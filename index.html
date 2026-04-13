@@ -1696,6 +1696,8 @@ async function uploadFilesToDriveForDraft(key) {
         // presence to decide whether to include Drive files, so clearing it would cause
         // old Drive files to re-appear alongside the new upload.
         console.log('Draft photo uploaded to Drive:', key, f.name, data.url);
+        // Auto-save draft now that Drive URL is available
+        saveDraft().catch(function() {});
       }
     } catch(e) {
       console.warn('Draft photo Drive upload failed for', key, f.name, e.message);
