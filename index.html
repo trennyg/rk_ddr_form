@@ -1473,31 +1473,58 @@ function getOpenAiKey() {
 async function testApiKey() {
   const el = document.getElementById('f_gemini_key');
   const key = el ? el.value.trim() : getGeminiKey();
-  if (!key) { showToast('Enter a key first', 'error'); return; }
+  const oaEl = document.getElementById('f_openai_key');
+  const oaKey = oaEl ? oaEl.value.trim() : getOpenAiKey();
   const resultEl = document.getElementById('keyTestResult');
+
   if (resultEl) {
     resultEl.style.display = 'block';
     resultEl.style.background = 'var(--surface2)';
     resultEl.style.border = '1px solid var(--border)';
     resultEl.style.color = 'var(--muted)';
-    resultEl.textContent = 'Testing key...';
+    resultEl.textContent = 'Testing keys...';
   }
-  try {
-    _workingModel = null;
-    const model = await discoverWorkingModel(key);
-    if (resultEl) {
-      resultEl.style.background = '#0d2318';
-      resultEl.style.border = '1px solid var(--green)';
-      resultEl.style.color = 'var(--green)';
-      resultEl.textContent = '✅ Key works! Model: ' + (model || 'found');
+
+  const results = [];
+
+  // Test Gemini
+  if (key) {
+    try {
+      _workingModel = null;
+      const model = await discoverWorkingModel(key);
+      results.push('✅ Gemini: working (model: ' + (model || 'found') + ')');
+    } catch(e) {
+      results.push('❌ Gemini: ' + e.message);
     }
-  } catch(e) {
-    if (resultEl) {
-      resultEl.style.background = '#200f0e';
-      resultEl.style.border = '1px solid var(--accent2)';
-      resultEl.style.color = 'var(--accent2)';
-      resultEl.textContent = '❌ ' + e.message;
+  } else {
+    results.push('⚠️ Gemini: no key entered');
+  }
+
+  // Test OpenAI
+  if (oaKey) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': 'Bearer ' + oaKey }
+      });
+      const data = await res.json();
+      if (data.error) {
+        results.push('❌ OpenAI: ' + data.error.message);
+      } else {
+        results.push('✅ OpenAI: working');
+      }
+    } catch(e) {
+      results.push('❌ OpenAI: ' + e.message);
     }
+  } else {
+    results.push('⚠️ OpenAI: no key entered');
+  }
+
+  if (resultEl) {
+    const allOk = results.every(function(r) { return r.startsWith('✅'); });
+    resultEl.style.background = allOk ? '#0d2318' : '#200f0e';
+    resultEl.style.border = '1px solid ' + (allOk ? 'var(--green)' : 'var(--accent2)');
+    resultEl.style.color = allOk ? 'var(--green)' : 'var(--text)';
+    resultEl.innerHTML = results.join('<br>');
   }
 }
 
