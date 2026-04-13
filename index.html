@@ -1270,7 +1270,8 @@ let _isSyncing = false;
 let pendingOcr = null;    // {key, docType, extracted}
 let submitType = 'final';
 let numCoApps = 0;
-let _draftDriveFiles = {}; // key -> [{driveUrl, name, mimeType}] — files already on Drive
+let _draftDriveFiles = {}; // key -> [{driveUrl, name, mimeType, base64}] — files already on Drive
+let _discardedDriveKeys = new Set(); // keys where user chose to discard the Drive file
 
 // Gemini API — discovers available models dynamically from user's key
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
@@ -3120,38 +3121,48 @@ async function submitForm() {
 
     for (const { col, key } of fileKeys) {
       const files = uploadedFiles[key] || [];
-      const driveFiles = _draftDriveFiles[key] || [];
+      // Only include Drive files if not discarded by user
+      const driveFiles = _discardedDriveKeys.has(key) ? [] : (_draftDriveFiles[key] || []);
       const urls = [];
 
-      if (files.length > 0) {
-        // Fresh local files — upload to Drive now
-        for (let fi = 0; fi < files.length; fi++) {
-          const f = files[fi];
-          // Check if already uploaded to Drive (background upload may have done it)
-          const alreadyOnDrive = driveFiles.find(function(d) { return d.name === f.name; });
-          if (alreadyOnDrive) {
-            urls.push(alreadyOnDrive.driveUrl);
-            continue;
-          }
-          try {
-            setProgress(5 + Math.round((uploaded / totalFiles) * 60));
-            showStatus(`Uploading ${key.replace(/_/g,' ')} (${fi+1}/${files.length})...`, 'info');
-            const res = await fetch(endpoint, {
-              method: 'POST',
-              body: JSON.stringify({
-                action: 'uploadFile',
-                file: { base64: f.base64, mimeType: f.mimeType, name: f.name || (key + '_' + fi + '.jpg') }
-              })
-            });
-            const data = await res.json();
-            if (data.url) { urls.push(data.url); }
-            else if (data.error) { console.warn('File upload failed [' + key + ']:', data.error); }
-          } catch(uploadErr) {
-            console.warn('File upload error [' + key + ']:', uploadErr.message);
-          }
+      // Upload fresh local files first
+      const trulyLocal = files.filter(function(f) { return f.file !== null; });
+      for (let fi = 0; fi < trulyLocal.length; fi++) {
+        const f = trulyLocal[fi];
+        // Check if this file was already background-uploaded to Drive
+        const alreadyOnDrive = (_draftDriveFiles[key] || []).find(function(d) { return d.name === f.name; });
+        if (alreadyOnDrive && !_discardedDriveKeys.has(key)) {
+          urls.push(alreadyOnDrive.driveUrl);
+          continue;
         }
-      } else if (driveFiles.length > 0) {
-        // No local files — use Drive URLs from draft directly, no re-upload needed
+        try {
+          setProgress(5 + Math.round((uploaded / totalFiles) * 60));
+          showStatus(`Uploading ${key.replace(/_/g,' ')} (${fi+1}/${trulyLocal.length})...`, 'info');
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'uploadFile',
+              file: { base64: f.base64, mimeType: f.mimeType, name: f.name || (key + '_' + fi + '.jpg') }
+            })
+          });
+          const data = await res.json();
+          if (data.url) { urls.push(data.url); }
+          else if (data.error) { console.warn('File upload failed [' + key + ']:', data.error); }
+        } catch(uploadErr) {
+          console.warn('File upload error [' + key + ']:', uploadErr.message);
+        }
+      }
+
+      // Add Drive files from draft (kept by user) that aren't already included
+      const uploadedUrls = new Set(urls);
+      driveFiles.forEach(function(df) {
+        if (!uploadedUrls.has(df.driveUrl)) {
+          urls.push(df.driveUrl);
+        }
+      });
+
+      // If no local files and Drive not discarded, use Drive URLs directly
+      if (trulyLocal.length === 0 && driveFiles.length > 0 && urls.length === 0) {
         showStatus(`Using saved Drive file(s) for ${key.replace(/_/g,' ')}...`, 'info');
         driveFiles.forEach(function(df) { urls.push(df.driveUrl); });
       }
@@ -3291,40 +3302,40 @@ function restoreFormValues(metaOrVals) {
   }, 400);
 
   // Restore Drive-uploaded photos from draft
-  // These show as linked items in upload zones — no re-upload needed for submission
   const meta = (metaOrVals && metaOrVals.vals) ? metaOrVals : null;
   const savedDriveFiles = meta ? meta.driveFiles : null;
   if (savedDriveFiles && Object.keys(savedDriveFiles).length > 0) {
     _draftDriveFiles = savedDriveFiles;
-    // Also restore base64 into uploadedFiles so OCR works without re-fetching from Drive
+    _discardedDriveKeys = new Set();
+
+    // Restore base64 into uploadedFiles so OCR works immediately
     Object.keys(_draftDriveFiles).forEach(function(key) {
       const driveFiles = _draftDriveFiles[key];
       if (!driveFiles || driveFiles.length === 0) return;
-      // Rebuild uploadedFiles entries from stored base64
       const withBase64 = driveFiles.filter(function(df) { return df.base64; });
       if (withBase64.length > 0) {
         uploadedFiles[key] = withBase64.map(function(df) {
           return { base64: df.base64, mimeType: df.mimeType, name: df.name, file: null };
         });
       }
-      // Mark upload zone as having files
       const uz = document.getElementById('uz_' + key);
       if (uz) {
         uz.classList.add('has-file');
         const iconEl = uz.querySelector('.uz-icon');
         const textEl = uz.querySelector('.uz-text');
         if (iconEl) iconEl.textContent = '☁️';
-        if (textEl) textEl.textContent = driveFiles.length + ' file(s) from Drive';
+        if (textEl) textEl.textContent = driveFiles.length + ' file(s) from Draft';
       }
-      // Enable OCR button
       const ocrBtn = document.getElementById('ocr_' + key);
       if (ocrBtn) ocrBtn.disabled = false;
       renderFileList(key);
     });
+
+    // Show keep/discard modal after short delay so form is visible
     setTimeout(function() {
-      showStatus('📎 Draft loaded with ' + Object.keys(savedDriveFiles).length + ' document(s) restored from Drive. You can re-upload any file to replace it, or submit as-is.', 'info');
-      document.getElementById('statusMsg').style.display = 'block';
-    }, 600);
+      showDriveFilesModal(savedDriveFiles);
+    }, 800);
+
   } else {
     // No Drive photos saved — show the old message to re-attach
     setTimeout(function() {
@@ -3600,6 +3611,7 @@ function hardClearForm(confirm_first) {
   });
   uploadedFiles = {};
   _draftDriveFiles = {};
+  _discardedDriveKeys = new Set();
   numCoApps = 0;
   currentDraftKey = null;
   document.getElementById('coAppContainer').innerHTML = '';
@@ -3619,6 +3631,130 @@ function hardClearForm(confirm_first) {
 function clearForm() { hardClearForm(true); }
 
 // ── Restore saved config on load ──
+// ══════════════════════════════════════════════════════════
+// DRIVE FILES KEEP / DISCARD MODAL
+// Shown after loading a draft that has saved Drive photos.
+// User can keep or discard each document individually.
+// ══════════════════════════════════════════════════════════
+function showDriveFilesModal(driveFiles) {
+  const keys = Object.keys(driveFiles).filter(function(k) {
+    return driveFiles[k] && driveFiles[k].length > 0;
+  });
+  if (keys.length === 0) return;
+
+  // Build a friendly label from the key name
+  function keyLabel(key) {
+    return key.replace(/_/g, ' ')
+      .replace(/\b(app|co\d)\b/g, function(m) {
+        if (m === 'app') return 'Applicant';
+        return 'Co-App ' + m.replace('co','');
+      })
+      .replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+  }
+
+  // Build modal HTML
+  const rows = keys.map(function(key) {
+    const df = driveFiles[key];
+    const fileId = df[0] ? extractDriveFileId(df[0].driveUrl) : null;
+    const isImage = df[0] && df[0].mimeType && df[0].mimeType.startsWith('image/');
+    const thumbHtml = (isImage && fileId)
+      ? '<img src="https://drive.google.com/thumbnail?id=' + fileId + '&sz=w80" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+      : '<span style="font-size:24px;">📄</span>';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
+      + thumbHtml
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;font-weight:600;color:var(--text);">' + keyLabel(key) + '</div>'
+      + '<div style="font-size:11px;color:var(--muted);">' + df.length + ' file(s) from draft</div>'
+      + '</div>'
+      + '<button onclick="keepDriveFile(\'' + key + '\', this)" style="background:var(--green);border:none;border-radius:6px;color:#000;font-size:12px;font-weight:600;padding:6px 10px;cursor:pointer;touch-action:manipulation;">✓ Keep</button>'
+      + '<button onclick="discardDriveFile(\'' + key + '\', this)" style="background:none;border:1px solid var(--accent2);border-radius:6px;color:var(--accent2);font-size:12px;padding:6px 10px;cursor:pointer;touch-action:manipulation;margin-left:4px;">✕ Discard</button>'
+      + '</div>';
+  }).join('');
+
+  // Inject modal into page
+  var existing = document.getElementById('driveFilesModal');
+  if (existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'driveFilesModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:3000;padding:16px;';
+  modal.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">'
+    + '<div style="padding:16px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:15px;color:var(--accent);">📎 Previous Photos Found</div>'
+    + '<div style="padding:4px 18px 0;">' + rows + '</div>'
+    + '<div style="padding:14px 18px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border);margin-top:8px;">'
+    + '<button onclick="keepAllDriveFiles()" style="background:var(--green);border:none;border-radius:8px;color:#000;font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;touch-action:manipulation;">✓ Keep All</button>'
+    + '<button onclick="discardAllDriveFiles()" style="background:var(--accent2);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;touch-action:manipulation;">✕ Discard All</button>'
+    + '<button onclick="closeDriveFilesModal()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;touch-action:manipulation;">Done</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+}
+
+function keepDriveFile(key, btn) {
+  _discardedDriveKeys.delete(key);
+  btn.style.background = 'var(--green)';
+  btn.textContent = '✓ Kept';
+  // Re-render file list to show Drive file
+  renderFileList(key);
+}
+
+function discardDriveFile(key, btn) {
+  _discardedDriveKeys.add(key);
+  // Remove from uploadedFiles if it came from Drive
+  if (uploadedFiles[key]) {
+    uploadedFiles[key] = uploadedFiles[key].filter(function(f) { return f.file !== null; });
+    if (uploadedFiles[key].length === 0) delete uploadedFiles[key];
+  }
+  // Mark upload zone as empty
+  const uz = document.getElementById('uz_' + key);
+  if (uz) {
+    uz.classList.remove('has-file');
+    const iconEl = uz.querySelector('.uz-icon');
+    const textEl = uz.querySelector('.uz-text');
+    if (iconEl) iconEl.textContent = '📄';
+    if (textEl) textEl.textContent = 'Tap to upload';
+  }
+  const ocrBtn = document.getElementById('ocr_' + key);
+  if (ocrBtn) ocrBtn.disabled = true;
+  renderFileList(key);
+  btn.style.background = 'var(--accent2)';
+  btn.textContent = '✕ Discarded';
+  showToast('Previous ' + key.replace(/_/g,' ') + ' discarded', 'success');
+}
+
+function keepAllDriveFiles() {
+  _discardedDriveKeys.clear();
+  closeDriveFilesModal();
+  showToast('All previous photos kept', 'success');
+}
+
+function discardAllDriveFiles() {
+  Object.keys(_draftDriveFiles).forEach(function(key) {
+    _discardedDriveKeys.add(key);
+    if (uploadedFiles[key]) {
+      uploadedFiles[key] = uploadedFiles[key].filter(function(f) { return f.file !== null; });
+      if (uploadedFiles[key].length === 0) delete uploadedFiles[key];
+    }
+    const uz = document.getElementById('uz_' + key);
+    if (uz) {
+      uz.classList.remove('has-file');
+      const iconEl = uz.querySelector('.uz-icon');
+      const textEl = uz.querySelector('.uz-text');
+      if (iconEl) iconEl.textContent = '📄';
+      if (textEl) textEl.textContent = 'Tap to upload';
+    }
+    const ocrBtn = document.getElementById('ocr_' + key);
+    if (ocrBtn) ocrBtn.disabled = true;
+    renderFileList(key);
+  });
+  closeDriveFilesModal();
+  showToast('All previous photos discarded', 'success');
+}
+
+function closeDriveFilesModal() {
+  var modal = document.getElementById('driveFilesModal');
+  if (modal) modal.remove();
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   // Prompt for API keys on first use if not set
   const hasGemini = !!localStorage.getItem('rka_gemini_key');
