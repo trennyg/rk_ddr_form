@@ -1735,7 +1735,7 @@ function renderFileList(key) {
         ${thumbHtml}
         <span class="fi-name" style="color:var(--label);">${displayName}</span>
         <span class="fi-status" style="flex-shrink:0;color:var(--muted);font-size:10px;">Draft</span>
-        <button class="fi-remove" onclick="discardDriveFile('${key}')" style="color:var(--accent2);flex-shrink:0;min-width:28px;">×</button>
+        <button class="fi-remove" onclick="discardDriveFile('${key}', ${di})" style="color:var(--accent2);flex-shrink:0;min-width:28px;">×</button>
       </div>`;
   });
 
@@ -3725,8 +3725,19 @@ function keepDriveFile(key, btn) {
   renderFileList(key);
 }
 
-function discardDriveFile(key) {
-  _discardedDriveKeys.add(key);
+function discardDriveFile(key, index) {
+  // If index provided, remove only that specific Drive file
+  if (typeof index === 'number' && _draftDriveFiles[key]) {
+    _draftDriveFiles[key].splice(index, 1);
+    if (_draftDriveFiles[key].length === 0) {
+      delete _draftDriveFiles[key];
+      _discardedDriveKeys.add(key);
+    }
+  } else {
+    // No index — remove all Drive files for this key
+    _discardedDriveKeys.add(key);
+    delete _draftDriveFiles[key];
+  }
   // Remove Drive-sourced entries from uploadedFiles
   if (uploadedFiles[key]) {
     uploadedFiles[key] = uploadedFiles[key].filter(function(f) { return f.file !== null; });
@@ -3746,6 +3757,8 @@ function discardDriveFile(key) {
   if (ocrBtn && !hasLocal) ocrBtn.disabled = true;
   renderFileList(key);
   showToast('Draft photo removed', 'success');
+  // Auto-save draft so the removed file is no longer in the saved draft
+  saveDraft().catch(function() {});
 }
 
 function keepAllDriveFiles() {
