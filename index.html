@@ -3449,10 +3449,17 @@ async function fetchDrafts() {
       });
       const data = await res.json();
       if (data.drafts && Array.isArray(data.drafts) && data.drafts.length > 0) {
-        // Merge cloud + local — cloud wins for same key
+        // Merge cloud + local — newer savedAt wins for same key
         const merged = {};
         localDrafts.forEach(function(d) { if (d && d.key) merged[d.key] = d; });
-        data.drafts.forEach(function(d) { if (d && d.key) merged[d.key] = d; });
+        data.drafts.forEach(function(d) {
+          if (!d || !d.key) return;
+          const existing = merged[d.key];
+          if (!existing) { merged[d.key] = d; return; }
+          const localTime = new Date(existing.savedAt || 0).getTime();
+          const cloudTime = new Date(d.savedAt || 0).getTime();
+          if (cloudTime > localTime) { merged[d.key] = d; }
+        });
         const all = Object.values(merged);
         // Sync merged set back to localStorage
         all.forEach(function(d) {
@@ -3761,8 +3768,24 @@ function discardDriveFile(key, index) {
   if (ocrBtn && !hasLocal) ocrBtn.disabled = true;
   renderFileList(key);
   showToast('Draft photo removed', 'success');
-  // Auto-save draft so the removed file is no longer in the saved draft
-  saveDraft().catch(function() {});
+  // Auto-save draft synchronously so removed file is gone from both cloud and local
+  saveDraft().then(function() {
+    // Also update localStorage directly with current _draftDriveFiles state
+    if (currentDraftKey) {
+      try {
+        var stored = JSON.parse(localStorage.getItem('rka_draft_' + currentDraftKey) || 'null');
+        if (stored) {
+          stored.driveFiles = Object.assign({}, _draftDriveFiles);
+          stored.savedAt = new Date().toISOString();
+          localStorage.setItem('rka_draft_' + currentDraftKey, JSON.stringify(stored));
+          _updateLocalIndex(stored);
+          // Update cache too
+          var ci = _draftsCache.findIndex(function(d) { return d.key === currentDraftKey; });
+          if (ci > -1) { _draftsCache[ci] = stored; }
+        }
+      } catch(e) {}
+    }
+  }).catch(function() {});
 }
 
 function keepAllDriveFiles() {
