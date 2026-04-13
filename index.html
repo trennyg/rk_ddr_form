@@ -1578,8 +1578,14 @@ async function handleFileSelect(key, files) {
   var inp = document.getElementById('fu_' + key);
   if (inp) inp.value = '';
 
+  // When a new file is selected, mark the old Drive file as discarded
+  // so it doesn't show alongside the new one unless user explicitly wants both
+  if (_draftDriveFiles[key] && _draftDriveFiles[key].length > 0) {
+    _discardedDriveKeys.add(key);
+    renderFileList(key); // re-render to hide Drive file now new one is present
+  }
+
   // Upload to Drive immediately so photos persist in drafts across devices
-  // Runs silently in background — does not block the user
   uploadFilesToDriveForDraft(key);
 }
 
@@ -1669,8 +1675,14 @@ async function uploadFilesToDriveForDraft(key) {
       });
       const data = await res.json();
       if (data.url) {
-        // Store base64 alongside URL so OCR works on draft reopen without Drive fetch
+        // Replace old Drive entry for this key with new upload
+        // (keeps _draftDriveFiles in sync with latest uploaded file)
+        if (!_draftDriveFiles[key]) _draftDriveFiles[key] = [];
+        // Remove old entry with same name if exists
+        _draftDriveFiles[key] = _draftDriveFiles[key].filter(function(d) { return d.name !== f.name; });
         _draftDriveFiles[key].push({ driveUrl: data.url, name: f.name, mimeType: f.mimeType, base64: f.base64 });
+        // Mark as not discarded now that we have a fresh upload
+        _discardedDriveKeys.delete(key);
         console.log('Draft photo uploaded to Drive:', key, f.name, data.url);
       }
     } catch(e) {
@@ -1683,36 +1695,37 @@ function renderFileList(key) {
   const fl = document.getElementById('fl_' + key);
   if (!fl) return;
   const files = uploadedFiles[key] || [];
-  const driveFiles = (_draftDriveFiles[key] || []);
+  const driveFiles = _discardedDriveKeys.has(key) ? [] : (_draftDriveFiles[key] || []);
 
-  // Local files (freshly selected this session)
-  let html = files.map((f, i) => `
+  // Local files (freshly selected this session) — show with remove button
+  let html = files.filter(f => f.file !== null).map((f, i) => `
     <div class="file-item">
       <span>📄</span>
       <span class="fi-name">${f.name}</span>
+      <span class="fi-status" style="color:var(--green);font-size:10px;">New</span>
       <button class="fi-remove" onclick="removeFile('${key}',${i})">×</button>
     </div>
   `).join('');
 
-  // Drive files restored from draft (no remove button — they are already on Drive)
-  // Only show if not already covered by a local file with the same name
-  const localNames = new Set(files.map(function(f) { return f.name; }));
-  driveFiles.forEach(function(df) {
-    if (localNames.has(df.name)) return; // local version present — don't double-show
+  // Drive files restored from draft — show thumbnail + Keep/Discard inline
+  const localNames = new Set(files.filter(f => f.file !== null).map(f => f.name));
+  driveFiles.forEach(function(df, di) {
+    if (localNames.has(df.name)) return;
     const isImage = df.mimeType && df.mimeType.startsWith('image/');
     const fileId = extractDriveFileId(df.driveUrl);
     const thumbHtml = (isImage && fileId)
       ? `<img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w60" style="width:36px;height:36px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.style.display='none'">`
       : `<span>☁️</span>`;
     html += `
-      <div class="file-item" style="border:1px solid var(--accent);opacity:0.85;">
+      <div class="file-item" style="border:1px solid var(--border);background:var(--surface2);" id="drive_item_${key}_${di}">
         ${thumbHtml}
-        <span class="fi-name" style="color:var(--accent);">${df.name}</span>
-        <span class="fi-status">Drive</span>
+        <span class="fi-name" style="color:var(--label);">${df.name}</span>
+        <span class="fi-status" style="color:var(--muted);font-size:10px;">Draft</span>
+        <button onclick="discardDriveFile('${key}')" style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;">×</button>
       </div>`;
   });
 
-  fl.innerHTML = html;
+  fl.innerHTML = html || '';
 }
 
 function extractDriveFileId(url) {
@@ -3331,9 +3344,10 @@ function restoreFormValues(metaOrVals) {
       renderFileList(key);
     });
 
-    // Show keep/discard modal after short delay so form is visible
+    // Show simple status instead of modal
     setTimeout(function() {
-      showDriveFilesModal(savedDriveFiles);
+      showStatus('📎 Draft loaded. Previous photos shown below each section — tap × to remove any you want to replace.', 'info');
+      document.getElementById('statusMsg').style.display = 'block';
     }, 800);
 
   } else {
@@ -3697,16 +3711,17 @@ function keepDriveFile(key, btn) {
   renderFileList(key);
 }
 
-function discardDriveFile(key, btn) {
+function discardDriveFile(key) {
   _discardedDriveKeys.add(key);
-  // Remove from uploadedFiles if it came from Drive
+  // Remove Drive-sourced entries from uploadedFiles
   if (uploadedFiles[key]) {
     uploadedFiles[key] = uploadedFiles[key].filter(function(f) { return f.file !== null; });
     if (uploadedFiles[key].length === 0) delete uploadedFiles[key];
   }
-  // Mark upload zone as empty
+  // Update upload zone
   const uz = document.getElementById('uz_' + key);
-  if (uz) {
+  const hasLocal = uploadedFiles[key] && uploadedFiles[key].length > 0;
+  if (uz && !hasLocal) {
     uz.classList.remove('has-file');
     const iconEl = uz.querySelector('.uz-icon');
     const textEl = uz.querySelector('.uz-text');
@@ -3714,11 +3729,9 @@ function discardDriveFile(key, btn) {
     if (textEl) textEl.textContent = 'Tap to upload';
   }
   const ocrBtn = document.getElementById('ocr_' + key);
-  if (ocrBtn) ocrBtn.disabled = true;
+  if (ocrBtn && !hasLocal) ocrBtn.disabled = true;
   renderFileList(key);
-  btn.style.background = 'var(--accent2)';
-  btn.textContent = '✕ Discarded';
-  showToast('Previous ' + key.replace(/_/g,' ') + ' discarded', 'success');
+  showToast('Draft photo removed', 'success');
 }
 
 function keepAllDriveFiles() {
