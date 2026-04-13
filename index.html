@@ -1668,7 +1668,8 @@ async function uploadFilesToDriveForDraft(key) {
       });
       const data = await res.json();
       if (data.url) {
-        _draftDriveFiles[key].push({ driveUrl: data.url, name: f.name, mimeType: f.mimeType });
+        // Store base64 alongside URL so OCR works on draft reopen without Drive fetch
+        _draftDriveFiles[key].push({ driveUrl: data.url, name: f.name, mimeType: f.mimeType, base64: f.base64 });
         console.log('Draft photo uploaded to Drive:', key, f.name, data.url);
       }
     } catch(e) {
@@ -1815,7 +1816,17 @@ readyReckoner → Ready reckoner / guideline value. Labels: "बाजारम�
 
 Return ONLY this JSON (no markdown, no explanation, every value on one line):
 {"regNo":"","regDate":"","index2No":"","index2Date":"","purchaser":"","seller":"","propAddress":"","propArea":"","houseRef":"","actualPrice":"","stampDuty":"","regFee":"","readyReckoner":""}`,
-  car: `Extract from car quotation/proforma invoice. Return ONLY raw JSON no markdown: {"carModel":"car company and model","carPrice":"total on-road price","dealershipName":"dealership name","dealershipAddr":"dealership address","dealershipContact":"phone number","execName":"sales executive name","execContact":"sales executive contact"}`
+  car: `Extract from car quotation/proforma invoice. Return ONLY raw JSON no markdown: {"carModel":"car company and model","carPrice":"total on-road price","dealershipName":"dealership name","dealershipAddr":"dealership address","dealershipContact":"phone number","execName":"sales executive name","execContact":"sales executive contact"}`,
+  itr_doc: `Extract from Income Tax Return (ITR) document. Return ONLY raw JSON no markdown.
+Look for fields labelled Gross Total Income, Total Income, or Net Taxable Income.
+Do NOT pick any field with the word Loss in it. The value must be a positive number.
+Fields: {"ackNo":"acknowledgement number","income":"Gross Total Income or Total Income — NOT any loss figure","year":"assessment year"}`,
+  f16: `Extract from Form 16 salary certificate (Indian income tax document). Return ONLY raw JSON no markdown no explanation.
+Look for EXACTLY these two fields:
+1. "Certificate No." — this is the certNo field. It appears in the header of Part A or Part B.
+2. "Total taxable income (9-11)" — this is the income field. It must be a positive number greater than 0.
+If "Total taxable income (9-11)" is missing or zero, also try "Gross total income" as fallback.
+Return: {"certNo":"the certificate number value","income":"the Total taxable income (9-11) value as a positive number"}`
 };
 
 const OCR_TITLES = {
@@ -2689,14 +2700,8 @@ async function runItrOcr(prefix, shortYr, docKind) {
   const btn = document.getElementById(`ocr_${key}`);
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span><span> Extracting...</span>'; btn.classList.add('loading'); }
 
-  const prompt = docKind === 'itr'
-    ? `Extract from Income Tax Return (ITR) document. Return ONLY raw JSON no markdown no explanation.
-Look for Gross Total Income, Total Income, or Net Taxable Income. Do NOT pick any Loss figure. Value must be positive.
-Return: {"income":"the positive income figure as a number","ackNo":"acknowledgement number or empty string"}`
-    : `Extract from Form 16 salary certificate (Indian income tax). Return ONLY raw JSON no markdown no explanation.
-Look for Gross total income (6+8) first, then Total taxable income. Must be positive number > 0.
-Certificate Number is in Part A or Part B header (short alphanumeric code).
-Return: {"income":"gross total income — positive number","certNo":"certificate number or empty string"}`;
+  // Use the same full prompts as the main OCR pipeline for consistency
+  const prompt = docKind === 'itr' ? OCR_PROMPTS.itr_doc : OCR_PROMPTS.f16;
 
   try {
     let itrText = '';
@@ -3291,10 +3296,17 @@ function restoreFormValues(metaOrVals) {
   const savedDriveFiles = meta ? meta.driveFiles : null;
   if (savedDriveFiles && Object.keys(savedDriveFiles).length > 0) {
     _draftDriveFiles = savedDriveFiles;
-    // Render each upload zone that has Drive files
+    // Also restore base64 into uploadedFiles so OCR works without re-fetching from Drive
     Object.keys(_draftDriveFiles).forEach(function(key) {
       const driveFiles = _draftDriveFiles[key];
       if (!driveFiles || driveFiles.length === 0) return;
+      // Rebuild uploadedFiles entries from stored base64
+      const withBase64 = driveFiles.filter(function(df) { return df.base64; });
+      if (withBase64.length > 0) {
+        uploadedFiles[key] = withBase64.map(function(df) {
+          return { base64: df.base64, mimeType: df.mimeType, name: df.name, file: null };
+        });
+      }
       // Mark upload zone as having files
       const uz = document.getElementById('uz_' + key);
       if (uz) {
@@ -3304,7 +3316,7 @@ function restoreFormValues(metaOrVals) {
         if (iconEl) iconEl.textContent = '☁️';
         if (textEl) textEl.textContent = driveFiles.length + ' file(s) from Drive';
       }
-      // Enable OCR button if available
+      // Enable OCR button
       const ocrBtn = document.getElementById('ocr_' + key);
       if (ocrBtn) ocrBtn.disabled = false;
       renderFileList(key);
