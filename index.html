@@ -2602,7 +2602,8 @@ async function runItrOcr(prefix, shortYr, docKind) {
   try {
     const imgData = files[0];
     // Try Cloud Vision first for text extraction
-    const itrText = await extractTextWithVision([imgData]);
+    let itrText = '';
+    try { itrText = await extractTextWithCloudVision(imgData.base64, imgData.mimeType); } catch(vErr) { console.warn('Vision failed for ITR/F16:', vErr.message); }
     let raw;
     if (itrText) {
       const textPrompt = prompt + '\n\nDOCUMENT TEXT:\n' + itrText.substring(0, 6000);
