@@ -415,7 +415,7 @@
     <div class="subtitle">DDR Field Data Entry Form</div>
   </div>
   <div class="header-right">
-    <!-- Config hidden — API key is pre-configured -->
+    <button class="api-key-btn" onclick="openApiKeyModal()">⚙ Config</button>
   </div>
 </div>
 
@@ -1233,8 +1233,13 @@
       <div class="config-row">
         <label>Gemini API Key</label>
         <input type="password" id="f_gemini_key" placeholder="AIza..." style="font-family:'DM Mono',monospace;font-size:13px;">
-        <span class="hint">Your key is stored only in your browser's local storage. Get a free key at <strong>aistudio.google.com</strong></span>
+        <span class="hint">Get a free key at <strong>aistudio.google.com</strong></span>
         <div id="keyTestResult" style="margin-top:8px;font-size:12px;display:none;padding:8px 10px;border-radius:6px;"></div>
+      </div>
+      <div class="config-row" style="margin-top:12px;">
+        <label>OpenAI API Key</label>
+        <input type="password" id="f_openai_key" placeholder="sk-proj-..." style="font-family:'DM Mono',monospace;font-size:13px;">
+        <span class="hint">Get a key at <strong>platform.openai.com/account/api-keys</strong> — used as fallback if Gemini fails</span>
       </div>
     </div>
     <div class="modal-foot">
@@ -1435,6 +1440,9 @@ function openApiKeyModal() {
   const saved = getGeminiKey();
   const el = document.getElementById('f_gemini_key');
   if (saved && el) el.value = saved;
+  const oaSaved = localStorage.getItem('rka_openai_key') || '';
+  const oaEl = document.getElementById('f_openai_key');
+  if (oaEl) oaEl.value = oaSaved;
   const modal = document.getElementById('apiKeyModal');
   if (modal) modal.classList.add('open');
 }
@@ -1448,13 +1456,19 @@ function saveApiKey() {
   if (key) {
     localStorage.setItem('rka_gemini_key', key);
     _workingModel = null;
-    showToast('API key saved!', 'success');
   }
+  const oaEl = document.getElementById('f_openai_key');
+  const oaKey = oaEl ? oaEl.value.trim() : '';
+  if (oaKey) { localStorage.setItem('rka_openai_key', oaKey); }
+  showToast('Keys saved!', 'success');
   closeApiKeyModal();
 }
-function getGeminiKey()     { return 'AIzaSyCcr-TqzBo_fiT9K99N0SXuxY0E0H4ZJIs'; }
+function getGeminiKey()     { return 'AIzaSyC_PUxfC3CoKFW6ZUVCMAwEn1wHTEPfky4'; }
 function getCloudVisionKey() { return 'AIzaSyCaOkCxCP5xZdvzlG2IfMvzHKYJ4ZkYch0'; }
-function getOpenAiKey()      { return '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'; }
+function getOpenAiKey() {
+  // Stored in localStorage — set once via the ⚙ Config button
+  return localStorage.getItem('rka_openai_key') || '';
+}
 
 async function testApiKey() {
   const el = document.getElementById('f_gemini_key');
@@ -1844,6 +1858,7 @@ async function structureWithGemini(rawText, prompt) {
 // ── Step 3: OpenAI GPT-4o-mini fallback ──────────────────
 async function structureWithOpenAI(rawText, prompt) {
   const key = getOpenAiKey();
+  if (!key) throw new Error('OpenAI key not set — tap ⚙ Config in the header to add it');
   const fullPrompt = prompt + '\n\nEXTRACTED TEXT:\n' + rawText.substring(0, 6000);
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
