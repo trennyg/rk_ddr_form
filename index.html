@@ -1942,20 +1942,34 @@ async function runOcr(key, docType) {
         }
       }
     } else if (driveFiles.length > 0) {
-      // Drive-restored files — fetch image bytes then run Cloud Vision
+      // Drive-restored files — fetch via Apps Script proxy (avoids CORS block on Drive URLs)
       btn && (btn.innerHTML = '<span class="spinner"></span><span> Fetching Drive files...</span>');
+      const endpoint = getEndpoint();
       for (let i = 0; i < Math.min(driveFiles.length, maxPages); i++) {
         const df = driveFiles[i];
         try {
-          // Fetch image as blob and convert to base64
-          const imgRes = await fetch(df.driveUrl);
-          const blob = await imgRes.blob();
-          const b64 = await new Promise(function(res, rej) {
-            const reader = new FileReader();
-            reader.onload = function(e) { res(e.target.result.split(',')[1]); };
-            reader.onerror = rej;
-            reader.readAsDataURL(blob);
-          });
+          let b64 = null;
+          if (endpoint) {
+            // Route through Apps Script to avoid CORS
+            const proxyRes = await fetch(endpoint, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'fetchDriveFile', url: df.driveUrl })
+            });
+            const proxyData = await proxyRes.json();
+            if (proxyData.base64) { b64 = proxyData.base64; }
+          }
+          if (!b64) {
+            // Direct fetch fallback (works if not CORS blocked)
+            const imgRes = await fetch(df.driveUrl);
+            const blob = await imgRes.blob();
+            b64 = await new Promise(function(res, rej) {
+              const reader = new FileReader();
+              reader.onload = function(e) { res(e.target.result.split(',')[1]); };
+              reader.onerror = rej;
+              reader.readAsDataURL(blob);
+            });
+          }
+          if (!b64) { console.warn('Could not fetch Drive file:', df.name); continue; }
           btn && (btn.innerHTML = '<span class="spinner"></span><span> Reading Drive file ' + (i+1) + '...</span>');
           const pageText = await extractTextWithCloudVision(b64, df.mimeType || 'image/jpeg');
           if (pageText) allRawText += '\n--- PAGE ' + (i+1) + ' ---\n' + pageText;
@@ -2589,53 +2603,128 @@ async function runItrOcr(prefix, shortYr, docKind) {
   const key = `${docKind}_${prefix}_${shortYr}`;
   const geminiKey = getGeminiKey();
   if (!geminiKey) { openApiKeyModal(); return; }
-  const files = uploadedFiles[key];
-  if (!files || files.length === 0) return;
+
+  // Check local files first, then Drive-restored files
+  const files = uploadedFiles[key] || [];
+  const driveFiles = (_draftDriveFiles[key] || []);
+  if (files.length === 0 && driveFiles.length === 0) {
+    showError('No file uploaded for this field — please upload first.');
+    return;
+  }
 
   const btn = document.getElementById(`ocr_${key}`);
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span><span> Extracting...</span>'; btn.classList.add('loading'); }
 
   const prompt = docKind === 'itr'
-    ? `Extract from Income Tax Return. Return ONLY raw JSON: {"income":"Gross Total Income or Total Income as a number — NOT any loss figure","ackNo":"acknowledgement number"}`
-    : `Extract from Form 16. Return ONLY raw JSON: {"income":"Gross total income — must be positive number > 0","certNo":"Certificate number from Part A or Part B header"}`;
+    ? `Extract from Income Tax Return (ITR) document. Return ONLY raw JSON no markdown no explanation.
+Look for Gross Total Income, Total Income, or Net Taxable Income. Do NOT pick any Loss figure. Value must be positive.
+Return: {"income":"the positive income figure as a number","ackNo":"acknowledgement number or empty string"}`
+    : `Extract from Form 16 salary certificate (Indian income tax). Return ONLY raw JSON no markdown no explanation.
+Look for Gross total income (6+8) first, then Total taxable income. Must be positive number > 0.
+Certificate Number is in Part A or Part B header (short alphanumeric code).
+Return: {"income":"gross total income — positive number","certNo":"certificate number or empty string"}`;
 
   try {
-    const imgData = files[0];
-    // Try Cloud Vision first for text extraction
     let itrText = '';
-    try { itrText = await extractTextWithCloudVision(imgData.base64, imgData.mimeType); } catch(vErr) { console.warn('Vision failed for ITR/F16:', vErr.message); }
+
+    if (files.length > 0) {
+      // Local file — use Cloud Vision
+      const imgData = files[0];
+      btn && (btn.innerHTML = '<span class="spinner"></span><span> Reading text...</span>');
+      try {
+        itrText = await extractTextWithCloudVision(imgData.base64, imgData.mimeType);
+        console.log('ITR/F16 Vision text (' + itrText.length + ' chars):', itrText.substring(0, 200));
+      } catch(vErr) {
+        console.warn('Vision failed for ITR/F16:', vErr.message);
+      }
+    } else if (driveFiles.length > 0) {
+      // Drive-restored file — fetch via Apps Script proxy to avoid CORS
+      btn && (btn.innerHTML = '<span class="spinner"></span><span> Fetching from Drive...</span>');
+      const df = driveFiles[0];
+      const endpoint = getEndpoint();
+      try {
+        let b64 = null;
+        if (endpoint) {
+          const proxyRes = await fetch(endpoint, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'fetchDriveFile', url: df.driveUrl })
+          });
+          const proxyData = await proxyRes.json();
+          if (proxyData.base64) { b64 = proxyData.base64; }
+        }
+        if (!b64) {
+          // Direct fetch fallback
+          const imgRes = await fetch(df.driveUrl);
+          const blob = await imgRes.blob();
+          b64 = await new Promise(function(res, rej) {
+            const reader = new FileReader();
+            reader.onload = function(e) { res(e.target.result.split(',')[1]); };
+            reader.onerror = rej;
+            reader.readAsDataURL(blob);
+          });
+        }
+        if (b64) {
+          btn && (btn.innerHTML = '<span class="spinner"></span><span> Reading text...</span>');
+          itrText = await extractTextWithCloudVision(b64, df.mimeType || 'image/jpeg');
+          console.log('ITR/F16 Drive Vision text (' + itrText.length + ' chars):', itrText.substring(0, 200));
+        }
+      } catch(dfErr) {
+        console.warn('Drive Vision failed for ITR/F16:', dfErr.message);
+      }
+    }
+
+    if (!itrText || itrText.trim().length < 10) {
+      throw new Error('No text could be extracted from the image. Please try a clearer photo.');
+    }
+
+    btn && (btn.innerHTML = '<span class="spinner"></span><span> Structuring data...</span>');
+    const textPrompt = prompt + '\n\nDOCUMENT TEXT:\n' + itrText.substring(0, 6000);
+
     let raw;
-    if (itrText) {
-      const textPrompt = prompt + '\n\nDOCUMENT TEXT:\n' + itrText.substring(0, 6000);
+    try {
+      // Try Gemini first
       const d = await callGemini(geminiKey, {
         contents: [{ parts: [{ text: textPrompt }] }],
         generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
       });
-      raw = d.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim();
-    } else {
-      const d = await callGemini(geminiKey, {
-        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: imgData.mimeType, data: imgData.base64 } }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
-      });
-      raw = d.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim();
+      raw = d.candidates[0].content.parts[0].text.trim();
+    } catch(gemErr) {
+      console.warn('Gemini failed for ITR/F16, trying OpenAI proxy:', gemErr.message);
+      // OpenAI proxy fallback
+      raw = await structureWithOpenAI(itrText, prompt);
     }
-    let parsed;
-    try { parsed = JSON.parse(raw); } catch(e) { parsed = {}; }
+
+    console.log('ITR/F16 raw response:', raw);
+    // Use the shared parseOcrJson for consistent parsing
+    const parsed = parseOcrJson(raw, docKind);
+    console.log('ITR/F16 parsed:', JSON.stringify(parsed));
 
     if (docKind === 'itr') {
-      if (parsed.income) { setVal(`f_itr_${prefix}_${shortYr}`, parsed.income); itrStore[`f_itr_${prefix}_${shortYr}`] = parsed.income; }
-      if (parsed.ackNo)  { setVal(`f_itr_ack_${prefix}_${shortYr}`, parsed.ackNo); itrStore[`f_itr_ack_${prefix}_${shortYr}`] = parsed.ackNo; }
-      showToast(`ITR ${shortYr} extracted`, 'success');
-      // Save draft immediately after ITR extraction
-      var _appName = (document.getElementById('f_app_name') || {}).value || '';
-      if (_appName.trim()) saveDraft(_appName.trim()).catch(function() {});
+      const inc = parsed.income || parsed.Income || parsed.INCOME || '';
+      const ack = parsed.ackNo  || parsed.ackno  || parsed.AckNo  || parsed.acknowledgement || '';
+      if (inc) { forceSetVal(`f_itr_${prefix}_${shortYr}`, inc); itrStore[`f_itr_${prefix}_${shortYr}`] = inc; }
+      if (ack) { forceSetVal(`f_itr_ack_${prefix}_${shortYr}`, ack); itrStore[`f_itr_ack_${prefix}_${shortYr}`] = ack; }
+      if (inc || ack) {
+        showToast('ITR ' + shortYr + ' extracted ✅', 'success');
+      } else {
+        showToast('Text read but income/ack not found — check console', 'error');
+      }
     } else {
-      if (parsed.income) { setVal(`f_f16_inc_${prefix}_${shortYr}`, parsed.income); itrStore[`f_f16_inc_${prefix}_${shortYr}`] = parsed.income; }
-      if (parsed.certNo) { setVal(`f_f16_cert_${prefix}_${shortYr}`, parsed.certNo); itrStore[`f_f16_cert_${prefix}_${shortYr}`] = parsed.certNo; }
-      showToast(`Form 16 ${shortYr} extracted`, 'success');
-      var _appNameF16 = (document.getElementById('f_app_name') || {}).value || '';
-      if (_appNameF16.trim()) saveDraft(_appNameF16.trim()).catch(function() {});
+      const inc  = parsed.income  || parsed.Income  || parsed.INCOME  || '';
+      const cert = parsed.certNo  || parsed.certno  || parsed.CertNo  || parsed.certificateNo || '';
+      if (inc)  { forceSetVal(`f_f16_inc_${prefix}_${shortYr}`, inc); itrStore[`f_f16_inc_${prefix}_${shortYr}`] = inc; }
+      if (cert) { forceSetVal(`f_f16_cert_${prefix}_${shortYr}`, cert); itrStore[`f_f16_cert_${prefix}_${shortYr}`] = cert; }
+      if (inc || cert) {
+        showToast('Form 16 ' + shortYr + ' extracted ✅', 'success');
+      } else {
+        showToast('Text read but income/cert not found — check console', 'error');
+      }
     }
+
+    // Save draft after extraction
+    var _appName = (document.getElementById('f_app_name') || {}).value || '';
+    if (_appName.trim()) saveDraft(_appName.trim()).catch(function() {});
+
   } catch(e) {
     showError('OCR failed: ' + e.message);
   }
