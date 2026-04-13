@@ -1237,9 +1237,9 @@
         <div id="keyTestResult" style="margin-top:8px;font-size:12px;display:none;padding:8px 10px;border-radius:6px;"></div>
       </div>
       <div class="config-row" style="margin-top:12px;">
-        <label>OpenAI API Key</label>
-        <input type="password" id="f_openai_key" placeholder="sk-proj-..." style="font-family:'DM Mono',monospace;font-size:13px;">
-        <span class="hint">Get a key at <strong>platform.openai.com/account/api-keys</strong> — used as fallback if Gemini fails</span>
+        <label>Cloud Vision API Key</label>
+        <input type="password" id="f_vision_key" placeholder="AIza..." style="font-family:'DM Mono',monospace;font-size:13px;">
+        <span class="hint">Google Cloud Vision API key — used for text extraction from photos</span>
       </div>
     </div>
     <div class="modal-foot">
@@ -1437,12 +1437,10 @@ function setProgress(pct) {
 }
 
 function openApiKeyModal() {
-  const saved = getGeminiKey();
   const el = document.getElementById('f_gemini_key');
-  if (saved && el) el.value = saved;
-  const oaSaved = localStorage.getItem('rka_openai_key') || '';
-  const oaEl = document.getElementById('f_openai_key');
-  if (oaEl) oaEl.value = oaSaved;
+  if (el) el.value = localStorage.getItem('rka_gemini_key') || '';
+  const vEl = document.getElementById('f_vision_key');
+  if (vEl) vEl.value = localStorage.getItem('rka_vision_key') || '';
   const modal = document.getElementById('apiKeyModal');
   if (modal) modal.classList.add('open');
 }
@@ -1453,18 +1451,15 @@ function closeApiKeyModal() {
 function saveApiKey() {
   const el = document.getElementById('f_gemini_key');
   const key = el ? el.value.trim() : '';
-  if (key) {
-    localStorage.setItem('rka_gemini_key', key);
-    _workingModel = null;
-  }
-  const oaEl = document.getElementById('f_openai_key');
-  const oaKey = oaEl ? oaEl.value.trim() : '';
-  if (oaKey) { localStorage.setItem('rka_openai_key', oaKey); }
+  if (key) { localStorage.setItem('rka_gemini_key', key); _workingModel = null; }
+  const vEl = document.getElementById('f_vision_key');
+  const vKey = vEl ? vEl.value.trim() : '';
+  if (vKey) { localStorage.setItem('rka_vision_key', vKey); }
   showToast('Keys saved!', 'success');
   closeApiKeyModal();
 }
-function getGeminiKey()     { return 'AIzaSyC_PUxfC3CoKFW6ZUVCMAwEn1wHTEPfky4'; }
-function getCloudVisionKey() { return 'AIzaSyCaOkCxCP5xZdvzlG2IfMvzHKYJ4ZkYch0'; }
+function getGeminiKey()     { return localStorage.getItem('rka_gemini_key') || ''; }
+function getCloudVisionKey() { return localStorage.getItem('rka_vision_key') || ''; }
 function getOpenAiKey() {
   // Stored in localStorage — set once via the ⚙ Config button
   return localStorage.getItem('rka_openai_key') || '';
@@ -1473,58 +1468,30 @@ function getOpenAiKey() {
 async function testApiKey() {
   const el = document.getElementById('f_gemini_key');
   const key = el ? el.value.trim() : getGeminiKey();
-  const oaEl = document.getElementById('f_openai_key');
-  const oaKey = oaEl ? oaEl.value.trim() : getOpenAiKey();
   const resultEl = document.getElementById('keyTestResult');
-
   if (resultEl) {
     resultEl.style.display = 'block';
     resultEl.style.background = 'var(--surface2)';
     resultEl.style.border = '1px solid var(--border)';
     resultEl.style.color = 'var(--muted)';
-    resultEl.textContent = 'Testing keys...';
+    resultEl.textContent = 'Testing Gemini key...';
   }
-
-  const results = [];
-
-  // Test Gemini
-  if (key) {
-    try {
-      _workingModel = null;
-      const model = await discoverWorkingModel(key);
-      results.push('✅ Gemini: working (model: ' + (model || 'found') + ')');
-    } catch(e) {
-      results.push('❌ Gemini: ' + e.message);
+  try {
+    _workingModel = null;
+    const model = await discoverWorkingModel(key);
+    if (resultEl) {
+      resultEl.style.background = '#0d2318';
+      resultEl.style.border = '1px solid var(--green)';
+      resultEl.style.color = 'var(--green)';
+      resultEl.textContent = '✅ Gemini working — model: ' + (model || 'found') + '. OpenAI fallback runs via Apps Script (no key needed here).';
     }
-  } else {
-    results.push('⚠️ Gemini: no key entered');
-  }
-
-  // Test OpenAI
-  if (oaKey) {
-    try {
-      const res = await fetch('https://api.openai.com/v1/models', {
-        headers: { 'Authorization': 'Bearer ' + oaKey }
-      });
-      const data = await res.json();
-      if (data.error) {
-        results.push('❌ OpenAI: ' + data.error.message);
-      } else {
-        results.push('✅ OpenAI: working');
-      }
-    } catch(e) {
-      results.push('❌ OpenAI: ' + e.message);
+  } catch(e) {
+    if (resultEl) {
+      resultEl.style.background = '#200f0e';
+      resultEl.style.border = '1px solid var(--accent2)';
+      resultEl.style.color = 'var(--accent2)';
+      resultEl.textContent = '❌ ' + e.message;
     }
-  } else {
-    results.push('⚠️ OpenAI: no key entered');
-  }
-
-  if (resultEl) {
-    const allOk = results.every(function(r) { return r.startsWith('✅'); });
-    resultEl.style.background = allOk ? '#0d2318' : '#200f0e';
-    resultEl.style.border = '1px solid ' + (allOk ? 'var(--green)' : 'var(--accent2)');
-    resultEl.style.color = allOk ? 'var(--green)' : 'var(--text)';
-    resultEl.innerHTML = results.join('<br>');
   }
 }
 
@@ -1882,28 +1849,22 @@ async function structureWithGemini(rawText, prompt) {
   return data.candidates[0].content.parts[0].text.trim();
 }
 
-// ── Step 3: OpenAI GPT-4o-mini fallback ──────────────────
+// ── Step 3: OpenAI via Apps Script proxy (avoids CORS) ───
 async function structureWithOpenAI(rawText, prompt) {
-  const key = getOpenAiKey();
-  if (!key) throw new Error('OpenAI key not set — tap ⚙ Config in the header to add it');
-  const fullPrompt = prompt + '\n\nEXTRACTED TEXT:\n' + rawText.substring(0, 6000);
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const endpoint = getEndpoint();
+  if (!endpoint) throw new Error('No Apps Script endpoint configured');
+  const res = await fetch(endpoint, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + key
-    },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: fullPrompt }],
-      max_tokens: 2048,
-      temperature: 0.1,
-      response_format: { type: 'json_object' }
+      action: 'proxyOpenAI',
+      rawText: rawText.substring(0, 6000),
+      prompt: prompt
     })
   });
   const data = await res.json();
-  if (data.error) throw new Error('OpenAI error: ' + data.error.message);
-  return data.choices[0].message.content.trim();
+  if (data.error) throw new Error(data.error);
+  if (!data.result) throw new Error('No result from OpenAI proxy');
+  return data.result;
 }
 
 // ── Parse raw JSON string safely ─────────────────────────
@@ -3471,6 +3432,15 @@ function clearForm() { hardClearForm(true); }
 
 // ── Restore saved config on load ──
 window.addEventListener('DOMContentLoaded', () => {
+  // Prompt for API keys on first use if not set
+  const hasGemini = !!localStorage.getItem('rka_gemini_key');
+  const hasVision = !!localStorage.getItem('rka_vision_key');
+  if (!hasGemini || !hasVision) {
+    setTimeout(function() {
+      openApiKeyModal();
+      showToast('Please enter your API keys to get started', 'info');
+    }, 800);
+  }
   // OCR sheet buttons wired fresh inside showOcrModal() each call
 
   // Draft list buttons — event delegation so dynamically rendered buttons work
