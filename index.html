@@ -3737,18 +3737,9 @@ function keepDriveFile(key, btn) {
 }
 
 function discardDriveFile(key, index) {
-  // If index provided, remove only that specific Drive file
-  if (typeof index === 'number' && _draftDriveFiles[key]) {
-    _draftDriveFiles[key].splice(index, 1);
-    if (_draftDriveFiles[key].length === 0) {
-      delete _draftDriveFiles[key];
-      _discardedDriveKeys.add(key);
-    }
-  } else {
-    // No index — remove all Drive files for this key
-    _discardedDriveKeys.add(key);
-    delete _draftDriveFiles[key];
-  }
+  // Remove this key entirely from _draftDriveFiles
+  delete _draftDriveFiles[key];
+  _discardedDriveKeys.add(key);
   // Remove Drive-sourced entries from uploadedFiles
   if (uploadedFiles[key]) {
     uploadedFiles[key] = uploadedFiles[key].filter(function(f) { return f.file !== null; });
