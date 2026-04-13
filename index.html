@@ -1347,46 +1347,62 @@ async function discoverWorkingModel(key) {
 async function callGemini(key, payload) {
   // Discover working model if not cached
   const discovered = await discoverWorkingModel(key);
-
-  const modelsToTry = discovered
-    ? [discovered]
-    : PREFERRED_MODELS;
+  const modelsToTry = discovered ? [discovered] : PREFERRED_MODELS;
 
   let lastError = '';
   for (let i = 0; i < modelsToTry.length; i++) {
     const model = modelsToTry[i];
-    try {
-      const res = await fetch(GEMINI_BASE + model + ':generateContent?key=' + key, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (data.error) {
-        const msg = (data.error.message || '').toLowerCase();
-        if (msg.includes('not found') || msg.includes('not supported') ||
+    // Retry up to 2 times on overload before moving to next model
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const res = await fetch(GEMINI_BASE + model + ':generateContent?key=' + key, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.error) {
+          const msg = (data.error.message || '').toLowerCase();
+          const isOverload = msg.includes('high demand') || msg.includes('overload') ||
+            msg.includes('resource exhausted') || msg.includes('quota') ||
+            msg.includes('too many requests') || msg.includes('unavailable') ||
+            data.error.code === 429 || data.error.code === 503;
+          const isNotFound = msg.includes('not found') || msg.includes('not supported') ||
             msg.includes('no longer available') || msg.includes('deprecated') ||
-            msg.includes('does not exist')) {
-          lastError = data.error.message;
-          _workingModel = null; // reset cache so next call re-discovers
-          continue;
+            msg.includes('does not exist');
+          if (isOverload && attempt < 2) {
+            // Wait 3 seconds then retry same model
+            await new Promise(r => setTimeout(r, 3000));
+            continue;
+          }
+          if (isOverload) {
+            // All retries exhausted — try next model
+            lastError = data.error.message;
+            _workingModel = null;
+            break;
+          }
+          if (isNotFound) {
+            lastError = data.error.message;
+            _workingModel = null;
+            break;
+          }
+          throw new Error(data.error.message);
         }
-        throw new Error(data.error.message);
+        _workingModel = model;
+        return data;
+      } catch(e) {
+        const msg = (e.message || '').toLowerCase();
+        const isOverload = msg.includes('high demand') || msg.includes('overload') ||
+          msg.includes('429') || msg.includes('503') || msg.includes('resource exhausted');
+        const isNotFound = msg.includes('not found') || msg.includes('not supported') ||
+          msg.includes('no longer available') || msg.includes('deprecated');
+        if (isOverload && attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
+        if (isOverload || isNotFound) { lastError = e.message; break; }
+        throw e;
       }
-      _workingModel = model;
-      return data;
-    } catch(e) {
-      const msg = (e.message || '').toLowerCase();
-      if (msg.includes('not found') || msg.includes('not supported') ||
-          msg.includes('no longer available') || msg.includes('deprecated')) {
-        lastError = e.message;
-        continue;
-      }
-      throw e;
     }
   }
-  throw new Error('OCR failed — no working Gemini model. Last error: ' + lastError +
-    '. Please verify your API key in ⚙ Config has Gemini API enabled at aistudio.google.com');
+  throw new Error('All Gemini models failed. Last error: ' + lastError);
 }
 
 // ITR years to show
@@ -1979,27 +1995,66 @@ async function runOcr(key, docType) {
       }
     }
 
-    if (!allRawText.trim()) {
-      throw new Error('No text could be extracted from the image(s). Please try a clearer photo.');
-    }
-
     console.log('Cloud Vision raw text (' + allRawText.length + ' chars):', allRawText.substring(0, 300));
     btn && (btn.innerHTML = '<span class="spinner"></span><span> Structuring data...</span>');
 
-    // ── Step 2: Structure with Gemini ─────────────────────
     let jsonRaw = null;
-    try {
-      jsonRaw = await structureWithGemini(allRawText, prompt);
-      console.log('Gemini structured response:', jsonRaw.substring(0, 200));
-    } catch(geminiErr) {
-      console.warn('Gemini structuring failed:', geminiErr.message, '— trying OpenAI fallback');
-      btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying OpenAI fallback...</span>');
+
+    if (allRawText.trim()) {
+      // ── Text extracted — Structure with Gemini, fallback OpenAI ──
+      try {
+        jsonRaw = await structureWithGemini(allRawText, prompt);
+        console.log('Gemini structured response:', jsonRaw.substring(0, 200));
+      } catch(geminiErr) {
+        console.warn('Gemini structuring failed:', geminiErr.message, '— trying OpenAI proxy');
+        btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying OpenAI fallback...</span>');
+        try {
+          jsonRaw = await structureWithOpenAI(allRawText, prompt);
+          console.log('OpenAI proxy response:', jsonRaw.substring(0, 200));
+        } catch(oaErr) {
+          throw new Error('Both Gemini and OpenAI structuring failed. Gemini: ' + geminiErr.message + ' | OpenAI: ' + oaErr.message);
+        }
+      }
+    } else {
+      // ── Cloud Vision got nothing — try Gemini direct vision (image as base64) ──
+      console.warn('Cloud Vision returned no text — trying Gemini direct vision');
+      btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying Gemini vision...</span>');
+
+      // Collect image parts from local files
+      const imgParts = [];
+      const localFiles = (files && files.length > 0) ? files.slice(0, maxPages) : [];
+      for (let i = 0; i < localFiles.length; i++) {
+        imgParts.push({ inline_data: { mime_type: localFiles[i].mimeType, data: localFiles[i].base64 } });
+      }
+
+      if (imgParts.length > 0) {
+        try {
+          const d = await callGemini(getGeminiKey(), {
+            contents: [{ parts: [{ text: prompt }, ...imgParts] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 2048 }
+          });
+          jsonRaw = d.candidates[0].content.parts[0].text.trim();
+          console.log('Gemini direct vision response:', jsonRaw.substring(0, 200));
+        } catch(gemVisionErr) {
+          // ── Gemini direct vision failed — try OpenAI proxy with image description request ──
+          console.warn('Gemini direct vision failed:', gemVisionErr.message, '— trying OpenAI proxy');
+          btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying OpenAI fallback...</span>');
+          try {
+            // For OpenAI fallback without image, ask it to extract from prompt description
+            jsonRaw = await structureWithOpenAI('Image text extraction failed. Please return an empty JSON with the correct field structure based on the document type.', prompt);
+            console.log('OpenAI fallback (no image):', jsonRaw.substring(0, 200));
+          } catch(oaErr) {
+            throw new Error('All extraction methods failed. Please try a clearer image. Last error: ' + gemVisionErr.message);
+          }
+        }
+      } else {
+        // Drive files with no local copy — can't send to Gemini directly
+        throw new Error('Could not extract text from the Drive file. Please re-upload the document and try again.');
+      }
     }
 
-    // ── Step 3: OpenAI fallback if Gemini failed ──────────
     if (!jsonRaw) {
-      jsonRaw = await structureWithOpenAI(allRawText, prompt);
-      console.log('OpenAI fallback response:', jsonRaw.substring(0, 200));
+      throw new Error('No response received from AI. Please try again.');
     }
 
     const parsed = parseOcrJson(jsonRaw, docType);
@@ -2599,6 +2654,25 @@ function buildItrSection(forceRebuild) {
   restoreItrFieldsFromStore();
 }
 
+// Helper — apply parsed ITR/F16 result to form fields
+function _applyItrParsed(parsed, docKind, prefix, shortYr) {
+  if (docKind === 'itr') {
+    const inc = parsed.income || parsed.Income || parsed.INCOME || '';
+    const ack = parsed.ackNo  || parsed.ackno  || parsed.AckNo  || parsed.acknowledgement || '';
+    if (inc) { forceSetVal(`f_itr_${prefix}_${shortYr}`, inc); itrStore[`f_itr_${prefix}_${shortYr}`] = inc; }
+    if (ack) { forceSetVal(`f_itr_ack_${prefix}_${shortYr}`, ack); itrStore[`f_itr_ack_${prefix}_${shortYr}`] = ack; }
+    if (inc || ack) { showToast('ITR ' + shortYr + ' extracted ✅', 'success'); }
+    else { showToast('Text read but income/ack not found — check console', 'error'); }
+  } else {
+    const inc  = parsed.income  || parsed.Income  || parsed.INCOME  || '';
+    const cert = parsed.certNo  || parsed.certno  || parsed.CertNo  || parsed.certificateNo || '';
+    if (inc)  { forceSetVal(`f_f16_inc_${prefix}_${shortYr}`, inc);  itrStore[`f_f16_inc_${prefix}_${shortYr}`]  = inc; }
+    if (cert) { forceSetVal(`f_f16_cert_${prefix}_${shortYr}`, cert); itrStore[`f_f16_cert_${prefix}_${shortYr}`] = cert; }
+    if (inc || cert) { showToast('Form 16 ' + shortYr + ' extracted ✅', 'success'); }
+    else { showToast('Text read but income/cert not found — check console', 'error'); }
+  }
+}
+
 async function runItrOcr(prefix, shortYr, docKind) {
   const key = `${docKind}_${prefix}_${shortYr}`;
   const geminiKey = getGeminiKey();
@@ -2674,7 +2748,41 @@ Return: {"income":"gross total income — positive number","certNo":"certificate
     }
 
     if (!itrText || itrText.trim().length < 10) {
-      throw new Error('No text could be extracted from the image. Please try a clearer photo.');
+      // Cloud Vision failed — try Gemini direct vision if we have local file
+      if (files.length > 0) {
+        console.warn('Cloud Vision got no text — trying Gemini direct vision for ITR/F16');
+        btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying Gemini vision...</span>');
+        const imgData = files[0];
+        try {
+          const d = await callGemini(geminiKey, {
+            contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: imgData.mimeType, data: imgData.base64 } }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+          });
+          const raw = d.candidates[0].content.parts[0].text.trim();
+          const parsed = parseOcrJson(raw, docKind);
+          console.log('Gemini direct ITR/F16 parsed:', JSON.stringify(parsed));
+          _applyItrParsed(parsed, docKind, prefix, shortYr);
+          var _an = (document.getElementById('f_app_name') || {}).value || '';
+          if (_an.trim()) saveDraft(_an.trim()).catch(function() {});
+          if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
+          return;
+        } catch(gemVisionErr) {
+          console.warn('Gemini direct also failed:', gemVisionErr.message, '— trying OpenAI proxy');
+          btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying OpenAI fallback...</span>');
+          try {
+            const raw = await structureWithOpenAI('Extract income and certificate/acknowledgement number from this ' + docKind + ' document image. ' + prompt, prompt);
+            const parsed = parseOcrJson(raw, docKind);
+            _applyItrParsed(parsed, docKind, prefix, shortYr);
+            var _an2 = (document.getElementById('f_app_name') || {}).value || '';
+            if (_an2.trim()) saveDraft(_an2.trim()).catch(function() {});
+            if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
+            return;
+          } catch(oaErr) {
+            throw new Error('All extraction methods failed. Please try a clearer photo.');
+          }
+        }
+      }
+      throw new Error('No text could be extracted. Please re-upload the document and try again.');
     }
 
     btn && (btn.innerHTML = '<span class="spinner"></span><span> Structuring data...</span>');
@@ -2682,7 +2790,7 @@ Return: {"income":"gross total income — positive number","certNo":"certificate
 
     let raw;
     try {
-      // Try Gemini first
+      // Try Gemini structuring first
       const d = await callGemini(geminiKey, {
         contents: [{ parts: [{ text: textPrompt }] }],
         generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
@@ -2690,36 +2798,14 @@ Return: {"income":"gross total income — positive number","certNo":"certificate
       raw = d.candidates[0].content.parts[0].text.trim();
     } catch(gemErr) {
       console.warn('Gemini failed for ITR/F16, trying OpenAI proxy:', gemErr.message);
-      // OpenAI proxy fallback
+      btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying OpenAI fallback...</span>');
       raw = await structureWithOpenAI(itrText, prompt);
     }
 
     console.log('ITR/F16 raw response:', raw);
-    // Use the shared parseOcrJson for consistent parsing
     const parsed = parseOcrJson(raw, docKind);
     console.log('ITR/F16 parsed:', JSON.stringify(parsed));
-
-    if (docKind === 'itr') {
-      const inc = parsed.income || parsed.Income || parsed.INCOME || '';
-      const ack = parsed.ackNo  || parsed.ackno  || parsed.AckNo  || parsed.acknowledgement || '';
-      if (inc) { forceSetVal(`f_itr_${prefix}_${shortYr}`, inc); itrStore[`f_itr_${prefix}_${shortYr}`] = inc; }
-      if (ack) { forceSetVal(`f_itr_ack_${prefix}_${shortYr}`, ack); itrStore[`f_itr_ack_${prefix}_${shortYr}`] = ack; }
-      if (inc || ack) {
-        showToast('ITR ' + shortYr + ' extracted ✅', 'success');
-      } else {
-        showToast('Text read but income/ack not found — check console', 'error');
-      }
-    } else {
-      const inc  = parsed.income  || parsed.Income  || parsed.INCOME  || '';
-      const cert = parsed.certNo  || parsed.certno  || parsed.CertNo  || parsed.certificateNo || '';
-      if (inc)  { forceSetVal(`f_f16_inc_${prefix}_${shortYr}`, inc); itrStore[`f_f16_inc_${prefix}_${shortYr}`] = inc; }
-      if (cert) { forceSetVal(`f_f16_cert_${prefix}_${shortYr}`, cert); itrStore[`f_f16_cert_${prefix}_${shortYr}`] = cert; }
-      if (inc || cert) {
-        showToast('Form 16 ' + shortYr + ' extracted ✅', 'success');
-      } else {
-        showToast('Text read but income/cert not found — check console', 'error');
-      }
-    }
+    _applyItrParsed(parsed, docKind, prefix, shortYr);
 
     // Save draft after extraction
     var _appName = (document.getElementById('f_app_name') || {}).value || '';
