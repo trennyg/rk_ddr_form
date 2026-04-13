@@ -1,0 +1,3464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>R.K. Associates — DDR Field Form</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2334;
+    --border: #2a3048;
+    --accent: #f0b429;
+    --accent2: #e85d4a;
+    --green: #2ec27e;
+    --text: #e8eaf0;
+    --muted: #7a8099;
+    --label: #a0a8c0;
+    --radius: 10px;
+    --tab-h: 52px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── HEADER ── */
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .app-header .logo {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: #000; flex-shrink: 0;
+  }
+  .app-header .title { font-weight: 600; font-size: 15px; line-height: 1.2; }
+  .app-header .subtitle { font-size: 11px; color: var(--muted); }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .api-key-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--label); border-radius: 7px; padding: 6px 11px;
+    font-size: 12px; font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+  }
+  .api-key-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── TAB BAR ── */
+  .tab-bar {
+    display: flex;
+    overflow-x: auto;
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    scrollbar-width: none;
+    position: sticky;
+    top: 65px;
+    z-index: 99;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0 16px;
+    height: var(--tab-h);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab-btn .tab-num {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--border);
+    font-size: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn.active .tab-num { background: var(--accent); color: #000; }
+  .tab-btn.done .tab-num { background: var(--green); color: #000; }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  /* ── TAB CONTENT ── */
+  .tab-pane { display: none; padding: 18px; max-width: 700px; margin: 0 auto; }
+  .tab-pane.active { display: block; }
+
+  /* ── SECTION CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .card-hdr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 11px 15px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-body { padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── FORM ELEMENTS ── */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 480px) {
+    .field-row { grid-template-columns: 1fr; }
+    .field-row.three { grid-template-columns: 1fr 1fr; }
+  }
+
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--label);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  label .req { color: var(--accent2); margin-left: 2px; }
+
+  input[type=text], input[type=date], input[type=tel],
+  input[type=email], input[type=number], select, textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    background: #13161f;
+  }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a8099' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
+  textarea { resize: vertical; min-height: 80px; }
+  input::placeholder, textarea::placeholder { color: var(--muted); font-size: 13px; }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--bg);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: #1a1e2c;
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    width: 100%; height: 100%; z-index: 2;
+    /* Covers entire zone — tap anywhere opens file picker directly */
+    /* No JS onclick needed — browser handles it natively */
+  }
+  .upload-zone .uz-icon { font-size: 24px; margin-bottom: 6px; }
+  .upload-zone .uz-text { font-size: 12px; color: var(--muted); }
+  .upload-zone .uz-hint { font-size: 11px; color: var(--border); margin-top: 3px; }
+  .upload-zone.has-file {
+    border-color: var(--green);
+    background: #0d1a13;
+  }
+  .upload-zone.has-file .uz-icon { color: var(--green); }
+
+  /* file list inside upload */
+  .file-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+  .file-item {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border-radius: 6px;
+    padding: 6px 10px; font-size: 12px;
+  }
+  .file-item .fi-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-item .fi-remove {
+    background: none; border: none; color: var(--accent2);
+    cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px;
+  }
+  .file-item .fi-status { font-size: 11px; color: var(--muted); }
+
+  /* ── OCR EXTRACT BUTTON ── */
+  .ocr-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #000;
+    border: none; border-radius: 7px;
+    padding: 8px 14px; font-size: 13px;
+    font-weight: 600; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: opacity 0.15s;
+    width: fit-content;
+  }
+  .ocr-btn:hover { opacity: 0.85; }
+  .ocr-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ocr-btn.loading { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+  /* ── CO-APP TOGGLE STRIP ── */
+  .coapp-strip {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .coapp-tab {
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    background: var(--surface2); border: 1.5px solid var(--border);
+    color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .coapp-tab.active { background: var(--accent); border-color: var(--accent); color: #000; }
+  .coapp-tab.add-btn {
+    border-style: dashed; color: var(--accent); border-color: var(--accent);
+    background: transparent;
+  }
+  .coapp-tab.remove-btn { color: var(--accent2); border-color: var(--accent2); background: transparent; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 10px 20px; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: none; transition: opacity 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: var(--accent2); color: #fff; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:not(:disabled):hover { opacity: 0.85; }
+
+  .nav-btns { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; padding: 16px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    max-width: 480px; width: 100%;
+    max-height: 85vh; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transform: translateY(20px); transition: transform 0.2s;
+    position: relative; z-index: 1001;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-hdr {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600; font-size: 15px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .modal-foot { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-foot .btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; min-height: 44px; min-width: 80px; }
+
+  .extracted-field {
+    background: var(--surface2); border-radius: 8px; padding: 10px 12px;
+  }
+  .extracted-field .ef-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .extracted-field .ef-value { font-size: 14px; color: var(--text); font-family: 'DM Mono', monospace; }
+  .extracted-field .ef-value.empty { color: var(--muted); font-style: italic; font-family: 'DM Sans', sans-serif; }
+
+  /* ── SUBMIT TAB ── */
+  .submit-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+  }
+  .submit-type-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .submit-type-btn {
+    padding: 16px; border-radius: 10px;
+    border: 2px solid var(--border);
+    background: var(--bg); cursor: pointer;
+    text-align: center; transition: all 0.15s;
+  }
+  .submit-type-btn .st-icon { font-size: 24px; margin-bottom: 6px; }
+  .submit-type-btn .st-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .submit-type-btn .st-desc { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .submit-type-btn.selected { border-color: var(--accent); background: #1a1a0a; }
+  .submit-type-btn.selected .st-title { color: var(--accent); }
+
+  .progress-bar { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; width: 0%; }
+
+  .status-msg {
+    padding: 12px 14px; border-radius: 8px; font-size: 13px;
+    margin-top: 10px; display: none;
+  }
+  .status-msg.success { background: #0d2318; border: 1px solid var(--green); color: var(--green); }
+  .status-msg.error { background: #200f0e; border: 1px solid var(--accent2); color: var(--accent2); }
+  .status-msg.info { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+
+  /* ── BUSINESS OWNER FIELDS ── */
+  .biz-fields {
+    background: #12192a;
+    border: 1px solid #2a3a5a;
+    border-radius: 8px;
+    padding: 14px;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .biz-fields.visible { display: flex; }
+  .biz-fields-hdr {
+    font-size: 11px; font-weight: 700; color: #5a8ac0;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding-bottom: 8px; border-bottom: 1px solid #2a3a5a;
+  }
+
+  /* ── API KEY MODAL ── */
+  #apiKeyModal .modal { max-width: 400px; }
+  .config-row { display: flex; flex-direction: column; gap: 6px; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 18px;
+    font-size: 13px; color: var(--text); z-index: 2000;
+    transition: transform 0.3s; white-space: nowrap;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── SPINNER ── */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+  }
+  .spinner.light {
+    border-color: rgba(255,255,255,0.2);
+    border-top-color: var(--muted);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── MISC ── */
+  .divider { height: 1px; background: var(--border); margin: 4px 0; }
+  .hint { font-size: 11px; color: var(--muted); }
+  .badge {
+    display: inline-flex; align-items: center;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 6px;
+    font-size: 11px; font-family: 'DM Mono', monospace; color: var(--label);
+  }
+  .section-title {
+    font-size: 13px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 2px;
+  }
+  .itr-year-block {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; margin-bottom: 8px;
+  }
+  .itr-year-label {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; margin-bottom: 10px;
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div class="logo">RK</div>
+  <div>
+    <div class="title">R.K. Associates</div>
+    <div class="subtitle">DDR Field Data Entry Form</div>
+  </div>
+  <div class="header-right">
+    <!-- Config hidden — API key is pre-configured -->
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar" id="tabBar">
+  <button class="tab-btn active" onclick="switchTab(0)" id="tab0"><span class="tab-num">1</span> Bank</button>
+  <button class="tab-btn" onclick="switchTab(1)" id="tab1"><span class="tab-num">2</span> Applicant</button>
+  <button class="tab-btn" onclick="switchTab(2)" id="tab2"><span class="tab-num">3</span> Co-Apps</button>
+  <button class="tab-btn" onclick="switchTab(3)" id="tab3"><span class="tab-num">4</span> Field Visit</button>
+  <button class="tab-btn" onclick="switchTab(4)" id="tab4"><span class="tab-num">5</span> ITR / F16</button>
+  <button class="tab-btn" onclick="switchTab(5)" id="tab5"><span class="tab-num">6</span> Property</button>
+  <button class="tab-btn" onclick="switchTab(6)" id="tab6"><span class="tab-num">7</span> Car Loan</button>
+  <button class="tab-btn" onclick="switchTab(7)" id="tab7"><span class="tab-num">8</span> References</button>
+  <button class="tab-btn" onclick="switchTab(8)" id="tab8"><span class="tab-num">9</span> Submit</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 0 — BANK INFO
+════════════════════════════════════════════ -->
+<div class="tab-pane active" id="pane0">
+  <div class="card">
+    <div class="card-hdr">🏦 Bank & Loan Details</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Bank Name & Branch <span class="req">*</span></label>
+        <input type="text" id="f_bank" placeholder="e.g. HDFC Bank, Andheri Branch">
+      </div>
+      <div class="field">
+        <label>Loan Amount / Product <span class="req">*</span></label>
+        <input type="text" id="f_loan" placeholder="e.g. ₹35,00,000 Home Loan">
+      </div>
+    </div>
+  </div>
+  <div class="nav-btns">
+    <span></span>
+    <button class="btn btn-primary" type="button" onclick="switchTab(1)">Next → Applicant</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 1 — APPLICANT
+════════════════════════════════════════════ -->
+<div class="tab-pane" id="pane1">
+
+  <!-- PAN CARD -->
+  <div class="card">
+    <div class="card-hdr">🪪 PAN Card (Photo / PDF)</div>
+    <div class="card-body">
+      <div class="upload-zone" id="uz_app_pan">
+        <input type="file" id="fu_app_pan" accept="image/*,.pdf" multiple onchange="handleFileSelect('app_pan', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📄</div>
+        <div class="uz-text">Tap to upload PAN Card</div>
+        <div class="uz-hint">JPG, PNG or PDF supported</div>
+      </div>
+      <div class="file-list" id="fl_app_pan"></div>
+      <button class="ocr-btn" id="ocr_app_pan" onclick="runOcr('app_pan','pan')" disabled>
+        <span>✨ Extract from PAN</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- PERSONAL INFO -->
+  <div class="card">
+    <div class="card-hdr">👤 Personal Information</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Full Name <span class="req">*</span></label>
+        <input type="text" id="f_app_name" placeholder="As on PAN card">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Date of Birth</label>
+          <input type="date" id="f_app_dob">
+        </div>
+        <div class="field">
+          <label>Gender</label>
+          <select id="f_app_gender">
+            <option value="">Select</option>
+            <option>Male</option><option>Female</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Marital Status</label>
+          <select id="f_app_marital">
+            <option value="">Select</option>
+            <option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Education Qualification</label>
+          <input type="text" id="f_app_education" placeholder="e.g. B.Com, B.Tech, 12th Pass, M.B.A.">
+        </div>
+      </div>
+      <div class="field">
+        <label>Mobile Number</label>
+        <input type="tel" id="f_app_mobile" placeholder="10-digit mobile">
+      </div>
+    </div>
+  </div>
+
+  <!-- EMPLOYMENT -->
+  <div class="card">
+    <div class="card-hdr">💼 Employment Details</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Employment Status <span class="req">*</span></label>
+        <select id="f_app_emp_status" onchange="handleEmpStatusChange('app')">
+          <option value="">Select</option>
+          <option value="Salaried">Salaried</option>
+          <option value="Business Owner">Business Owner</option>
+          <option value="Self Employed">Self Employed</option>
+          <option value="Retired">Retired</option>
+          <option value="Homemaker">Homemaker</option>
+          <option value="Student">Student</option>
+          <option value="Unemployed">Unemployed</option>
+        </select>
+      </div>
+
+      <!-- SALARIED FIELDS -->
+      <div id="app_salaried_fields">
+        <div class="card-body" style="padding:0;gap:12px;">
+          <div class="upload-zone" id="uz_app_payslip">
+            <input type="file" id="fu_app_payslip" accept="image/*,.pdf" multiple onchange="handleFileSelect('app_payslip', this.files)" onclick="event.stopPropagation()">
+            <div class="uz-icon">📋</div>
+            <div class="uz-text">Upload Payslip / Salary Certificate</div>
+            <div class="uz-hint">JPG, PNG or PDF</div>
+          </div>
+          <div class="file-list" id="fl_app_payslip"></div>
+          <button class="ocr-btn" id="ocr_app_payslip" onclick="runOcr('app_payslip','payslip')" disabled>
+            <span>✨ Extract from Payslip</span>
+          </button>
+          <div class="field-row">
+            <div class="field">
+              <label>Employer / Company</label>
+              <input type="text" id="f_app_company" placeholder="Company name">
+            </div>
+            <div class="field">
+              <label>Designation</label>
+              <input type="text" id="f_app_designation" placeholder="Job title">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Employee Code</label>
+              <input type="text" id="f_app_emp_code" placeholder="Emp code">
+            </div>
+            <div class="field">
+              <label>Branch / Location</label>
+              <input type="text" id="f_app_branch" placeholder="Branch">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Net Monthly Pay</label>
+              <input type="text" id="f_app_net_pay" placeholder="₹ Amount">
+            </div>
+            <div class="field">
+              <label>Date of Joining</label>
+              <input type="date" id="f_app_joining">
+            </div>
+          </div>
+          <div class="field">
+            <label>Office Address</label>
+            <textarea id="f_app_office_addr" placeholder="Full office address" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- BUSINESS OWNER FIELDS -->
+      <div class="biz-fields" id="app_biz_fields">
+        <div class="biz-fields-hdr">🏢 Business / GST / Udyam Details</div>
+        <div class="upload-zone" id="uz_app_biz_cert">
+          <input type="file" id="fu_app_biz_cert" accept="image/*,.pdf" multiple onchange="handleFileSelect('app_biz_cert', this.files)" onclick="event.stopPropagation()">
+          <div class="uz-icon">📜</div>
+          <div class="uz-text">Upload GST Certificate / Udyam Certificate</div>
+          <div class="uz-hint">JPG, PNG or PDF</div>
+        </div>
+        <div class="file-list" id="fl_app_biz_cert"></div>
+        <button class="ocr-btn" id="ocr_app_biz_cert" onclick="runOcr('app_biz_cert','biz')" disabled>
+          <span>✨ Extract from Certificate</span>
+        </button>
+        <div class="field-row">
+          <div class="field">
+            <label>GST Number</label>
+            <input type="text" id="f_app_gst_no" placeholder="15-char GSTIN" style="font-family:'DM Mono',monospace">
+          </div>
+          <div class="field">
+            <label>Udyam Number</label>
+            <input type="text" id="f_app_udyam_no" placeholder="UDYAM-XX-00-000000" style="font-family:'DM Mono',monospace">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Legal Name of Business</label>
+            <input type="text" id="f_app_gst_legal_name" placeholder="Registered legal name">
+          </div>
+          <div class="field">
+            <label>Organisation Type</label>
+            <select id="f_app_gst_constitution">
+              <option value="">Select</option>
+              <option>Proprietorship</option><option>Partnership</option>
+              <option>Private Limited Company</option><option>Public Limited Company</option>
+              <option>LLP</option><option>Trust</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Designation / Role</label>
+            <input type="text" id="f_app_biz_designation" placeholder="e.g. Proprietor, Director">
+          </div>
+          <div class="field">
+            <label>Net Monthly Income</label>
+            <input type="text" id="f_app_biz_net_pay" placeholder="₹ Amount">
+          </div>
+        </div>
+        <div class="field">
+          <label>Directors / Partners Names</label>
+          <input type="text" id="f_app_gst_directors" placeholder="Comma-separated names">
+        </div>
+        <div class="field">
+          <label>Legal / Registered Address</label>
+          <textarea id="f_app_gst_address" placeholder="Registered business address" rows="2"></textarea>
+        </div>
+        <div class="field">
+          <label>Enterprise Type (Udyam)</label>
+          <select id="f_app_udyam_ent_type">
+            <option value="">Select</option>
+            <option>Micro</option><option>Small</option><option>Medium</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Date of Incorporation / Start</label>
+          <input type="date" id="f_app_biz_joining">
+        </div>
+        <div class="field">
+          <label>Business Address</label>
+          <textarea id="f_app_biz_office_addr" placeholder="Principal place of business" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMPLOYMENT VERIFICATION REMARKS - always visible regardless of employment type -->
+  <div class="card">
+    <div class="card-hdr">📝 Employment / Business Verification Remarks</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Verification Remarks</label>
+        <textarea id="f_app_emp_remarks" placeholder="e.g. Office / business premises visited. Employment / business confirmed at stated details. Verification found satisfactory." rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANK STATEMENT -->
+  <div class="card">
+    <div class="card-hdr">🏛 Bank Statement</div>
+    <div class="card-body">
+      <div class="upload-zone" id="uz_app_bank_stmt">
+        <input type="file" id="fu_app_bank_stmt" accept="image/*,.pdf" multiple onchange="handleFileSelect('app_bank_stmt', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📊</div>
+        <div class="uz-text">Upload Bank Statement</div>
+        <div class="uz-hint">JPG, PNG or PDF — multi-page OK</div>
+      </div>
+      <div class="file-list" id="fl_app_bank_stmt"></div>
+      <button class="ocr-btn" id="ocr_app_bank_stmt" onclick="runOcr('app_bank_stmt','bank')" disabled>
+        <span>✨ Extract Bank Details</span>
+      </button>
+      <div class="field-row">
+        <div class="field">
+          <label>Bank Name</label>
+          <input type="text" id="f_app_bank_name" placeholder="Bank name">
+        </div>
+        <div class="field">
+          <label>Bank Branch</label>
+          <input type="text" id="f_app_bank_branch" placeholder="Branch name">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Account Number</label>
+          <input type="text" id="f_app_account_no" placeholder="Account number" style="font-family:'DM Mono',monospace">
+        </div>
+        <div class="field">
+          <label>Account Type</label>
+          <select id="f_app_account_type">
+            <option value="">Select</option>
+            <option>Savings</option><option>Current</option><option>Salary</option><option>NRI</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KYC DOCUMENTS -->
+  <div class="card">
+    <div class="card-hdr">🔏 KYC Documents</div>
+    <div class="card-body">
+      <div class="field">
+        <label>KYC PAN Card Upload</label>
+        <div class="upload-zone" id="uz_app_kyc_pan">
+          <input type="file" id="fu_app_kyc_pan" accept="image/*,.pdf" onchange="handleFileSelect('app_kyc_pan', this.files)" onclick="event.stopPropagation()">
+          <div class="uz-icon">🪪</div>
+          <div class="uz-text">Upload KYC PAN Card</div>
+        </div>
+        <div class="file-list" id="fl_app_kyc_pan"></div>
+        <button class="ocr-btn" id="ocr_app_kyc_pan" onclick="runOcr('app_kyc_pan','kyc_pan')" disabled style="margin-top:6px">
+          <span>✨ Extract PAN Number</span>
+        </button>
+        <input type="text" id="f_app_kyc_pan_no" placeholder="PAN Number (auto-filled or type)" style="margin-top:6px;font-family:'DM Mono',monospace;letter-spacing:0.1em">
+      </div>
+      <div class="field">
+        <label>KYC Aadhar Card Upload</label>
+        <div class="upload-zone" id="uz_app_kyc_aadhar">
+          <input type="file" id="fu_app_kyc_aadhar" accept="image/*,.pdf" multiple onchange="handleFileSelect('app_kyc_aadhar', this.files)" onclick="event.stopPropagation()">
+          <div class="uz-icon">🪪</div>
+          <div class="uz-text">Upload KYC Aadhar Card</div>
+        </div>
+        <div class="file-list" id="fl_app_kyc_aadhar"></div>
+        <button class="ocr-btn" id="ocr_app_kyc_aadhar" onclick="runOcr('app_kyc_aadhar','kyc_aadhar')" disabled style="margin-top:6px">
+          <span>✨ Extract Aadhar Number</span>
+        </button>
+        <input type="text" id="f_app_kyc_aadhar_no" placeholder="Aadhar Number (auto-filled or type)" style="margin-top:6px;font-family:'DM Mono',monospace;letter-spacing:0.1em">
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-secondary" type="button" onclick="switchTab(0)">← Bank</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(2)">Next → Co-Apps</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 2 — CO-APPLICANTS
+════════════════════════════════════════════ -->
+<div class="tab-pane" id="pane2">
+  <div class="coapp-strip" id="coAppStrip">
+    <button class="coapp-tab add-btn" onclick="addCoApp()">+ Add Co-Applicant</button>
+  </div>
+  <div id="coAppContainer"></div>
+  <div class="nav-btns">
+    <button class="btn btn-secondary" type="button" onclick="switchTab(1)">← Applicant</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(3)">Next → Field Visit</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 3 — FIELD VISIT
+════════════════════════════════════════════ -->
+<div class="tab-pane" id="pane3">
+  <div class="card">
+    <div class="card-hdr">👤 Visit Information</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Executive Name</label>
+          <input type="text" id="f_exec_name" placeholder="Field executive name">
+        </div>
+        <div class="field">
+          <label>Visit Date & Time</label>
+          <input type="datetime-local" id="f_visit_dt">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">🏠 Current Residence</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Current Address <span class="req">*</span></label>
+        <textarea id="f_current_addr" placeholder="Full current address" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label>Permanent Address</label>
+        <textarea id="f_perm_addr" placeholder="Leave blank if same as current" rows="2"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Duration of Stay</label>
+          <input type="text" id="f_duration_stay" placeholder="e.g. 5 years">
+        </div>
+        <div class="field">
+          <label>Residence Type</label>
+          <select id="f_residence_type">
+            <option value="">Select</option>
+            <option>Owned</option><option>Rented</option><option>Company Provided</option>
+            <option>Family Owned</option><option>PG / Hostel</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Society / Building Name</label>
+          <input type="text" id="f_society_name" placeholder="Building name">
+        </div>
+        <div class="field">
+          <label>Locality Type</label>
+          <select id="f_locality_type">
+            <option value="">Select</option>
+            <option>Urban</option><option>Semi-Urban</option><option>Rural</option>
+            <option>Metropolitan</option><option>Commercial Area</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Field Visit Notes & Observations</label>
+        <textarea id="f_field_notes" placeholder="Nameplate visible, condition of residence, access, observations..." rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESIDENCE VERIFICATION REMARKS PER PERSON -->
+  <div class="card">
+    <div class="card-hdr">📝 Residence Verification Remarks</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Applicant — Residence Remarks</label>
+        <textarea id="f_app_res_remarks" placeholder="e.g. Residence verified at the above address. Nameplate with applicant's name found. Neighbours confirmed stay. Locality is residential. Verification found satisfactory." rows="3"></textarea>
+      </div>
+      <div id="co_res_remarks_container"></div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-secondary" type="button" onclick="switchTab(2)">← Co-Apps</button>
+    <button class="btn btn-primary" type="button" onclick="buildCoResRemarks(); switchTab(4)">Next → ITR / F16</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 4 — ITR / FORM 16
+════════════════════════════════════════════ -->
+<div class="tab-pane" id="pane4">
+  <div id="itrContainer"></div>
+  <div class="nav-btns">
+    <button class="btn btn-secondary" type="button" onclick="switchTab(3)">← Field Visit</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(5)">Next → Property</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 5 — PROPERTY / INDEX II
+════════════════════════════════════════════ -->
+<div class="tab-pane" id="pane5">
+
+  <!-- INDEX II UPLOAD — TOP, fills everything below -->
+  <div class="card" style="border-color:#3a5a8a;">
+    <div class="card-hdr" style="background:#12192a;color:#7ab4f0;">📄 Step 1 — Upload Index II (Auto-fills all fields below)</div>
+    <div class="card-body">
+      <p class="hint" style="margin-bottom:10px;">Upload the Index II document first. It will auto-extract property address, purchaser, seller, area, registration details — even if the document is in <strong style="color:var(--accent)">Marathi</strong> (translated to English automatically).</p>
+      <div class="upload-zone" id="uz_index2">
+        <input type="file" id="fu_index2" accept="image/*,.pdf" multiple onchange="handleFileSelect('index2', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📋</div>
+        <div class="uz-text">Upload Index II Document</div>
+        <div class="uz-hint">JPG, PNG or PDF — Marathi documents fully supported</div>
+      </div>
+      <div class="file-list" id="fl_index2"></div>
+      <button class="ocr-btn" id="ocr_index2" onclick="runOcr('index2','index2')" disabled style="margin-top:8px">
+        <span>✨ Extract &amp; Translate Index II</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- PROPERTY DETAILS — filled by Index II OCR or manually -->
+  <div class="card">
+    <div class="card-hdr">🏢 Step 2 — Property Details (Auto-filled or type manually)</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Property Address</label>
+        <textarea id="f_prop_address" placeholder="Auto-filled from Index II or type here" rows="2"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Purchaser Name</label>
+          <input type="text" id="f_purchaser" placeholder="Buyer name">
+        </div>
+        <div class="field">
+          <label>Seller Name</label>
+          <input type="text" id="f_seller" placeholder="Seller / vendor name">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>House Ref / Survey / CTS No.</label>
+          <input type="text" id="f_house_ref" placeholder="Survey / CTS number">
+        </div>
+        <div class="field">
+          <label>Property Area</label>
+          <input type="text" id="f_prop_area" placeholder="e.g. 650 sq ft">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Property Type</label>
+          <input type="text" id="f_prop_type" placeholder="e.g. Residential Flat, Shop, Plot...">
+        </div>
+        <div class="field">
+          <label>Unit Type</label>
+          <input type="text" id="f_unit_type" placeholder="e.g. 2 BHK, Studio, Shop...">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Property Price / Market Value</label>
+          <input type="text" id="f_prop_price" placeholder="₹ Market value">
+        </div>
+        <div class="field">
+          <label>NOC Issued</label>
+          <select id="f_noc">
+            <option value="">Select</option>
+            <option>Yes</option><option>No</option><option>N/A</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTRATION DETAILS -->
+  <div class="card">
+    <div class="card-hdr">🗂 Registration Details</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Registration Number</label>
+          <input type="text" id="f_reg_no" placeholder="Reg. / Doc. number">
+        </div>
+        <div class="field">
+          <label>Registration Date</label>
+          <input type="date" id="f_reg_date">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Stamp Duty Paid (₹)</label>
+          <input type="text" id="f_stamp_duty" placeholder="Amount">
+        </div>
+        <div class="field">
+          <label>Registration Fee Paid (₹)</label>
+          <input type="text" id="f_reg_fee" placeholder="Amount">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Ready Reckoner Rate (₹)</label>
+          <input type="text" id="f_ready_reckoner" placeholder="Rate">
+        </div>
+
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Index II Number</label>
+          <input type="text" id="f_index2_no" placeholder="Index II number">
+        </div>
+        <div class="field">
+          <label>Index II Date</label>
+          <input type="date" id="f_index2_date">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Index II Verified By</label>
+          <input type="text" id="f_index2_by" placeholder="Verifying officer">
+        </div>
+        <div class="field">
+          <label>Ownership Document</label>
+          <select id="f_ownership_doc">
+            <option value="">Select</option>
+            <option>Sale Deed</option><option>Agreement to Sale</option>
+            <option>Gift Deed</option><option>Will</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROPERTY VERIFICATION REMARKS -->
+  <div class="card">
+    <div class="card-hdr">📝 Property Verification Remarks</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Remarks / Observations</label>
+        <textarea id="f_prop_remarks" placeholder="Enter property verification remarks, observations, or notes..." rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-secondary" type="button" onclick="switchTab(4)">← ITR / F16</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(6)">Next → Car Loan</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 6 — CAR LOAN
+════════════════════════════════════════════ -->
+<div class="tab-pane" id="pane6">
+  <div class="card">
+    <div class="card-hdr">🚗 Car Loan / Vehicle Details</div>
+    <div class="card-body">
+      <p class="hint" style="margin-bottom:8px">Only fill this section if the loan product is a Car / Vehicle Loan.</p>
+      <div class="upload-zone" id="uz_car_quotation">
+        <input type="file" id="fu_car_quotation" accept="image/*,.pdf" multiple onchange="handleFileSelect('car_quotation', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📋</div>
+        <div class="uz-text">Upload Car Quotation / Proforma Invoice</div>
+        <div class="uz-hint">JPG, PNG or PDF</div>
+      </div>
+      <div class="file-list" id="fl_car_quotation"></div>
+      <button class="ocr-btn" id="ocr_car_quotation" onclick="runOcr('car_quotation','car')" disabled>
+        <span>✨ Extract Quotation Details</span>
+      </button>
+      <div class="field-row">
+        <div class="field">
+          <label>Car Model</label>
+          <input type="text" id="f_car_model" placeholder="e.g. Hyundai Creta SX">
+        </div>
+        <div class="field">
+          <label>Car Price (On-Road)</label>
+          <input type="text" id="f_car_price" placeholder="₹ On-road price">
+        </div>
+      </div>
+      <div class="field">
+        <label>Dealership Name</label>
+        <input type="text" id="f_dealership_name" placeholder="Showroom / dealership name">
+      </div>
+      <div class="field">
+        <label>Dealership Address</label>
+        <textarea id="f_dealership_addr" placeholder="Full dealership address" rows="2"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Dealership Contact</label>
+          <input type="tel" id="f_dealership_contact" placeholder="Phone number">
+        </div>
+        <div class="field">
+          <label>Sales Executive Name</label>
+          <input type="text" id="f_car_exec_name" placeholder="Executive name">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">📝 Car Loan Verification Remarks</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Verification Remarks</label>
+        <textarea id="f_car_remarks" placeholder="e.g. Contacted dealership and confirmed proforma invoice. Sales executive verified. Quotation found satisfactory." rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-secondary" type="button" onclick="switchTab(5)">← Property</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(7)">Next → References</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 7 — REFERENCES
+════════════════════════════════════════════ -->
+<div class="tab-pane" id="pane7">
+  <div class="card">
+    <div class="card-hdr">📞 Reference 1</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Name</label>
+          <input type="text" id="f_ref1_name" placeholder="Reference name">
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="tel" id="f_ref1_phone" placeholder="Contact number">
+        </div>
+      </div>
+      <div class="field">
+        <label>Conversation Summary</label>
+        <textarea id="f_ref1_conv" placeholder="What the reference said..." rows="2"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">📞 Reference 2</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Name</label>
+          <input type="text" id="f_ref2_name" placeholder="Reference name">
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="tel" id="f_ref2_phone" placeholder="Contact number">
+        </div>
+      </div>
+      <div class="field">
+        <label>Conversation Summary</label>
+        <textarea id="f_ref2_conv" placeholder="What the reference said..." rows="2"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="nav-btns">
+    <button class="btn btn-secondary" type="button" onclick="switchTab(6)">← Car Loan</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(8)">Next → Submit</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 8 — SUBMIT
+════════════════════════════════════════════ -->
+<div class="tab-pane" id="pane8">
+
+  <!-- SAVED DRAFTS — load any past applicant to edit -->
+  <div class="submit-card">
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px;">📂 Saved Drafts</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Load any previous applicant to edit and re-submit. Data auto-saves every time you type.</div>
+    <div style="position:relative;margin-bottom:10px;">
+    <input type="text" id="draftSearch" placeholder="🔍  Type a name to search drafts..." 
+      oninput="filterDrafts(this.value)"
+      style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;">
+  </div>
+  <div id="draftListContainer"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Start typing a name above to search your drafts.</div></div>
+    <button onclick="saveDraftNow()" style="margin-top:8px;background:none;border:1px dashed var(--border);border-radius:7px;color:var(--muted);font-size:12px;padding:7px 14px;cursor:pointer;width:100%;">
+      💾 Save current form as draft now
+    </button>
+  </div>
+  <div class="submit-card">
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Submission Type</div>
+    <div style="font-size:12px;color:var(--muted);">Choose whether this is a final submission or an intermediate save.</div>
+    <div class="submit-type-row">
+      <div class="submit-type-btn" id="btn_intermediate" onclick="setSubmitType('intermediate')">
+        <div class="st-icon">💾</div>
+        <div class="st-title">Save (Intermediate)</div>
+        <div class="st-desc">Data saved. DDR not generated yet.</div>
+      </div>
+      <div class="submit-type-btn selected" id="btn_final" onclick="setSubmitType('final')">
+        <div class="st-icon">🚀</div>
+        <div class="st-title">Final Submit</div>
+        <div class="st-desc">Triggers full DDR report generation.</div>
+      </div>
+    </div>
+  </div>
+  <div class="submit-card">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Upload Summary</div>
+    <div id="uploadSummary" style="font-size:12px;color:var(--muted);">Loading...</div>
+  </div>
+  <div class="submit-card">
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Apps Script Endpoint</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Paste your deployed Apps Script Web App URL here.</div>
+    <input type="text" id="f_endpoint" placeholder="https://script.google.com/macros/s/.../exec" style="font-size:12px;font-family:'DM Mono',monospace;">
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="submitProgress"></div></div>
+  <div class="status-msg" id="statusMsg"></div>
+
+  <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
+    <button class="btn btn-primary" id="submitBtn" onclick="submitForm()" style="width:100%;padding:14px;font-size:15px;">
+      🚀 Submit Form
+    </button>
+    <button class="btn btn-secondary" type="button" onclick="clearForm()" style="width:100%;font-size:13px;">
+      🗑 Clear All Data
+    </button>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-secondary" type="button" onclick="switchTab(7)">← References</button>
+    <span></span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     OCR BOTTOM SHEET (replaces modal — iOS safe)
+════════════════════════════════════════════ -->
+<!-- OCR SHEET — fixed container, scrollable body, buttons outside scroll -->
+<div id="ocrSheet" style="
+  position:fixed; bottom:0; left:0; right:0; z-index:2000;
+  background:var(--surface); border-top:2px solid var(--accent);
+  border-radius:18px 18px 0 0;
+  max-height:80vh;
+  display:flex; flex-direction:column;
+  transform:translateY(100%); transition:transform 0.3s ease;
+  box-shadow:0 -8px 40px rgba(0,0,0,0.6);
+">
+  <!-- HEADER — fixed, never scrolls -->
+  <div style="padding:14px 18px 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); flex-shrink:0;">
+    <div style="font-size:15px; font-weight:700; color:var(--accent);">✨ <span id="ocrSheetTitle">Extracted Data</span></div>
+    <button id="ocrSheetClose" type="button" onclick="closeOcrModal()" style="background:none;border:none;color:var(--muted);font-size:28px;line-height:1;padding:4px 10px;cursor:pointer;">×</button>
+  </div>
+  <!-- BODY — scrollable -->
+  <div id="ocrSheetBody" style="padding:14px 18px; flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:10px;"></div>
+  <!-- FOOTER — fixed, never scrolls, buttons always visible and tappable -->
+  <div style="padding:14px 18px 28px; display:flex; gap:12px; border-top:1px solid var(--border); flex-shrink:0; background:var(--surface);">
+    <button id="ocrSheetDiscard" type="button" onclick="closeOcrModal()" style="
+      flex:1; padding:16px 10px; border-radius:10px; font-size:15px; font-weight:600;
+      background:var(--surface2); border:1px solid var(--border); color:var(--text);
+      cursor:pointer;
+    ">Discard</button>
+    <button id="ocrSheetApply" type="button" onclick="applyOcrData()" style="
+      flex:2; padding:16px 10px; border-radius:10px; font-size:16px; font-weight:700;
+      background:var(--accent); border:none; color:#000;
+      cursor:pointer;
+    ">✓ Use These Values</button>
+  </div>
+</div>
+<div id="ocrSheetOverlay" style="
+  position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1999;
+  display:none; pointer-events:none;
+"></div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="apiKeyModal">
+  <div class="modal">
+    <div class="modal-hdr">⚙ Configuration</div>
+    <div class="modal-body">
+      <div class="config-row">
+        <label>Gemini API Key</label>
+        <input type="password" id="f_gemini_key" placeholder="AIza..." style="font-family:'DM Mono',monospace;font-size:13px;">
+        <span class="hint">Your key is stored only in your browser's local storage. Get a free key at <strong>aistudio.google.com</strong></span>
+        <div id="keyTestResult" style="margin-top:8px;font-size:12px;display:none;padding:8px 10px;border-radius:6px;"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" type="button" onclick="closeApiKeyModal()">Cancel</button>
+      <button class="btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="testApiKey()">🔍 Test Key</button>
+      <button class="btn btn-primary" type="button" onclick="saveApiKey()">Save Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// PDF.js setup
+// ══════════════════════════════════════════════════════════
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+let currentTab = 0;
+let uploadedFiles = {};   // key -> [{file, base64, mimeType, name}]
+let currentDraftKey = null;
+let _draftsCache = [];
+let _isSyncing = false;
+let pendingOcr = null;    // {key, docType, extracted}
+let submitType = 'final';
+let numCoApps = 0;
+let _draftDriveFiles = {}; // key -> [{driveUrl, name, mimeType}] — files already on Drive
+
+// Gemini API — discovers available models dynamically from user's key
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+let _workingModel = null;
+
+// Preferred model names in priority order (will be validated against user's account)
+const PREFERRED_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-preview-04-17',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-001',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-flash-001',
+  'gemini-1.5-flash-8b',
+  'gemini-1.5-pro',
+];
+
+// Fetch the real list of models available for this API key, pick best multimodal one
+async function discoverWorkingModel(key) {
+  if (_workingModel) return _workingModel;
+  try {
+    const listRes = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models?key=' + key
+    );
+    const listData = await listRes.json();
+    if (listData.error) throw new Error('API key error: ' + listData.error.message);
+
+    // Build set of model IDs that support generateContent
+    const available = new Set();
+    (listData.models || []).forEach(function(m) {
+      const supported = m.supportedGenerationMethods || [];
+      if (supported.indexOf('generateContent') > -1) {
+        // m.name is like "models/gemini-1.5-flash" — strip prefix
+        available.add(m.name.replace('models/', ''));
+      }
+    });
+    console.log('Models available for this key:', [...available].join(', '));
+
+    // Pick first preferred model that's in the available set
+    for (let i = 0; i < PREFERRED_MODELS.length; i++) {
+      if (available.has(PREFERRED_MODELS[i])) {
+        _workingModel = PREFERRED_MODELS[i];
+        console.log('Selected model:', _workingModel);
+        return _workingModel;
+      }
+    }
+
+    // Fallback: pick any model with "flash" in the name
+    for (const name of available) {
+      if (name.includes('flash') && !name.includes('image')) {
+        _workingModel = name;
+        console.log('Fallback model selected:', _workingModel);
+        return _workingModel;
+      }
+    }
+
+    // Last resort: pick any generateContent model
+    if (available.size > 0) {
+      _workingModel = [...available][0];
+      console.log('Last resort model:', _workingModel);
+      return _workingModel;
+    }
+
+    throw new Error('No generateContent models found for this API key. Check key in ⚙ Config.');
+  } catch(e) {
+    // If ListModels itself fails, try preferred models directly
+    console.warn('ListModels failed:', e.message, '— falling back to direct attempt');
+    return null; // signal to try directly
+  }
+}
+
+async function callGemini(key, payload) {
+  // Discover working model if not cached
+  const discovered = await discoverWorkingModel(key);
+
+  const modelsToTry = discovered
+    ? [discovered]
+    : PREFERRED_MODELS;
+
+  let lastError = '';
+  for (let i = 0; i < modelsToTry.length; i++) {
+    const model = modelsToTry[i];
+    try {
+      const res = await fetch(GEMINI_BASE + model + ':generateContent?key=' + key, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.error) {
+        const msg = (data.error.message || '').toLowerCase();
+        if (msg.includes('not found') || msg.includes('not supported') ||
+            msg.includes('no longer available') || msg.includes('deprecated') ||
+            msg.includes('does not exist')) {
+          lastError = data.error.message;
+          _workingModel = null; // reset cache so next call re-discovers
+          continue;
+        }
+        throw new Error(data.error.message);
+      }
+      _workingModel = model;
+      return data;
+    } catch(e) {
+      const msg = (e.message || '').toLowerCase();
+      if (msg.includes('not found') || msg.includes('not supported') ||
+          msg.includes('no longer available') || msg.includes('deprecated')) {
+        lastError = e.message;
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error('OCR failed — no working Gemini model. Last error: ' + lastError +
+    '. Please verify your API key in ⚙ Config has Gemini API enabled at aistudio.google.com');
+}
+
+// ITR years to show
+const ITR_YEARS = ['2024-25','2025-26','2026-27'];
+
+// ══════════════════════════════════════════════════════════
+// UTILITY FUNCTIONS — toast, status, progress, api key
+// ══════════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg, type) {
+  type = type || '';
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  if (toastTimer) clearTimeout(toastTimer);
+  if (type === 'error') {
+    t.style.cursor = 'pointer';
+    t.onclick = function() { t.classList.remove('show'); };
+  } else {
+    t.style.cursor = 'default';
+    t.onclick = null;
+    toastTimer = setTimeout(function() { t.classList.remove('show'); }, 3000);
+  }
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  if (!el) return;
+  el.className = 'status-msg ' + (type || '');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function showError(msg) {
+  document.querySelectorAll('.err-banner').forEach(function(e) { e.remove(); });
+  const banner = document.createElement('div');
+  banner.className = 'err-banner';
+  banner.style.cssText = 'background:#200f0e;border:1px solid #e85d4a;color:#e85d4a;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;align-items:center;justify-content:space-between;margin:0 0 12px 0;';
+  banner.innerHTML = '<span>&#9888; ' + msg + '</span><button onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;font-size:20px;line-height:1;padding:0 0 0 10px;">&times;</button>';
+  const activePane = document.querySelector('.tab-pane.active');
+  if (activePane) activePane.insertBefore(banner, activePane.firstChild);
+}
+
+function setProgress(pct) {
+  const el = document.getElementById('submitProgress');
+  if (el) el.style.width = pct + '%';
+}
+
+function openApiKeyModal() {
+  const saved = getGeminiKey();
+  const el = document.getElementById('f_gemini_key');
+  if (saved && el) el.value = saved;
+  const modal = document.getElementById('apiKeyModal');
+  if (modal) modal.classList.add('open');
+}
+function closeApiKeyModal() {
+  const modal = document.getElementById('apiKeyModal');
+  if (modal) modal.classList.remove('open');
+}
+function saveApiKey() {
+  const el = document.getElementById('f_gemini_key');
+  const key = el ? el.value.trim() : '';
+  if (key) {
+    localStorage.setItem('rka_gemini_key', key);
+    _workingModel = null;
+    showToast('API key saved!', 'success');
+  }
+  closeApiKeyModal();
+}
+function getGeminiKey()     { return 'AIzaSyC_PUxfC3CoKFW6ZUVCMAwEn1wHTEPfky4'; }
+function getCloudVisionKey() { return 'AIzaSyCaOkCxCP5xZdvzHKYJ4ZkYch0'; }
+function getOpenAiKey()      { return 'skprojI967PhLH6_FbaDiw7RxOAvHhgNNA82fMElSTLiyR79pdg43IuArlbwiGupC9xbYYJ4pLm64_MKT3BlbkFJTFQ-WVJwlOEmnNeLPhb-rnIWT1Pz9xhNUTtgqSmJ2Uxq5TwjlJBznWLSfzbGQpdLli_ATdx28A'; }
+
+async function testApiKey() {
+  const el = document.getElementById('f_gemini_key');
+  const key = el ? el.value.trim() : getGeminiKey();
+  if (!key) { showToast('Enter a key first', 'error'); return; }
+  const resultEl = document.getElementById('keyTestResult');
+  if (resultEl) {
+    resultEl.style.display = 'block';
+    resultEl.style.background = 'var(--surface2)';
+    resultEl.style.border = '1px solid var(--border)';
+    resultEl.style.color = 'var(--muted)';
+    resultEl.textContent = 'Testing key...';
+  }
+  try {
+    _workingModel = null;
+    const model = await discoverWorkingModel(key);
+    if (resultEl) {
+      resultEl.style.background = '#0d2318';
+      resultEl.style.border = '1px solid var(--green)';
+      resultEl.style.color = 'var(--green)';
+      resultEl.textContent = '✅ Key works! Model: ' + (model || 'found');
+    }
+  } catch(e) {
+    if (resultEl) {
+      resultEl.style.background = '#200f0e';
+      resultEl.style.border = '1px solid var(--accent2)';
+      resultEl.style.color = 'var(--accent2)';
+      resultEl.textContent = '❌ ' + e.message;
+    }
+  }
+}
+
+function g(id) {
+  const el = document.getElementById(id);
+  return el ? (el.value || '').trim() : '';
+}
+
+
+function switchTab(n) {
+  document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  var pane = document.getElementById('pane' + n);
+  var tabBtn = document.getElementById('tab' + n);
+  if (pane) pane.classList.add('active');
+  if (tabBtn) {
+    tabBtn.classList.add('active');
+    // iOS: scroll the tab button into view in the tab bar
+    setTimeout(function() {
+      tabBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, 50);
+  }
+  currentTab = n;
+  if (n === 4) buildItrSection();
+  if (n === 8) buildUploadSummary();
+  window.scrollTo(0, 0);
+}
+
+// ══════════════════════════════════════════════════════════
+// FILE UPLOAD + PDF CONVERSION
+// ══════════════════════════════════════════════════════════
+function triggerUpload(key) {
+  // File inputs now cover the upload zone natively (position:absolute, inset:0)
+  // so tapping the zone opens the picker directly without JS.
+  // This function kept as fallback for any remaining onclick calls.
+  var input = document.getElementById('fu_' + key);
+  if (input) input.click();
+}
+
+async function handleFileSelect(key, files) {
+  if (!files || files.length === 0) return;
+  if (!uploadedFiles[key]) uploadedFiles[key] = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (file.type === 'application/pdf') {
+      showToast('Converting PDF...', 'info');
+      try {
+        const pages = await pdfToImages(file);
+        pages.forEach((p, idx) => {
+          uploadedFiles[key].push({ file: null, base64: p.base64, mimeType: 'image/jpeg', name: file.name + ` (page ${idx+1})` });
+        });
+        showToast(`PDF converted: ${pages.length} page(s)`, 'success');
+      } catch(e) {
+        showToast('PDF conversion failed: ' + e.message, 'error');
+      }
+    } else {
+      // Compress images before storing — keeps payload size manageable
+      const b64 = await compressImage(file);
+      uploadedFiles[key].push({ file, base64: b64, mimeType: 'image/jpeg', name: file.name });
+    }
+  }
+  renderFileList(key);
+  updateUploadZone(key);
+  enableOcrBtn(key);
+  // Reset input value so same file can be re-selected if needed
+  var inp = document.getElementById('fu_' + key);
+  if (inp) inp.value = '';
+
+  // Upload to Drive immediately so photos persist in drafts across devices
+  // Runs silently in background — does not block the user
+  uploadFilesToDriveForDraft(key);
+}
+
+async function pdfToImages(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    const base64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+    pages.push({ base64 });
+  }
+  return pages;
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = e => res(e.target.result.split(',')[1]);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Compress image to max 1400px and 0.75 quality before upload
+// Keeps file size under ~300KB per image so payload stays within Apps Script limits
+function compressImage(file, maxDim, quality) {
+  maxDim = maxDim || 1400;
+  quality = quality || 0.75;
+  return new Promise(function(res, rej) {
+    if (file.type === 'application/pdf') { fileToBase64(file).then(res).catch(rej); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        var w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          var scale = Math.min(maxDim/w, maxDim/h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        var b64 = canvas.toDataURL('image/jpeg', quality).split(',')[1];
+        res(b64);
+      };
+      img.onerror = rej;
+      img.src = e.target.result;
+    };
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// DRIVE UPLOAD FOR DRAFT PHOTO PERSISTENCE
+// Uploads files to Drive silently after each file select.
+// URLs stored in _draftDriveFiles so they survive across devices.
+// ══════════════════════════════════════════════════════════
+async function uploadFilesToDriveForDraft(key) {
+  const endpoint = getEndpoint();
+  if (!endpoint) return; // no endpoint configured — skip silently
+  const files = uploadedFiles[key];
+  if (!files || files.length === 0) return;
+
+  if (!_draftDriveFiles[key]) _draftDriveFiles[key] = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    // Skip if already uploaded (same name already in driveFiles for this key)
+    const alreadyUploaded = _draftDriveFiles[key].some(function(d) { return d.name === f.name; });
+    if (alreadyUploaded) continue;
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'uploadFile',
+          file: { base64: f.base64, mimeType: f.mimeType, name: f.name }
+        })
+      });
+      const data = await res.json();
+      if (data.url) {
+        _draftDriveFiles[key].push({ driveUrl: data.url, name: f.name, mimeType: f.mimeType });
+        console.log('Draft photo uploaded to Drive:', key, f.name, data.url);
+      }
+    } catch(e) {
+      console.warn('Draft photo Drive upload failed for', key, f.name, e.message);
+    }
+  }
+}
+
+function renderFileList(key) {
+  const fl = document.getElementById('fl_' + key);
+  if (!fl) return;
+  const files = uploadedFiles[key] || [];
+  const driveFiles = (_draftDriveFiles[key] || []);
+
+  // Local files (freshly selected this session)
+  let html = files.map((f, i) => `
+    <div class="file-item">
+      <span>📄</span>
+      <span class="fi-name">${f.name}</span>
+      <button class="fi-remove" onclick="removeFile('${key}',${i})">×</button>
+    </div>
+  `).join('');
+
+  // Drive files restored from draft (no remove button — they are already on Drive)
+  // Only show if not already covered by a local file with the same name
+  const localNames = new Set(files.map(function(f) { return f.name; }));
+  driveFiles.forEach(function(df) {
+    if (localNames.has(df.name)) return; // local version present — don't double-show
+    const isImage = df.mimeType && df.mimeType.startsWith('image/');
+    const fileId = extractDriveFileId(df.driveUrl);
+    const thumbHtml = (isImage && fileId)
+      ? `<img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w60" style="width:36px;height:36px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.style.display='none'">`
+      : `<span>☁️</span>`;
+    html += `
+      <div class="file-item" style="border:1px solid var(--accent);opacity:0.85;">
+        ${thumbHtml}
+        <span class="fi-name" style="color:var(--accent);">${df.name}</span>
+        <span class="fi-status">Drive</span>
+      </div>`;
+  });
+
+  fl.innerHTML = html;
+}
+
+function extractDriveFileId(url) {
+  if (!url) return null;
+  var m = url.match(/[?&]id=([^&]+)/);
+  return m ? m[1] : null;
+}
+
+function removeFile(key, idx) {
+  uploadedFiles[key].splice(idx, 1);
+  renderFileList(key);
+  updateUploadZone(key);
+  if (!uploadedFiles[key] || uploadedFiles[key].length === 0) {
+    const btn = document.getElementById('ocr_' + key);
+    if (btn) btn.disabled = true;
+  }
+}
+
+function updateUploadZone(key) {
+  const uz = document.getElementById('uz_' + key);
+  if (!uz) return;
+  const count = (uploadedFiles[key] || []).length;
+  const iconEl = uz.querySelector('.uz-icon');
+  const textEl = uz.querySelector('.uz-text');
+  if (count > 0) {
+    uz.classList.add('has-file');
+    if (iconEl) iconEl.textContent = '✅';
+    if (textEl) textEl.textContent = count + ' file(s) ready';
+  } else {
+    uz.classList.remove('has-file');
+  }
+}
+
+function enableOcrBtn(key) {
+  const btn = document.getElementById('ocr_' + key);
+  if (btn && uploadedFiles[key] && uploadedFiles[key].length > 0) btn.disabled = false;
+}
+
+// ══════════════════════════════════════════════════════════
+// OCR — GEMINI API
+// ══════════════════════════════════════════════════════════
+const OCR_PROMPTS = {
+  pan: `Extract from PAN card image. Return ONLY raw JSON no markdown: {"name":"full name on card","dob":"date of birth DD/MM/YYYY","pan":"PAN number"}`,
+  payslip: `Extract from payslip. Return ONLY raw JSON no markdown: {"company":"company name","designation":"job title","empCode":"employee code","branch":"branch or location","netPay":"net/take-home monthly pay as number","isAnnual":"false","joining":"date of joining DD/MM/YYYY"}`,
+  bank: `Extract from bank statement. Return ONLY raw JSON no markdown: {"bankName":"bank name","branchName":"branch name","accountNo":"account number","accountType":"Savings or Current or Salary","accountHolder":"account holder name"}`,
+  biz: `You are reading an Indian GST Registration Certificate or Udyam (MSME) Registration Certificate. Extract ALL fields listed below.
+
+FOR GST CERTIFICATE:
+- gstNo: The 15-character GSTIN (e.g. 27AABCU9603R1ZX)
+- legalName: Legal Name of Business or Trade Name
+- constitution: Constitution of Business — Proprietorship / Partnership / Private Limited Company / LLP etc.
+- designation: Role of applicant — look in "Authorized Signatory" section (Proprietor / Director / Partner / Managing Director)
+- directors: ALL names from the "Details of Promoters / Partners / Directors / Members" table — comma-separated
+- address: Principal Place of Business full address (labeled "Principal Place of Business")
+- incorporationDate: Date of registration or commencement of business if shown (DD/MM/YYYY)
+
+FOR UDYAM CERTIFICATE:
+- udyamNo: Registration number starting with UDYAM- (e.g. UDYAM-MH-12-0001234)
+- legalName: Name of Enterprise
+- udyamEntType: Type — Micro / Small / Medium
+- incorporationDate: Date of incorporation or commencement (DD/MM/YYYY) — look for "Date of Incorporation" or "Commencement of Production"
+- address: Official address of the enterprise
+- businessAddress: Major activity address if different from registered address
+
+Return ONLY a single-line JSON object — no markdown, no newlines in values, no explanation:
+{"gstNo":"GSTIN or empty","udyamNo":"UDYAM number or empty","legalName":"business name","constitution":"org type","designation":"role","directors":"all names comma-separated","address":"registered address","businessAddress":"business/activity address if different or empty","incorporationDate":"DD/MM/YYYY or empty","udyamEntType":"Micro or Small or Medium or empty"}`,
+  kyc_pan: `Extract PAN number from this PAN card image. Return ONLY raw JSON: {"pan":"PAN number — 5 letters, 4 digits, 1 letter","name":"full name"}`,
+  kyc_aadhar: `Extract Aadhar number. Return ONLY raw JSON: {"aadhar":"12 digit Aadhar number with spaces XXXX XXXX XXXX","name":"full name"}`,
+  index2: `You are reading an Indian property registration document. This is an Index II extract (इंडेक्स-२ उतारा) generated by the Maharashtra government registration office (SRO). It may also be a Sale Deed or Registration Extract.
+
+TRANSLATION: All Marathi text must be translated to English. Names must be transliterated phonetically (e.g. श्री रमेश कुमार → Shri Ramesh Kumar).
+
+NUMBERS: Extract digits only — no ₹, no commas, no spaces (e.g. ₹5,00,000 → 500000).
+
+EXTRACT THESE FIELDS — search the ENTIRE document for each one:
+
+regNo → Registration/Document number. Labels: "नोंदणी क्रमांक", "दस्तऐवज क्रमांक", "Document No", "Reg No", "Serial No"
+
+regDate → Date of registration. Labels: "नोंदणी दिनांक", "Date of Registration", "Registered on". Format: DD/MM/YYYY
+
+index2No → The Index II document's own serial number. Labels: "अनुक्रमांक", "इंडेक्स क्र.", "Index No", "Sr. No." — usually a short number at the top of the extract
+
+index2Date → Date of the Index II extract itself. Labels: "उतार्याचा दिनांक", "Extract Date", "Date of Issue". Format: DD/MM/YYYY
+
+purchaser → Name of buyer/purchaser. Labels: "खरेदीदाराचे नाव", "खरेदीदार", "Purchaser Name", "Buyer", "Party of Second Part", "द्वितीय पक्ष". Give full name in English.
+
+seller → Name of seller/vendor. Labels: "विक्रेत्याचे नाव", "विक्रेता", "Vendor Name", "Seller", "Party of First Part", "प्रथम पक्ष". Give full name in English.
+
+propAddress → Full property address. Labels: "मालमत्तेचा पत्ता", "Property Address", "Premises", "मालमत्ता". Include flat no, wing, floor, building, society, area, city. Write in English.
+
+propArea → Area of property with unit. Labels: "क्षेत्रफळ", "एकूण क्षेत्र", "Area", "Carpet Area", "Built-up Area", "चटई क्षेत्र". Include unit: sq.mt / sq.ft / चौ.मी. / चौ.फु.
+
+houseRef → Land reference number. Labels: "सर्वे क्रमांक", "सी.टी.एस. क्रमांक", "गट क्रमांक", "Survey No", "CTS No", "Gat No", "Plot No", "House No"
+
+actualPrice → Actual sale price / consideration amount. Labels: "विक्री किंमत", "प्रत्यक्ष मोबदला", "Consideration Amount", "Sale Price", "Agreement Value", "मोबदला रक्कम". Digits only.
+
+stampDuty → Stamp duty paid. Labels: "मुद्रांक शुल्क", "Stamp Duty Paid", "Stamp Duty". Digits only.
+
+regFee → Registration fee paid. Labels: "नोंदणी फी", "Registration Fee", "नोंदणी शुल्क". Digits only.
+
+readyReckoner → Ready reckoner / guideline value. Labels: "बाजारमूल्य", "Ready Reckoner Rate", "Circle Rate", "मार्गदर्शक मूल्य". Digits only.
+
+Return ONLY this JSON (no markdown, no explanation, every value on one line):
+{"regNo":"","regDate":"","index2No":"","index2Date":"","purchaser":"","seller":"","propAddress":"","propArea":"","houseRef":"","actualPrice":"","stampDuty":"","regFee":"","readyReckoner":""}`,
+  car: `Extract from car quotation/proforma invoice. Return ONLY raw JSON no markdown: {"carModel":"car company and model","carPrice":"total on-road price","dealershipName":"dealership name","dealershipAddr":"dealership address","dealershipContact":"phone number","execName":"sales executive name","execContact":"sales executive contact"}`
+};
+
+const OCR_TITLES = {
+  pan: 'PAN Card Details', payslip: 'Payslip Details', bank: 'Bank Statement Details',
+  biz: 'Business Certificate Details', kyc_pan: 'KYC PAN Details', kyc_aadhar: 'KYC Aadhar Details',
+  index2: 'Index II Details', car: 'Car Quotation Details'
+};
+
+// ══════════════════════════════════════════════════════════
+// OCR PIPELINE
+// Step 1: Cloud Vision API  — extracts raw text from image
+// Step 2: Gemini            — structures raw text into JSON
+// Step 3: OpenAI fallback   — if all Gemini models fail
+// ══════════════════════════════════════════════════════════
+
+// ── Step 1: Cloud Vision text extraction ─────────────────
+async function extractTextWithCloudVision(base64, mimeType) {
+  const visionKey = getCloudVisionKey();
+  const res = await fetch(
+    'https://vision.googleapis.com/v1/images:annotate?key=' + visionKey,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [{
+          image: { content: base64 },
+          features: [{ type: 'DOCUMENT_TEXT_DETECTION' }]
+        }]
+      })
+    }
+  );
+  const data = await res.json();
+  if (data.error) throw new Error('Cloud Vision error: ' + data.error.message);
+  const annotation = data.responses && data.responses[0] && data.responses[0].fullTextAnnotation;
+  return annotation ? annotation.text : '';
+}
+
+// ── Step 2: Gemini JSON structuring ──────────────────────
+async function structureWithGemini(rawText, prompt) {
+  const key = getGeminiKey();
+  const fullPrompt = prompt + '\n\nEXTRACTED TEXT:\n' + rawText.substring(0, 6000);
+  const payload = {
+    contents: [{ parts: [{ text: fullPrompt }] }],
+    generationConfig: { temperature: 0.1, maxOutputTokens: 2048 }
+  };
+  const data = await callGemini(key, payload);
+  return data.candidates[0].content.parts[0].text.trim();
+}
+
+// ── Step 3: OpenAI GPT-4o-mini fallback ──────────────────
+async function structureWithOpenAI(rawText, prompt) {
+  const key = getOpenAiKey();
+  const fullPrompt = prompt + '\n\nEXTRACTED TEXT:\n' + rawText.substring(0, 6000);
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + key
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: fullPrompt }],
+      max_tokens: 2048,
+      temperature: 0.1,
+      response_format: { type: 'json_object' }
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error('OpenAI error: ' + data.error.message);
+  return data.choices[0].message.content.trim();
+}
+
+// ── Parse raw JSON string safely ─────────────────────────
+function parseOcrJson(raw, docType) {
+  // Strip markdown fences
+  raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  // Find JSON boundaries
+  const jsonStart = raw.indexOf('{');
+  const jsonEnd   = raw.lastIndexOf('}');
+  if (jsonStart !== -1 && jsonEnd !== -1) raw = raw.substring(jsonStart, jsonEnd + 1);
+
+  // Strategy 1: direct parse
+  try { return JSON.parse(raw); } catch(e1) {}
+
+  // Strategy 2: sanitise newlines
+  try { return JSON.parse(raw.replace(/\n/g,' ').replace(/\r/g,' ').replace(/\t/g,' ')); } catch(e2) {}
+
+  // Strategy 3: line-by-line extraction
+  const allKeys = [
+    'regNo','regDate','index2No','index2Date','stampDuty','regFee',
+    'readyReckoner','propArea','houseRef','purchaser','seller','propAddress','actualPrice',
+    'name','dob','pan','company','designation','empCode','branch','netPay','joining',
+    'bankName','branchName','accountNo','accountType','accountHolder',
+    'gstNo','udyamNo','legalName','constitution','directors','address','udyamEntType',
+    'incorporationDate','businessAddress','aadhar',
+    'carModel','carPrice','dealershipName','dealershipAddr','dealershipContact',
+    'execName','execContact','income','ackNo','certNo','year','type','isAnnual'
+  ];
+  const rebuilt = {};
+  allKeys.forEach(function(k) {
+    const rStr = new RegExp('"' + k + '"\\s*:\\s*"([^"\\n]{0,500})"');
+    const rNum = new RegExp('"' + k + '"\\s*:\\s*([0-9][0-9.,]*)');
+    const mStr = raw.match(rStr);
+    const mNum = raw.match(rNum);
+    if (mStr) rebuilt[k] = mStr[1].trim();
+    else if (mNum) rebuilt[k] = mNum[1].trim();
+  });
+  return rebuilt;
+}
+
+// ── Main OCR entry point ──────────────────────────────────
+async function runOcr(key, docType) {
+  const files = uploadedFiles[key];
+  // Also check Drive files — allow OCR on Drive-restored files
+  const driveFiles = _draftDriveFiles[key] || [];
+  if ((!files || files.length === 0) && driveFiles.length === 0) return;
+
+  const btn = document.getElementById('ocr_' + key);
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span><span> Extracting...</span>';
+    btn.classList.add('loading');
+  }
+
+  try {
+    const prompt = OCR_PROMPTS[docType] || OCR_PROMPTS.pan;
+    const maxPages = (docType === 'index2') ? 6 : (['index2','biz','bank'].indexOf(docType) > -1 ? 4 : 1);
+
+    // ── Step 1: Extract raw text from all pages via Cloud Vision ──
+    let allRawText = '';
+    const filesToProcess = (files && files.length > 0) ? files.slice(0, maxPages) : [];
+
+    if (filesToProcess.length > 0) {
+      // Local files — extract with Cloud Vision
+      for (let i = 0; i < filesToProcess.length; i++) {
+        const f = filesToProcess[i];
+        try {
+          btn && (btn.innerHTML = '<span class="spinner"></span><span> Reading page ' + (i+1) + '/' + filesToProcess.length + '...</span>');
+          const pageText = await extractTextWithCloudVision(f.base64, f.mimeType);
+          if (pageText) allRawText += '\n--- PAGE ' + (i+1) + ' ---\n' + pageText;
+        } catch(visionErr) {
+          console.warn('Cloud Vision failed page', i+1, visionErr.message);
+          // Fallback: send image directly to Gemini (original behaviour)
+          allRawText += '\n--- PAGE ' + (i+1) + ' [vision failed — using direct] ---\n';
+        }
+      }
+    } else if (driveFiles.length > 0) {
+      // Drive-restored files — fetch image bytes then run Cloud Vision
+      btn && (btn.innerHTML = '<span class="spinner"></span><span> Fetching Drive files...</span>');
+      for (let i = 0; i < Math.min(driveFiles.length, maxPages); i++) {
+        const df = driveFiles[i];
+        try {
+          // Fetch image as blob and convert to base64
+          const imgRes = await fetch(df.driveUrl);
+          const blob = await imgRes.blob();
+          const b64 = await new Promise(function(res, rej) {
+            const reader = new FileReader();
+            reader.onload = function(e) { res(e.target.result.split(',')[1]); };
+            reader.onerror = rej;
+            reader.readAsDataURL(blob);
+          });
+          btn && (btn.innerHTML = '<span class="spinner"></span><span> Reading Drive file ' + (i+1) + '...</span>');
+          const pageText = await extractTextWithCloudVision(b64, df.mimeType || 'image/jpeg');
+          if (pageText) allRawText += '\n--- PAGE ' + (i+1) + ' ---\n' + pageText;
+        } catch(dfErr) {
+          console.warn('Drive file OCR failed', df.name, dfErr.message);
+        }
+      }
+    }
+
+    if (!allRawText.trim()) {
+      throw new Error('No text could be extracted from the image(s). Please try a clearer photo.');
+    }
+
+    console.log('Cloud Vision raw text (' + allRawText.length + ' chars):', allRawText.substring(0, 300));
+    btn && (btn.innerHTML = '<span class="spinner"></span><span> Structuring data...</span>');
+
+    // ── Step 2: Structure with Gemini ─────────────────────
+    let jsonRaw = null;
+    try {
+      jsonRaw = await structureWithGemini(allRawText, prompt);
+      console.log('Gemini structured response:', jsonRaw.substring(0, 200));
+    } catch(geminiErr) {
+      console.warn('Gemini structuring failed:', geminiErr.message, '— trying OpenAI fallback');
+      btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying OpenAI fallback...</span>');
+    }
+
+    // ── Step 3: OpenAI fallback if Gemini failed ──────────
+    if (!jsonRaw) {
+      jsonRaw = await structureWithOpenAI(allRawText, prompt);
+      console.log('OpenAI fallback response:', jsonRaw.substring(0, 200));
+    }
+
+    const parsed = parseOcrJson(jsonRaw, docType);
+    console.log('OCR parsed result for', docType, ':', JSON.stringify(parsed));
+
+    pendingOcr = { key, docType, extracted: parsed };
+    showOcrModal(docType, parsed);
+
+  } catch(e) {
+    showError('OCR failed: ' + e.message);
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.innerHTML = '<span>✨ Extract Again</span>';
+  }
+}
+
+function showOcrModal(docType, data) {
+  const title = OCR_TITLES[docType] || 'Extracted Data';
+  document.getElementById('ocrSheetTitle').textContent = title;
+  const body = document.getElementById('ocrSheetBody');
+  const entries = Object.entries(data).filter(function(kv) { return kv[1] && String(kv[1]).trim(); });
+  if (entries.length === 0) {
+    body.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">No data could be extracted. Please try a clearer image or check browser console (F12) for the raw Gemini response.</div>';
+  } else {
+    body.innerHTML = entries.map(function(kv) {
+      return '<div class="extracted-field"><div class="ef-label">' + kv[0] + '</div><div class="ef-value">' + (kv[1] || '') + '</div></div>';
+    }).join('');
+  }
+  document.getElementById('ocrSheetOverlay').style.display = 'block';
+  document.getElementById('ocrSheet').style.transform = 'translateY(0)';
+}
+
+function closeOcrModal() {
+  var sheet = document.getElementById('ocrSheet');
+  var overlay = document.getElementById('ocrSheetOverlay');
+  sheet.style.transform = 'translateY(100%)';
+  overlay.style.display = 'none';
+  pendingOcr = null;
+}
+
+function applyOcrData() {
+  console.log('applyOcrData called, pendingOcr:', pendingOcr);
+  if (!pendingOcr) {
+    showToast('No data to apply — please extract again', 'error');
+    return;
+  }
+  // Snapshot immediately so closeOcrModal can't null it out
+  const snap = pendingOcr;
+  const key = snap.key;
+  const docType = snap.docType;
+  const d = snap.extracted;
+  console.log('Applying:', docType, 'key:', key, 'data:', JSON.stringify(d).substring(0,200));
+
+  // Close sheet first — clear pendingOcr
+  closeOcrModal();
+
+  // Determine prefix (app or co1..co5)
+  const prefix = key.startsWith('co') ? key.split('_')[0] : 'app';
+
+  if (docType === 'pan') {
+    if (d.name) setVal(`f_${prefix}_name`, d.name);
+    if (d.dob)  setDateVal(`f_${prefix}_dob`, d.dob);
+  } else if (docType === 'payslip') {
+    if (d.company)     setVal(`f_${prefix}_company`, d.company);
+    if (d.designation) setVal(`f_${prefix}_designation`, d.designation);
+    if (d.empCode)     setVal(`f_${prefix}_emp_code`, d.empCode);
+    if (d.branch)      setVal(`f_${prefix}_branch`, d.branch);
+    if (d.netPay)      setVal(`f_${prefix}_net_pay`, d.netPay);
+    if (d.joining)     setDateVal(`f_${prefix}_joining`, d.joining);
+  } else if (docType === 'bank') {
+    if (d.bankName)    setVal(`f_${prefix}_bank_name`, d.bankName);
+    if (d.branchName)  setVal(`f_${prefix}_bank_branch`, d.branchName);
+    if (d.accountNo)   setVal(`f_${prefix}_account_no`, d.accountNo);
+    if (d.accountType) setSelectVal(`f_${prefix}_account_type`, d.accountType);
+  } else if (docType === 'biz') {
+    // Force employment status to Business Owner so biz fields become visible
+    const empSel = document.getElementById(`f_${prefix}_emp_status`);
+    if (empSel && (!empSel.value || empSel.value === '' || empSel.value === 'Salaried')) {
+      empSel.value = 'Business Owner';
+    }
+    // Trigger the show/hide logic so biz fields panel appears
+    handleEmpStatusChange(prefix);
+
+    // Force-show biz fields panel directly as double-safety
+    const bizPanel = document.getElementById(`${prefix}_biz_fields`);
+    if (bizPanel) bizPanel.classList.add('visible');
+    const salPanel = document.getElementById(`${prefix}_salaried_fields`);
+    if (salPanel) salPanel.style.display = 'none';
+
+    // Now fill all extracted values
+    if (d.gstNo)        forceSetVal(`f_${prefix}_gst_no`, d.gstNo);
+    if (d.udyamNo)      forceSetVal(`f_${prefix}_udyam_no`, d.udyamNo);
+    if (d.legalName)    forceSetVal(`f_${prefix}_gst_legal_name`, d.legalName);
+    if (d.constitution) setSelectVal(`f_${prefix}_gst_constitution`, d.constitution);
+    if (d.designation)  forceSetVal(`f_${prefix}_biz_designation`, d.designation);
+    if (d.directors)    forceSetVal(`f_${prefix}_gst_directors`, d.directors);
+    if (d.address)      forceSetVal(`f_${prefix}_gst_address`, d.address);
+    if (d.udyamEntType) setSelectVal(`f_${prefix}_udyam_ent_type`, d.udyamEntType);
+    // incorporationDate and businessAddress
+    if (d.incorporationDate) {
+      forceSetVal(`f_${prefix}_biz_joining`, '');
+      setDateVal(`f_${prefix}_biz_joining`, d.incorporationDate);
+      // Also set the joining field used by the row builder
+      forceSetVal(`f_${prefix}_joining`, '');
+      setDateVal(`f_${prefix}_joining`, d.incorporationDate);
+    }
+    if (d.businessAddress) forceSetVal(`f_${prefix}_biz_office_addr`, d.businessAddress);
+    // Mirror to salaried fallback fields too
+    if (d.legalName)    forceSetVal(`f_${prefix}_company`, d.legalName);
+    if (d.designation)  forceSetVal(`f_${prefix}_designation`, d.designation);
+  } else if (docType === 'kyc_pan') {
+    if (d.pan) setVal(`f_${prefix}_kyc_pan_no`, d.pan);
+  } else if (docType === 'kyc_aadhar') {
+    if (d.aadhar) setVal(`f_${prefix}_kyc_aadhar_no`, d.aadhar);
+  } else if (docType === 'index2') {
+    // forceSetVal — always overwrite with OCR result
+    if (d.regNo)         forceSetVal('f_reg_no', d.regNo);
+    if (d.regDate)       { const el = document.getElementById('f_reg_date'); if (el) { el.value = ''; setDateVal('f_reg_date', d.regDate); } }
+    if (d.stampDuty)     forceSetVal('f_stamp_duty', d.stampDuty);
+    if (d.readyReckoner) forceSetVal('f_ready_reckoner', d.readyReckoner);
+    if (d.propArea)      forceSetVal('f_prop_area', d.propArea);
+    if (d.houseRef)      forceSetVal('f_house_ref', d.houseRef);
+    if (d.purchaser)     forceSetVal('f_purchaser', d.purchaser);
+    if (d.seller)        forceSetVal('f_seller', d.seller);
+    if (d.propAddress)   forceSetVal('f_prop_address', d.propAddress);
+    if (d.actualPrice)   forceSetVal('f_prop_price', d.actualPrice);
+    if (d.regFee)        forceSetVal('f_reg_fee', d.regFee);
+    // Index II specific number and date (separate from registration number/date)
+    if (d.index2No)   forceSetVal('f_index2_no', d.index2No);
+    if (d.index2Date) { const el2 = document.getElementById('f_index2_date'); if(el2){el2.value=''; setDateVal('f_index2_date', d.index2Date);} }
+  } else if (docType === 'car') {
+    if (d.carModel)       setVal('f_car_model', d.carModel);
+    if (d.carPrice)       setVal('f_car_price', d.carPrice);
+    if (d.dealershipName) setVal('f_dealership_name', d.dealershipName);
+    if (d.dealershipAddr) setVal('f_dealership_addr', d.dealershipAddr);
+    if (d.dealershipContact) setVal('f_dealership_contact', d.dealershipContact);
+    if (d.execName)       setVal('f_car_exec_name', d.execName);
+  }
+
+  showToast('✅ Values applied!', 'success');
+  // Scroll to the first filled field so user can see the result
+  setTimeout(function() {
+    const prefix2 = (pendingOcr === null && typeof key !== 'undefined') ? key : '';
+    // Just scroll to top of active pane
+    const activePane = document.querySelector('.tab-pane.active');
+    if (activePane) activePane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 100);
+  // Save draft immediately after OCR fills fields
+  var _ocrAppName = (document.getElementById('f_app_name') || {}).value || '';
+  if (_ocrAppName.trim()) saveDraft(_ocrAppName.trim()).catch(function() {});
+}
+
+function setVal(id, val) {
+  // Only fills if field is currently empty
+  const el = document.getElementById(id);
+  if (el && val && !el.value) el.value = val;
+}
+function forceSetVal(id, val) {
+  // Always overwrites — used by OCR so extracted data always wins
+  const el = document.getElementById(id);
+  if (el && val !== undefined && val !== null && String(val).trim() !== '') {
+    el.value = String(val).trim();
+  }
+}
+function setSelectVal(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  for (let opt of el.options) {
+    if (opt.value.toLowerCase() === val.toLowerCase() || opt.text.toLowerCase().includes(val.toLowerCase())) {
+      el.value = opt.value; return;
+    }
+  }
+}
+function setDateVal(id, val) {
+  const el = document.getElementById(id);
+  if (!el || el.value) return;
+  // Try to parse date into YYYY-MM-DD
+  try {
+    const parts = val.replace(/[\/\-]/g,'/').split('/');
+    if (parts.length === 3) {
+      let [a,b,c] = parts;
+      if (c.length === 4) { el.value = `${c}-${b.padStart(2,'0')}-${a.padStart(2,'0')}`; }
+      else if (a.length === 4) { el.value = `${a}-${b.padStart(2,'0')}-${c.padStart(2,'0')}`; }
+    }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════════
+// EMPLOYMENT STATUS TOGGLE
+// ══════════════════════════════════════════════════════════
+const NON_WORKING = ['retired','homemaker','student','unemployed'];
+const BIZ_STATUSES = ['business owner','self employed'];
+
+function handleEmpStatusChange(prefix) {
+  const sel = document.getElementById(`f_${prefix}_emp_status`);
+  const val = sel ? sel.value.toLowerCase() : '';
+  const salFields = document.getElementById(`${prefix}_salaried_fields`);
+  const bizFields = document.getElementById(`${prefix}_biz_fields`);
+
+  const isNonWork = NON_WORKING.some(s => val.includes(s));
+  const isBiz = BIZ_STATUSES.some(s => val.includes(s));
+
+  if (salFields) salFields.style.display = (isNonWork || isBiz) ? 'none' : 'block';
+  if (bizFields) {
+    bizFields.classList.toggle('visible', isBiz);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// CO-APPLICANTS (dynamic)
+// ══════════════════════════════════════════════════════════
+function addCoApp() {
+  if (numCoApps >= 5) { showToast('Maximum 5 co-applicants', 'error'); return; }
+  numCoApps++;
+  const n = numCoApps;
+  const strip = document.getElementById('coAppStrip');
+  const addBtn = strip.querySelector('.add-btn');
+
+  // Add tab button
+  const tab = document.createElement('button');
+  tab.className = 'coapp-tab active';
+  tab.id = `coapp_tab_${n}`;
+  tab.onclick = () => showCoApp(n);
+  tab.textContent = `Co-App ${n}`;
+  strip.insertBefore(tab, addBtn);
+
+  // Deactivate others
+  strip.querySelectorAll('.coapp-tab:not(.add-btn)').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+
+  // Build HTML
+  buildCoAppBlock(n);
+  showCoApp(n);
+  // Force rebuild ITR section to include new co-app
+  buildItrSection(true);
+}
+
+function showCoApp(n) {
+  document.querySelectorAll('.coapp-block').forEach(b => b.style.display='none');
+  document.querySelectorAll('.coapp-tab:not(.add-btn)').forEach(t => t.classList.remove('active'));
+  const block = document.getElementById(`coapp_block_${n}`);
+  const tab = document.getElementById(`coapp_tab_${n}`);
+  if (block) block.style.display = 'block';
+  if (tab) tab.classList.add('active');
+}
+
+function buildCoAppBlock(n) {
+  const p = `co${n}`;
+  const container = document.getElementById('coAppContainer');
+  const div = document.createElement('div');
+  div.className = 'coapp-block';
+  div.id = `coapp_block_${n}`;
+  div.innerHTML = `
+    <!-- PAN -->
+    <div class="card">
+      <div class="card-hdr">🪪 Co-App ${n} — PAN Card</div>
+      <div class="card-body">
+        <div class="upload-zone" id="uz_${p}_pan">
+          <input type="file" id="fu_${p}_pan" accept="image/*,.pdf" onchange="handleFileSelect('${p}_pan', this.files)" onclick="event.stopPropagation()">
+          <div class="uz-icon">📄</div>
+          <div class="uz-text">Upload PAN Card</div>
+        </div>
+        <div class="file-list" id="fl_${p}_pan"></div>
+        <button class="ocr-btn" id="ocr_${p}_pan" onclick="runOcr('${p}_pan','pan')" disabled>
+          <span>✨ Extract from PAN</span>
+        </button>
+      </div>
+    </div>
+    <!-- PERSONAL -->
+    <div class="card">
+      <div class="card-hdr">👤 Co-App ${n} — Personal Info</div>
+      <div class="card-body">
+        <div class="field"><label>Full Name</label><input type="text" id="f_${p}_name" placeholder="Full name"></div>
+        <div class="field-row">
+          <div class="field"><label>Date of Birth</label><input type="date" id="f_${p}_dob"></div>
+          <div class="field"><label>Gender</label>
+            <select id="f_${p}_gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Marital Status</label>
+            <select id="f_${p}_marital"><option value="">Select</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select>
+          </div>
+          <div class="field"><label>Mobile</label><input type="tel" id="f_${p}_mobile" placeholder="10-digit"></div>
+        </div>
+        <div class="field">
+          <label>Current Address</label>
+          <select id="f_${p}_residence" onchange="handleCoResidenceChange(${n})">
+            <option value="">Select</option>
+            <option value="Same as Applicant">Same as Applicant (auto-filled)</option>
+            <option value="Different">Different Address</option>
+          </select>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label>Address</label>
+          <textarea id="f_${p}_address" rows="2" placeholder="Same as applicant or enter different address"></textarea>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label>Current Address Verification Remarks</label>
+          <textarea id="f_${p}_res_remarks" rows="2" placeholder="e.g. Residence verified at the stated address. Nameplate confirmed. Verification found satisfactory."></textarea>
+        </div>
+      </div>
+    </div>
+    <!-- EMPLOYMENT -->
+    <div class="card">
+      <div class="card-hdr">💼 Co-App ${n} — Employment</div>
+      <div class="card-body">
+        <div class="field"><label>Employment Status</label>
+          <select id="f_${p}_emp_status" onchange="handleEmpStatusChange('${p}')">
+            <option value="">Select</option>
+            <option value="Salaried">Salaried</option>
+            <option value="Business Owner">Business Owner</option>
+            <option value="Self Employed">Self Employed</option>
+            <option value="Retired">Retired</option>
+            <option value="Homemaker">Homemaker</option>
+            <option value="Student">Student</option>
+            <option value="Unemployed">Unemployed</option>
+          </select>
+        </div>
+        <div id="${p}_salaried_fields">
+          <div class="card-body" style="padding:0;gap:12px;margin-top:10px">
+            <div class="upload-zone" id="uz_${p}_payslip">
+              <input type="file" id="fu_${p}_payslip" accept="image/*,.pdf" multiple onchange="handleFileSelect('${p}_payslip', this.files)" onclick="event.stopPropagation()">
+              <div class="uz-icon">📋</div><div class="uz-text">Upload Payslip</div>
+            </div>
+            <div class="file-list" id="fl_${p}_payslip"></div>
+            <button class="ocr-btn" id="ocr_${p}_payslip" onclick="runOcr('${p}_payslip','payslip')" disabled>
+              <span>✨ Extract from Payslip</span>
+            </button>
+            <div class="field-row">
+              <div class="field"><label>Employer</label><input type="text" id="f_${p}_company" placeholder="Company"></div>
+              <div class="field"><label>Designation</label><input type="text" id="f_${p}_designation" placeholder="Title"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Employee Code</label><input type="text" id="f_${p}_emp_code" placeholder="Emp code"></div>
+              <div class="field"><label>Branch</label><input type="text" id="f_${p}_branch" placeholder="Branch"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Net Monthly Pay</label><input type="text" id="f_${p}_net_pay" placeholder="₹"></div>
+              <div class="field"><label>Date of Joining</label><input type="date" id="f_${p}_joining"></div>
+            </div>
+            <div class="field"><label>Office Address</label><textarea id="f_${p}_office_addr" rows="2" placeholder="Office address"></textarea></div>
+            <div class="field"><label>Employment Verification Remarks</label><textarea id="f_${p}_emp_remarks" rows="2" placeholder="e.g. Office premises visited. Employment confirmed. Verification found satisfactory."></textarea></div>
+          </div>
+        </div>
+        <!-- BIZ FIELDS -->
+        <div class="biz-fields" id="${p}_biz_fields">
+          <div class="biz-fields-hdr">🏢 Business / GST / Udyam Details</div>
+          <div class="upload-zone" id="uz_${p}_biz_cert">
+            <input type="file" id="fu_${p}_biz_cert" accept="image/*,.pdf" multiple onchange="handleFileSelect('${p}_biz_cert', this.files)" onclick="event.stopPropagation()">
+            <div class="uz-icon">📜</div><div class="uz-text">Upload GST / Udyam Certificate</div>
+          </div>
+          <div class="file-list" id="fl_${p}_biz_cert"></div>
+          <button class="ocr-btn" id="ocr_${p}_biz_cert" onclick="runOcr('${p}_biz_cert','biz')" disabled><span>✨ Extract</span></button>
+          <div class="field-row">
+            <div class="field"><label>GST Number</label><input type="text" id="f_${p}_gst_no" placeholder="GSTIN" style="font-family:'DM Mono',monospace"></div>
+            <div class="field"><label>Udyam Number</label><input type="text" id="f_${p}_udyam_no" placeholder="UDYAM-XX-..." style="font-family:'DM Mono',monospace"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Legal Name</label><input type="text" id="f_${p}_gst_legal_name" placeholder="Registered name"></div>
+            <div class="field"><label>Organisation Type</label>
+              <select id="f_${p}_gst_constitution">
+                <option value="">Select</option><option>Proprietorship</option><option>Partnership</option>
+                <option>Private Limited Company</option><option>Public Limited Company</option><option>LLP</option><option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Designation</label><input type="text" id="f_${p}_biz_designation" placeholder="Proprietor / Director"></div>
+            <div class="field"><label>Net Monthly Income</label><input type="text" id="f_${p}_biz_net_pay" placeholder="₹"></div>
+          </div>
+          <div class="field"><label>Directors / Partners</label><input type="text" id="f_${p}_gst_directors" placeholder="Comma-separated names"></div>
+          <div class="field"><label>Legal Address</label><textarea id="f_${p}_gst_address" rows="2" placeholder="Registered address"></textarea></div>
+          <div class="field"><label>Enterprise Type</label>
+            <select id="f_${p}_udyam_ent_type"><option value="">Select</option><option>Micro</option><option>Small</option><option>Medium</option></select>
+          </div>
+          <div class="field"><label>Date of Incorporation</label><input type="date" id="f_${p}_biz_joining"></div>
+          <div class="field"><label>Business Address</label><textarea id="f_${p}_biz_office_addr" rows="2"></textarea></div>
+          <div class="field"><label>Business / Office Verification Remarks</label><textarea id="f_${p}_biz_remarks" rows="2" placeholder="e.g. Business premises visited. Certificate verified. Verification found satisfactory."></textarea></div>
+        </div>
+      </div>
+    </div>
+    <!-- EMPLOYMENT REMARKS - always visible -->
+    <div class="card">
+      <div class="card-hdr">📝 Co-App ${n} — Employment / Business Verification Remarks</div>
+      <div class="card-body">
+        <div class="field">
+          <label>Verification Remarks</label>
+          <textarea id="f_${p}_emp_all_remarks" rows="3" placeholder="e.g. Office / business premises visited. Employment / business confirmed. Verification found satisfactory."></textarea>
+        </div>
+      </div>
+    </div>
+    <!-- BANK STMT -->
+    <div class="card">
+      <div class="card-hdr">🏛 Co-App ${n} — Bank Statement</div>
+      <div class="card-body">
+        <div class="upload-zone" id="uz_${p}_bank_stmt">
+          <input type="file" id="fu_${p}_bank_stmt" accept="image/*,.pdf" multiple onchange="handleFileSelect('${p}_bank_stmt', this.files)" onclick="event.stopPropagation()">
+          <div class="uz-icon">📊</div><div class="uz-text">Upload Bank Statement</div>
+        </div>
+        <div class="file-list" id="fl_${p}_bank_stmt"></div>
+        <button class="ocr-btn" id="ocr_${p}_bank_stmt" onclick="runOcr('${p}_bank_stmt','bank')" disabled>
+          <span>✨ Extract Bank Details</span>
+        </button>
+        <div class="field-row">
+          <div class="field"><label>Bank Name</label><input type="text" id="f_${p}_bank_name" placeholder="Bank name"></div>
+          <div class="field"><label>Bank Branch</label><input type="text" id="f_${p}_bank_branch" placeholder="Branch"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Account Number</label><input type="text" id="f_${p}_account_no" placeholder="Account no" style="font-family:'DM Mono',monospace"></div>
+          <div class="field"><label>Account Type</label>
+            <select id="f_${p}_account_type"><option value="">Select</option><option>Savings</option><option>Current</option><option>Salary</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- KYC -->
+    <div class="card">
+      <div class="card-hdr">🔏 Co-App ${n} — KYC Documents</div>
+      <div class="card-body">
+        <div class="field">
+          <label>KYC PAN Card</label>
+          <div class="upload-zone" id="uz_${p}_kyc_pan">
+            <input type="file" id="fu_${p}_kyc_pan" accept="image/*,.pdf" onchange="handleFileSelect('${p}_kyc_pan', this.files)" onclick="event.stopPropagation()">
+            <div class="uz-icon">🪪</div><div class="uz-text">Upload KYC PAN</div>
+          </div>
+          <div class="file-list" id="fl_${p}_kyc_pan"></div>
+          <button class="ocr-btn" id="ocr_${p}_kyc_pan" onclick="runOcr('${p}_kyc_pan','kyc_pan')" disabled style="margin-top:6px"><span>✨ Extract PAN No.</span></button>
+          <input type="text" id="f_${p}_kyc_pan_no" placeholder="PAN Number" style="margin-top:6px;font-family:'DM Mono',monospace;letter-spacing:0.1em">
+        </div>
+        <div class="field">
+          <label>KYC Aadhar Card</label>
+          <div class="upload-zone" id="uz_${p}_kyc_aadhar">
+            <input type="file" id="fu_${p}_kyc_aadhar" accept="image/*,.pdf" multiple onchange="handleFileSelect('${p}_kyc_aadhar', this.files)" onclick="event.stopPropagation()">
+            <div class="uz-icon">🪪</div><div class="uz-text">Upload KYC Aadhar</div>
+          </div>
+          <div class="file-list" id="fl_${p}_kyc_aadhar"></div>
+          <button class="ocr-btn" id="ocr_${p}_kyc_aadhar" onclick="runOcr('${p}_kyc_aadhar','kyc_aadhar')" disabled style="margin-top:6px"><span>✨ Extract Aadhar No.</span></button>
+          <input type="text" id="f_${p}_kyc_aadhar_no" placeholder="Aadhar Number" style="margin-top:6px;font-family:'DM Mono',monospace;letter-spacing:0.1em">
+        </div>
+      </div>
+    </div>
+    <div style="text-align:right;margin-bottom:16px">
+      <button class="btn btn-danger" onclick="removeCoApp(${n})" style="font-size:12px;padding:7px 14px">Remove Co-App ${n}</button>
+    </div>
+  `;
+  container.appendChild(div);
+}
+
+function handleCoResidenceChange(n) {
+  var p = 'co' + n;
+  var sel = document.getElementById('f_' + p + '_residence');
+  var addrField = document.getElementById('f_' + p + '_address');
+  if (!sel || !addrField) return;
+  if (sel.value === 'Same as Applicant') {
+    var appAddr = document.getElementById('f_current_addr');
+    addrField.value = appAddr ? appAddr.value : '';
+    addrField.style.opacity = '0.6';
+    addrField.readOnly = true;
+  } else {
+    addrField.style.opacity = '1';
+    addrField.readOnly = false;
+    if (addrField.value === (document.getElementById('f_current_addr') || {}).value) {
+      addrField.value = '';
+    }
+  }
+}
+
+function removeCoApp(n) {
+  const block = document.getElementById(`coapp_block_${n}`);
+  const tab = document.getElementById(`coapp_tab_${n}`);
+  if (block) block.remove();
+  if (tab) tab.remove();
+  // Clean up uploaded files
+  [`co${n}_pan`,`co${n}_payslip`,`co${n}_biz_cert`,`co${n}_bank_stmt`,`co${n}_kyc_pan`,`co${n}_kyc_aadhar`].forEach(k => delete uploadedFiles[k]);
+  // Show first remaining co-app
+  const remaining = document.querySelectorAll('.coapp-block');
+  if (remaining.length > 0) {
+    remaining[remaining.length-1].style.display = 'block';
+  }
+  showToast(`Co-App ${n} removed`, 'success');
+}
+
+// ══════════════════════════════════════════════════════════
+// CO-APP RESIDENCE REMARKS (built dynamically when moving
+// from Co-Apps tab to Field Visit tab)
+// ══════════════════════════════════════════════════════════
+function buildCoResRemarks() {
+  const container = document.getElementById('co_res_remarks_container');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const block = document.getElementById(`coapp_block_${i}`);
+    if (!block) continue;
+    const nameEl = document.getElementById(`f_co${i}_name`);
+    const name = (nameEl && nameEl.value.trim()) ? nameEl.value.trim() : `Co-App ${i}`;
+    // Skip if residence is same as applicant
+    const resSel = document.getElementById(`f_co${i}_residence`);
+    const isSame = resSel && resSel.value.toLowerCase().includes('same');
+    if (isSame) continue;
+    const div = document.createElement('div');
+    div.className = 'field';
+    div.style.marginTop = '12px';
+    div.innerHTML = `
+      <label>${name} — Residence Remarks</label>
+      <textarea id="f_co${i}_res_remarks" placeholder="e.g. Residence of ${name} verified at the stated address..." rows="2"></textarea>
+    `;
+    container.appendChild(div);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ITR / FORM 16 SECTION (dynamic)
+// ══════════════════════════════════════════════════════════
+function buildItrSection(forceRebuild) {
+  const container = document.getElementById('itrContainer');
+  // Only rebuild if container is empty OR forceRebuild is true
+  // This preserves filled values when switching tabs
+  if (!forceRebuild && container && container.children.length > 0) {
+    // Already built — just restore from itrStore in case of any new values
+    restoreItrFieldsFromStore();
+    return;
+  }
+  // Save existing typed values before clearing DOM
+  const savedVals = {};
+  container.querySelectorAll('input,textarea,select').forEach(function(el) {
+    if (el.id) savedVals[el.id] = el.value;
+  });
+  container.innerHTML = '';
+
+  const persons = [{ label: 'Applicant', prefix: 'app' }];
+  for (let i = 1; i <= numCoApps; i++) {
+    const name = g(`f_co${i}_name`) || `Co-App ${i}`;
+    persons.push({ label: name, prefix: `co${i}` });
+  }
+
+  persons.forEach(person => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    let html = `<div class="card-hdr">📑 ${person.label} — ITR & Form 16</div><div class="card-body">`;
+
+    ITR_YEARS.forEach(yr => {
+      const yrKey = yr.replace('-','').replace('-',''); // e.g. 202425
+      const shortYr = yr.replace('20','').replace('-',''); // e.g. 2425 (strips '20' prefix from both year parts)
+      html += `
+        <div class="itr-year-block">
+          <div class="itr-year-label">Assessment Year ${yr}</div>
+          <div class="field-row" style="margin-bottom:10px">
+            <div class="field">
+              <label>ITR Upload ${yr}</label>
+              <div class="upload-zone" id="uz_itr_${person.prefix}_${shortYr}">
+                <input type="file" id="fu_itr_${person.prefix}_${shortYr}" accept="image/*,.pdf" multiple onchange="handleFileSelect('itr_${person.prefix}_${shortYr}', this.files)" onclick="event.stopPropagation()">
+                <div class="uz-icon">📄</div><div class="uz-text">Upload ITR</div>
+              </div>
+              <div class="file-list" id="fl_itr_${person.prefix}_${shortYr}"></div>
+              <button class="ocr-btn" id="ocr_itr_${person.prefix}_${shortYr}" onclick="runItrOcr('${person.prefix}','${shortYr}','itr')" disabled style="margin-top:6px">
+                <span>✨ Extract ITR</span>
+              </button>
+            </div>
+            <div class="field">
+              <label>Form 16 Upload ${yr}</label>
+              <div class="upload-zone" id="uz_f16_${person.prefix}_${shortYr}">
+                <input type="file" id="fu_f16_${person.prefix}_${shortYr}" accept="image/*,.pdf" multiple onchange="handleFileSelect('f16_${person.prefix}_${shortYr}', this.files)" onclick="event.stopPropagation()">
+                <div class="uz-icon">📄</div><div class="uz-text">Upload Form 16</div>
+              </div>
+              <div class="file-list" id="fl_f16_${person.prefix}_${shortYr}"></div>
+              <button class="ocr-btn" id="ocr_f16_${person.prefix}_${shortYr}" onclick="runItrOcr('${person.prefix}','${shortYr}','f16')" disabled style="margin-top:6px">
+                <span>✨ Extract F16</span>
+              </button>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>ITR Income ${yr}</label><input type="text" id="f_itr_${person.prefix}_${shortYr}" placeholder="₹ Income"></div>
+            <div class="field"><label>ITR Ack No.</label><input type="text" id="f_itr_ack_${person.prefix}_${shortYr}" placeholder="Acknowledgement No." style="font-family:'DM Mono',monospace;font-size:12px"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Form 16 Income ${yr}</label><input type="text" id="f_f16_inc_${person.prefix}_${shortYr}" placeholder="₹ Income"></div>
+            <div class="field"><label>Form 16 Cert No.</label><input type="text" id="f_f16_cert_${person.prefix}_${shortYr}" placeholder="Certificate No." style="font-family:'DM Mono',monospace;font-size:12px"></div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    card.innerHTML = html;
+    container.appendChild(card);
+  });
+  // Restore any previously typed values (from DOM snapshot)
+  Object.entries(savedVals).forEach(function([id, val]) {
+    var el = document.getElementById(id);
+    if (el && val) el.value = val;
+  });
+  // Also restore from persistent itrStore (OCR results survive here)
+  restoreItrFieldsFromStore();
+}
+
+async function runItrOcr(prefix, shortYr, docKind) {
+  const key = `${docKind}_${prefix}_${shortYr}`;
+  const geminiKey = getGeminiKey();
+  if (!geminiKey) { openApiKeyModal(); return; }
+  const files = uploadedFiles[key];
+  if (!files || files.length === 0) return;
+
+  const btn = document.getElementById(`ocr_${key}`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span><span> Extracting...</span>'; btn.classList.add('loading'); }
+
+  const prompt = docKind === 'itr'
+    ? `Extract from Income Tax Return. Return ONLY raw JSON: {"income":"Gross Total Income or Total Income as a number — NOT any loss figure","ackNo":"acknowledgement number"}`
+    : `Extract from Form 16. Return ONLY raw JSON: {"income":"Gross total income — must be positive number > 0","certNo":"Certificate number from Part A or Part B header"}`;
+
+  try {
+    const imgData = files[0];
+    // Try Cloud Vision first for text extraction
+    const itrText = await extractTextWithVision([imgData]);
+    let raw;
+    if (itrText) {
+      const textPrompt = prompt + '\n\nDOCUMENT TEXT:\n' + itrText.substring(0, 6000);
+      const d = await callGemini(geminiKey, {
+        contents: [{ parts: [{ text: textPrompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+      });
+      raw = d.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim();
+    } else {
+      const d = await callGemini(geminiKey, {
+        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: imgData.mimeType, data: imgData.base64 } }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+      });
+      raw = d.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim();
+    }
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch(e) { parsed = {}; }
+
+    if (docKind === 'itr') {
+      if (parsed.income) { setVal(`f_itr_${prefix}_${shortYr}`, parsed.income); itrStore[`f_itr_${prefix}_${shortYr}`] = parsed.income; }
+      if (parsed.ackNo)  { setVal(`f_itr_ack_${prefix}_${shortYr}`, parsed.ackNo); itrStore[`f_itr_ack_${prefix}_${shortYr}`] = parsed.ackNo; }
+      showToast(`ITR ${shortYr} extracted`, 'success');
+      // Save draft immediately after ITR extraction
+      var _appName = (document.getElementById('f_app_name') || {}).value || '';
+      if (_appName.trim()) saveDraft(_appName.trim()).catch(function() {});
+    } else {
+      if (parsed.income) { setVal(`f_f16_inc_${prefix}_${shortYr}`, parsed.income); itrStore[`f_f16_inc_${prefix}_${shortYr}`] = parsed.income; }
+      if (parsed.certNo) { setVal(`f_f16_cert_${prefix}_${shortYr}`, parsed.certNo); itrStore[`f_f16_cert_${prefix}_${shortYr}`] = parsed.certNo; }
+      showToast(`Form 16 ${shortYr} extracted`, 'success');
+      var _appNameF16 = (document.getElementById('f_app_name') || {}).value || '';
+      if (_appNameF16.trim()) saveDraft(_appNameF16.trim()).catch(function() {});
+    }
+  } catch(e) {
+    showError('OCR failed: ' + e.message);
+  }
+  if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
+}
+
+// ══════════════════════════════════════════════════════════
+// UPLOAD SUMMARY
+// ══════════════════════════════════════════════════════════
+function buildUploadSummary() {
+  const div = document.getElementById('uploadSummary');
+  const lines = [];
+  Object.entries(uploadedFiles).forEach(([k, files]) => {
+    if (files && files.length > 0) {
+      lines.push(`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>${k.replace(/_/g,' ')}</span><span style="color:var(--green);font-weight:600">${files.length} file(s)</span></div>`);
+    }
+  });
+  div.innerHTML = lines.length ? lines.join('') : '<span style="color:var(--muted)">No files uploaded yet</span>';
+  // Refresh draft list and auto-save
+  const appName2 = (document.getElementById('f_app_name') || {}).value || '';
+  if (appName2.trim()) { saveDraft(appName2.trim()); }
+  renderDraftList();
+}
+
+
+// ══════════════════════════════════════════════════════════
+// FORM SUBMISSION
+// ══════════════════════════════════════════════════════════
+function setSubmitType(type) {
+  submitType = type;
+  document.getElementById('btn_intermediate').classList.toggle('selected', type === 'intermediate');
+  document.getElementById('btn_final').classList.toggle('selected', type === 'final');
+}
+
+function isBiz(prefix) {
+  const v = (g(`f_${prefix}_emp_status`) || '').toLowerCase();
+  return v.includes('business') || v.includes('self employ');
+}
+
+function buildRow() {
+  // Ensure ITR section exists in DOM, then sync to store
+  const itrContainer = document.getElementById('itrContainer');
+  if (!itrContainer || itrContainer.children.length === 0) {
+    buildItrSection(true);
+  }
+  saveItrFieldsToStore();
+  console.log('buildRow itrStore:', JSON.stringify(itrStore));
+
+  const row = new Array(313).fill('');
+  const now = new Date().toISOString();
+
+  row[0] = now;
+  row[1] = '';
+  row[2] = submitType === 'final' ? 'Yes' : 'No';
+  row[3] = g('f_bank');
+  row[4] = g('f_loan');
+
+  // Applicant
+  row[5]  = '__FILE__app_pan';
+  row[6]  = g('f_app_name');
+  row[7]  = g('f_app_dob');
+  row[8]  = g('f_app_gender');
+  row[9]  = g('f_app_marital');
+  row[10] = g('f_app_emp_status');
+  row[11] = g('f_app_education');
+  row[12] = '__FILE__app_payslip';
+
+  const isBizApp = isBiz('app');
+  row[13] = isBizApp ? (g('f_app_gst_legal_name') || g('f_app_company')) : g('f_app_company');
+  row[14] = isBizApp ? (g('f_app_biz_designation') || g('f_app_designation')) : g('f_app_designation');
+  row[15] = isBizApp ? (g('f_app_gst_no') || g('f_app_udyam_no') || g('f_app_emp_code')) : g('f_app_emp_code');
+  // For business owners: pack constitution + directors into branch field (col 16)
+  // V13 reads this as data.appBranch and the AI uses it in the summary
+  if (isBizApp) {
+    const constitution = g('f_app_gst_constitution') || g('f_app_udyam_ent_type') || '';
+    const directors    = g('f_app_gst_directors') || '';
+    const udyamNo      = g('f_app_udyam_no') || '';
+    const parts = [];
+    if (constitution) parts.push('Constitution: ' + constitution);
+    if (directors)    parts.push('Directors/Partners: ' + directors);
+    if (udyamNo)      parts.push('Udyam: ' + udyamNo);
+    row[16] = parts.join(' | ');
+  } else {
+    row[16] = g('f_app_branch');
+  }
+  row[17] = isBizApp ? (g('f_app_biz_net_pay') || g('f_app_net_pay')) : g('f_app_net_pay');
+  row[18] = isBizApp ? (g('f_app_biz_joining') || g('f_app_joining')) : g('f_app_joining');
+  row[19] = g('f_app_mobile');
+  row[20] = isBizApp ? (g('f_app_biz_office_addr') || g('f_app_office_addr')) : g('f_app_office_addr');
+  row[21] = '__FILE__app_bank_stmt';
+  row[22] = g('f_app_bank_name');
+  row[23] = g('f_app_bank_branch');
+  row[24] = g('f_app_account_no');
+  row[25] = g('f_app_account_type');
+
+  // Co-applicants cols 26-140
+  const coColBase = [26, 49, 72, 95, 118];
+  for (let ci = 1; ci <= 5; ci++) {
+    const base = coColBase[ci-1];
+    const p = `co${ci}`;
+    const blockExists = !!document.getElementById(`coapp_block_${ci}`);
+    if (!blockExists) continue;
+    const bizCo = isBiz(p);
+    const residence = g(`f_${p}_residence`);
+    row[base]    = `__FILE__${p}_pan`;
+    row[base+1]  = g(`f_${p}_name`);
+    row[base+2]  = g(`f_${p}_dob`);
+    row[base+3]  = g(`f_${p}_gender`);
+    row[base+4]  = g(`f_${p}_marital`);
+    row[base+5]  = residence;
+    row[base+6]  = g(`f_${p}_address`);
+    row[base+7]  = g(`f_${p}_emp_status`);
+    row[base+8]  = g(`f_${p}_education`) || '';
+    row[base+9]  = `__FILE__${p}_payslip`;
+    row[base+10] = bizCo ? (g(`f_${p}_gst_legal_name`) || g(`f_${p}_company`)) : g(`f_${p}_company`);
+    row[base+11] = bizCo ? (g(`f_${p}_biz_designation`) || g(`f_${p}_designation`)) : g(`f_${p}_designation`);
+    row[base+12] = bizCo ? (g(`f_${p}_gst_no`) || g(`f_${p}_udyam_no`)) : g(`f_${p}_emp_code`);
+    // For biz co-apps: pack constitution + directors into branch field
+    if (bizCo) {
+      const coConst   = g(`f_${p}_gst_constitution`) || g(`f_${p}_udyam_ent_type`) || '';
+      const coDir     = g(`f_${p}_gst_directors`) || '';
+      const coUdyam   = g(`f_${p}_udyam_no`) || '';
+      const coParts = [];
+      if (coConst)  coParts.push('Constitution: ' + coConst);
+      if (coDir)    coParts.push('Directors/Partners: ' + coDir);
+      if (coUdyam)  coParts.push('Udyam: ' + coUdyam);
+      row[base+13] = coParts.join(' | ');
+    } else {
+      row[base+13] = g(`f_${p}_branch`);
+    }
+    row[base+14] = bizCo ? g(`f_${p}_biz_net_pay`) : g(`f_${p}_net_pay`);
+    row[base+15] = bizCo ? g(`f_${p}_biz_joining`) : g(`f_${p}_joining`);
+    row[base+16] = g(`f_${p}_mobile`);
+    row[base+17] = g(`f_${p}_office_addr`);
+    row[base+18] = `__FILE__${p}_bank_stmt`;
+    row[base+19] = g(`f_${p}_bank_name`);
+    row[base+20] = g(`f_${p}_bank_branch`);
+    row[base+21] = g(`f_${p}_account_no`);
+    row[base+22] = g(`f_${p}_account_type`);
+  }
+
+  // Field Visit cols 141-150
+  row[141] = g('f_exec_name');
+  row[142] = g('f_visit_dt');
+  row[143] = g('f_current_addr');
+  row[144] = g('f_perm_addr');
+  row[145] = g('f_duration_stay');
+  row[146] = g('f_residence_type');
+  row[147] = g('f_society_name');
+  row[148] = '';
+  row[149] = g('f_locality_type');
+
+  let fieldNotesVal = g('f_field_notes');
+  const appResRemarks = g('f_app_res_remarks');
+  const appEmpRemarks = g('f_app_emp_remarks') || g('f_app_biz_remarks');
+  if (appResRemarks) fieldNotesVal += '\n\nAPPLICANT RESIDENCE REMARKS: ' + appResRemarks;
+  if (appEmpRemarks) fieldNotesVal += '\n\nAPPLICANT EMPLOYMENT REMARKS: ' + appEmpRemarks;
+  for (let ri = 1; ri <= 5; ri++) {
+    const coName = g(`f_co${ri}_name`) || ('Co-App ' + ri);
+    const coResRem = g(`f_co${ri}_res_remarks`);
+    const coEmpRem = g(`f_co${ri}_emp_remarks`) || g(`f_co${ri}_biz_remarks`);
+    if (coResRem) fieldNotesVal += '\n\n' + coName.toUpperCase() + ' RESIDENCE REMARKS: ' + coResRem;
+    if (coEmpRem) fieldNotesVal += '\n\n' + coName.toUpperCase() + ' EMPLOYMENT REMARKS: ' + coEmpRem;
+  }
+  row[150] = fieldNotesVal;
+
+  // ITR & Form 16 cols 151-258
+  const shortYrs = ['2425','2526','2627'];
+  const itrAppBase = 151;
+  shortYrs.forEach((yr, yi) => {
+    const base = itrAppBase + (yi * 3);
+    row[base]   = `__FILE__itr_app_${yr}`;
+    row[base+1] = itrStore[`f_itr_app_${yr}`] || g(`f_itr_app_${yr}`);
+    row[base+2] = itrStore[`f_itr_ack_app_${yr}`] || g(`f_itr_ack_app_${yr}`);
+  });
+  shortYrs.forEach((yr, yi) => {
+    const base = 160 + (yi * 3);
+    row[base]   = `__FILE__f16_app_${yr}`;
+    row[base+1] = itrStore[`f_f16_inc_app_${yr}`] || g(`f_f16_inc_app_${yr}`);
+    row[base+2] = itrStore[`f_f16_cert_app_${yr}`] || g(`f_f16_cert_app_${yr}`);
+  });
+
+  const coItrBases = [169, 187, 205, 223, 241];
+  const coF16Bases = [178, 196, 214, 232, 250];
+  for (let ci = 1; ci <= 5; ci++) {
+    const p = `co${ci}`;
+    shortYrs.forEach((yr, yi) => {
+      const ib = coItrBases[ci-1] + (yi*3);
+      row[ib]   = `__FILE__itr_${p}_${yr}`;
+      row[ib+1] = itrStore[`f_itr_${p}_${yr}`] || g(`f_itr_${p}_${yr}`);
+      row[ib+2] = itrStore[`f_itr_ack_${p}_${yr}`] || g(`f_itr_ack_${p}_${yr}`);
+      const fb = coF16Bases[ci-1] + (yi*3);
+      row[fb]   = `__FILE__f16_${p}_${yr}`;
+      row[fb+1] = itrStore[`f_f16_inc_${p}_${yr}`] || g(`f_f16_inc_${p}_${yr}`);
+      row[fb+2] = itrStore[`f_f16_cert_${p}_${yr}`] || g(`f_f16_cert_${p}_${yr}`);
+    });
+  }
+
+  // Property cols 259-276
+  row[259] = g('f_prop_type');
+  row[260] = g('f_noc');
+  row[261] = '__FILE__index2';
+  const propRemarks = g('f_prop_remarks');
+  row[262] = g('f_prop_address') + (propRemarks ? '\n\nPROPERTY REMARKS: ' + propRemarks : '');
+  row[263] = g('f_house_ref');
+  row[264] = g('f_prop_price');
+  row[265] = g('f_prop_area');
+  row[266] = g('f_unit_type');
+  row[267] = g('f_purchaser');
+  row[268] = g('f_seller');
+  row[269] = g('f_reg_date');
+  row[270] = g('f_reg_no');
+  const regFeeVal = g('f_reg_fee');
+  row[271] = g('f_stamp_duty') + (regFeeVal ? ' | Reg.Fee: ' + regFeeVal : '');
+  row[272] = g('f_ready_reckoner');
+  row[273] = g('f_index2_no');
+  row[274] = g('f_index2_date');
+  row[275] = g('f_index2_by');
+  row[276] = g('f_ownership_doc');
+
+  // References 277-282
+  row[277] = g('f_ref1_name');
+  row[278] = g('f_ref1_phone');
+  row[279] = g('f_ref1_conv');
+  row[280] = g('f_ref2_name');
+  row[281] = g('f_ref2_phone');
+  row[282] = g('f_ref2_conv');
+
+  // KYC 283-306
+  const kycPanKey = (uploadedFiles['app_kyc_pan'] && uploadedFiles['app_kyc_pan'].length > 0)
+    ? 'app_kyc_pan' : 'app_pan';
+  row[283] = '__FILE__' + kycPanKey;
+  row[284] = g('f_app_kyc_pan_no');
+  row[285] = '__FILE__app_kyc_aadhar';
+  row[286] = g('f_app_kyc_aadhar_no');
+  const coKycBase = [287, 291, 295, 299, 303];
+  for (let ci = 1; ci <= 5; ci++) {
+    const p = `co${ci}`;
+    const b = coKycBase[ci-1];
+    const coKycPanKey = (uploadedFiles[`${p}_kyc_pan`] && uploadedFiles[`${p}_kyc_pan`].length > 0)
+      ? `${p}_kyc_pan` : `${p}_pan`;
+    row[b]   = `__FILE__${coKycPanKey}`;
+    row[b+1] = g(`f_${p}_kyc_pan_no`);
+    row[b+2] = `__FILE__${p}_kyc_aadhar`;
+    row[b+3] = g(`f_${p}_kyc_aadhar_no`);
+  }
+
+  // Car 307-312
+  row[307] = '__FILE__car_quotation';
+  row[308] = g('f_car_model');
+  row[309] = g('f_car_price');
+  row[310] = g('f_dealership_name');
+  row[311] = g('f_dealership_addr');
+  row[312] = g('f_dealership_contact');
+
+  console.log('Submitting ITR values:');
+  ['2425','2526','2627'].forEach(function(yr) {
+    console.log('  itr_app_' + yr + ':', row[151 + ['2425','2526','2627'].indexOf(yr)*3 + 1]);
+    console.log('  f16_app_' + yr + ':', row[160 + ['2425','2526','2627'].indexOf(yr)*3 + 1]);
+  });
+
+  return row;
+}
+
+async function submitForm() {
+  const endpoint = getEndpoint();
+  if (!endpoint) {
+    showStatus('Please enter the Apps Script Web App URL above.', 'error');
+    return;
+  }
+
+  setProgress(5);
+  showStatus('Preparing form data...', 'info');
+  document.getElementById('submitBtn').disabled = true;
+
+  try {
+    // Build the 313-column row (text data only)
+    const row = buildRow();
+
+    // ── STEP 1: Upload each file individually to Apps Script ──────────────
+    // Each request is small (one file at a time) so no size limit issues.
+    // Apps Script saves to Drive and returns the URL.
+    // We then replace the __FILE__key placeholder in the row with the real URL.
+
+    const fileKeys = [];
+    for (let c = 0; c < row.length; c++) {
+      if (String(row[c]).startsWith('__FILE__')) {
+        const key = String(row[c]).replace('__FILE__', '');
+        const hasLocal = uploadedFiles[key] && uploadedFiles[key].length > 0;
+        const hasDrive = _draftDriveFiles[key] && _draftDriveFiles[key].length > 0;
+        if (hasLocal || hasDrive) {
+          fileKeys.push({ col: c, key });
+        } else {
+          row[c] = ''; // no file uploaded for this slot
+        }
+      }
+    }
+
+    const totalFiles = fileKeys.length;
+    let uploaded = 0;
+    showStatus(`Uploading ${totalFiles} file(s) to Drive...`, 'info');
+
+    for (const { col, key } of fileKeys) {
+      const files = uploadedFiles[key] || [];
+      const driveFiles = _draftDriveFiles[key] || [];
+      const urls = [];
+
+      if (files.length > 0) {
+        // Fresh local files — upload to Drive now
+        for (let fi = 0; fi < files.length; fi++) {
+          const f = files[fi];
+          // Check if already uploaded to Drive (background upload may have done it)
+          const alreadyOnDrive = driveFiles.find(function(d) { return d.name === f.name; });
+          if (alreadyOnDrive) {
+            urls.push(alreadyOnDrive.driveUrl);
+            continue;
+          }
+          try {
+            setProgress(5 + Math.round((uploaded / totalFiles) * 60));
+            showStatus(`Uploading ${key.replace(/_/g,' ')} (${fi+1}/${files.length})...`, 'info');
+            const res = await fetch(endpoint, {
+              method: 'POST',
+              body: JSON.stringify({
+                action: 'uploadFile',
+                file: { base64: f.base64, mimeType: f.mimeType, name: f.name || (key + '_' + fi + '.jpg') }
+              })
+            });
+            const data = await res.json();
+            if (data.url) { urls.push(data.url); }
+            else if (data.error) { console.warn('File upload failed [' + key + ']:', data.error); }
+          } catch(uploadErr) {
+            console.warn('File upload error [' + key + ']:', uploadErr.message);
+          }
+        }
+      } else if (driveFiles.length > 0) {
+        // No local files — use Drive URLs from draft directly, no re-upload needed
+        showStatus(`Using saved Drive file(s) for ${key.replace(/_/g,' ')}...`, 'info');
+        driveFiles.forEach(function(df) { urls.push(df.driveUrl); });
+      }
+
+      row[col] = urls.join(',');
+      uploaded++;
+    }
+
+    setProgress(70);
+    showStatus('Submitting form data...', 'info');
+
+    // ── STEP 2: Submit text row (no files — all already uploaded) ──────────
+    console.log('Submitting ITR values:');
+    ['2425','2526','2627'].forEach(function(yr) {
+      console.log('  itr_app_' + yr + ':', row[151 + ['2425','2526','2627'].indexOf(yr)*3 + 1]);
+      console.log('  f16_app_' + yr + ':', row[160 + ['2425','2526','2627'].indexOf(yr)*3 + 1]);
+    });
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({
+        row,
+        files: {},  // empty — all files already uploaded above
+        isFinal: submitType === 'final',
+        draftKey: currentDraftKey
+      })
+    });
+
+    setProgress(95);
+    const text = await res.text();
+    let result;
+    try { result = JSON.parse(text); } catch(e) { result = { status: 'ok', message: text }; }
+
+    if (result.error) throw new Error(result.error);
+
+    setProgress(100);
+    showStatus('✅ ' + (result.message || 'Form submitted successfully!'), 'success');
+    showToast('Submitted!', 'success');
+  } catch(e) {
+    showStatus('❌ Submission failed: ' + e.message, 'error');
+    showToast('Submission failed', 'error');
+  }
+  document.getElementById('submitBtn').disabled = false;
+}
+
+function getEndpoint() {
+  // Hardcoded endpoint — no configuration needed
+  return 'https://script.google.com/macros/s/AKfycbyG2Ld2l7Iwb44fv2x7y0GNEdvMMhkKu9gEUu0q3DvhrTDAQ4H1ohOcsKjg_yPlhoVN/exec';
+}
+
+// ── Collect all field values ──────────────────────────────
+// Persistent store for ITR/F16 values — survives DOM rebuilds
+var itrStore = {};
+
+function saveItrFieldsToStore() {
+  var container = document.getElementById('itrContainer');
+  if (!container || container.children.length === 0) return;
+  container.querySelectorAll('input[type=text]').forEach(function(el) {
+    if (el.id && el.id.match(/^f_(itr|f16)_/)) {
+      // Save all values including empty (so we know field exists)
+      if (el.value) itrStore[el.id] = el.value;
+    }
+  });
+}
+
+function restoreItrFieldsFromStore() {
+  Object.entries(itrStore).forEach(function([id, val]) {
+    if (!val) return;
+    var el = document.getElementById(id);
+    if (el) el.value = val;
+  });
+}
+
+function collectFormValues() {
+  // Save ITR fields to persistent store first
+  saveItrFieldsToStore();
+  const vals = {};
+  document.querySelectorAll(
+    'input[type=text],input[type=date],input[type=datetime-local],' +
+    'input[type=tel],input[type=email],input[type=number],select,textarea'
+  ).forEach(function(el) {
+    if (!el.id) return;
+    if (el.type === 'file') return;
+    vals[el.id] = el.value;
+  });
+  // Also include ITR store values (fields may not be in DOM right now)
+  Object.entries(itrStore).forEach(function([id, val]) {
+    if (val) vals[id] = val;
+  });
+  vals['__numCoApps'] = numCoApps;
+  return vals;
+}
+
+// ── Restore form from saved values ───────────────────────
+function restoreFormValues(metaOrVals) {
+  // Accept either a full draft meta object or just vals
+  const vals = (metaOrVals && metaOrVals.vals) ? metaOrVals.vals : metaOrVals;
+  if (!vals) return;
+  const savedCoApps = parseInt(vals['__numCoApps'] || 0);
+  for (let i = numCoApps + 1; i <= savedCoApps; i++) { addCoApp(); }
+  // Build ITR section so those field IDs exist before we set values
+  // Also restore itrStore from saved draft values
+  Object.entries(vals).forEach(function([id, val]) {
+    if (id.match && id.match(/^f_(itr|f16)_/) && val) {
+      itrStore[id] = val;
+    }
+  });
+  buildItrSection();
+  Object.entries(vals).forEach(function([id, val]) {
+    if (id.startsWith('__')) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Skip file inputs — browsers block setting their value for security
+    if (el.type === 'file') return;
+    el.value = val;
+    if (el.tagName === 'SELECT') el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  // Second pass after 400ms - re-fire all SELECTs AND re-set all text fields
+  // This ensures dependent show/hide sections are visible and values are correct
+  setTimeout(function() {
+    // Re-fire all SELECTs to show/hide dependent sections
+    document.querySelectorAll('select').forEach(function(el) {
+      if (el.id && el.value) {
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    // Re-set all text/textarea values in case dependent sections were
+    // hidden during first pass and fields didn't exist yet
+    Object.entries(vals).forEach(function([id, val]) {
+      if (id.startsWith('__') || !val) return;
+      const el = document.getElementById(id);
+      if (!el || el.type === 'file' || el.tagName === 'SELECT') return;
+      if (!el.value) el.value = val; // only set if still empty
+    });
+    // Re-restore ITR fields from store
+    restoreItrFieldsFromStore();
+  }, 400);
+
+  // Restore Drive-uploaded photos from draft
+  // These show as linked items in upload zones — no re-upload needed for submission
+  const meta = (metaOrVals && metaOrVals.vals) ? metaOrVals : null;
+  const savedDriveFiles = meta ? meta.driveFiles : null;
+  if (savedDriveFiles && Object.keys(savedDriveFiles).length > 0) {
+    _draftDriveFiles = savedDriveFiles;
+    // Render each upload zone that has Drive files
+    Object.keys(_draftDriveFiles).forEach(function(key) {
+      const driveFiles = _draftDriveFiles[key];
+      if (!driveFiles || driveFiles.length === 0) return;
+      // Mark upload zone as having files
+      const uz = document.getElementById('uz_' + key);
+      if (uz) {
+        uz.classList.add('has-file');
+        const iconEl = uz.querySelector('.uz-icon');
+        const textEl = uz.querySelector('.uz-text');
+        if (iconEl) iconEl.textContent = '☁️';
+        if (textEl) textEl.textContent = driveFiles.length + ' file(s) from Drive';
+      }
+      // Enable OCR button if available
+      const ocrBtn = document.getElementById('ocr_' + key);
+      if (ocrBtn) ocrBtn.disabled = false;
+      renderFileList(key);
+    });
+    setTimeout(function() {
+      showStatus('📎 Draft loaded with ' + Object.keys(savedDriveFiles).length + ' document(s) restored from Drive. You can re-upload any file to replace it, or submit as-is.', 'info');
+      document.getElementById('statusMsg').style.display = 'block';
+    }, 600);
+  } else {
+    // No Drive photos saved — show the old message to re-attach
+    setTimeout(function() {
+      showStatus('📎 Draft loaded. All text data restored. Please re-attach any document photos before submitting.', 'info');
+      document.getElementById('statusMsg').style.display = 'block';
+      document.querySelectorAll('input[type=file]').forEach(function(inp) {
+        try { inp.value = ''; } catch(e) {}
+      });
+      document.querySelectorAll('.upload-zone').forEach(function(uz) {
+        uz.classList.remove('has-file');
+        var icon = uz.querySelector('.uz-icon');
+        var text = uz.querySelector('.uz-text');
+        if (icon) icon.textContent = '📄';
+        if (text) text.textContent = 'Tap to upload';
+      });
+      document.querySelectorAll('.file-list').forEach(function(fl) { fl.innerHTML = ''; });
+    }, 600);
+  }
+}
+
+// ── Build draft meta object ───────────────────────────────
+function buildDraftMeta(draftName) {
+  const appName = (document.getElementById('f_app_name') || {}).value || '';
+  const bank    = (document.getElementById('f_bank')     || {}).value || '';
+  const key     = currentDraftKey || ('draft_' + Date.now());
+  currentDraftKey = key;
+  draftName = draftName || appName.trim() || ('Draft ' + new Date().toLocaleString('en-IN'));
+  return {
+    key, name: draftName,
+    appName: appName.trim(), bank: bank.trim(),
+    savedAt: new Date().toISOString(),
+    vals: collectFormValues(),
+    driveFiles: Object.assign({}, _draftDriveFiles)  // Drive URLs for all uploaded files
+  };
+}
+
+// ── SAVE DRAFT ────────────────────────────────────────────
+// Saves to cloud (Apps Script) AND localStorage as backup
+async function saveDraft(draftName) {
+  const meta = buildDraftMeta(draftName);
+
+  // Always save to localStorage as backup
+  localStorage.setItem('rka_draft_' + meta.key, JSON.stringify(meta));
+  _updateLocalIndex(meta);
+
+  // Try cloud sync if endpoint configured
+  const endpoint = getEndpoint();
+  if (endpoint) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'saveDraft', draft: meta })
+      });
+      const data = await res.json();
+      if (data.error) {
+        console.warn('Cloud draft save error:', data.error);
+      } else {
+        console.log('Cloud draft saved:', meta.appName || meta.name);
+      }
+    } catch(e) {
+      console.warn('Cloud draft save failed (local backup kept):', e.message);
+    }
+  }
+  return meta.name;
+}
+
+// ── LOAD DRAFTS ───────────────────────────────────────────
+// Fetches from cloud, falls back to localStorage
+async function fetchDrafts() {
+  const endpoint = getEndpoint();
+  // Always get local drafts first as baseline
+  const localDrafts = _getLocalDrafts();
+
+  if (endpoint) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'getDrafts' })
+      });
+      const data = await res.json();
+      if (data.drafts && Array.isArray(data.drafts) && data.drafts.length > 0) {
+        // Merge cloud + local — cloud wins for same key
+        const merged = {};
+        localDrafts.forEach(function(d) { if (d && d.key) merged[d.key] = d; });
+        data.drafts.forEach(function(d) { if (d && d.key) merged[d.key] = d; });
+        const all = Object.values(merged);
+        // Sync merged set back to localStorage
+        all.forEach(function(d) {
+          localStorage.setItem('rka_draft_' + d.key, JSON.stringify(d));
+        });
+        _rebuildLocalIndex(all);
+        _draftsCache = all;
+        return all;
+      }
+      // Cloud returned empty — just use local (don't wipe local with empty cloud)
+    } catch(e) {
+      console.warn('Cloud draft fetch failed, using localStorage:', e.message);
+    }
+  }
+  return localDrafts;
+}
+
+// ── DELETE DRAFT ──────────────────────────────────────────
+async function deleteDraft(key) {
+  if (!confirm('Delete this draft?')) return;
+  // Local
+  localStorage.removeItem('rka_draft_' + key);
+  _updateLocalIndex(null, key);
+  // Cloud
+  const endpoint = getEndpoint();
+  if (endpoint) {
+    try {
+      await fetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteDraft', key: key })
+      });
+    } catch(e) {}
+  }
+  renderDraftList();
+  showToast('Draft deleted', 'success');
+}
+
+// ── LOCAL INDEX HELPERS ───────────────────────────────────
+function _updateLocalIndex(meta, deleteKey) {
+  let index = _getLocalIndex();
+  if (deleteKey) {
+    index = index.filter(function(d) { return d.key !== deleteKey; });
+  } else if (meta) {
+    const exists = index.findIndex(function(d) { return d.key === meta.key; });
+    const summary = { key: meta.key, name: meta.name, appName: meta.appName, bank: meta.bank, savedAt: meta.savedAt };
+    if (exists > -1) index[exists] = summary;
+    else index.push(summary);
+  }
+  localStorage.setItem('rka_draft_index', JSON.stringify(index));
+}
+function _rebuildLocalIndex(drafts) {
+  const index = drafts.map(function(d) {
+    return { key: d.key, name: d.name, appName: d.appName, bank: d.bank, savedAt: d.savedAt };
+  });
+  localStorage.setItem('rka_draft_index', JSON.stringify(index));
+}
+function _getLocalIndex() {
+  try { return JSON.parse(localStorage.getItem('rka_draft_index') || '[]'); } catch(e) { return []; }
+}
+function _getLocalDrafts() {
+  return _getLocalIndex().map(function(idx) {
+    try { return JSON.parse(localStorage.getItem('rka_draft_' + idx.key)); } catch(e) { return null; }
+  }).filter(Boolean);
+}
+
+// ── RENDER DRAFT LIST ─────────────────────────────────────
+// Loads drafts into _draftsCache but does NOT show any cards.
+// Cards are only revealed when the user types in the search box.
+async function renderDraftList() {
+  const container = document.getElementById('draftListContainer');
+  if (!container) return;
+
+  // Clear search box
+  var searchBox = document.getElementById('draftSearch');
+  if (searchBox) searchBox.value = '';
+
+  // Show prompt — no cards visible yet
+  container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Start typing a name above to search your drafts.</div>';
+
+  // Load drafts into cache in background
+  const drafts = await fetchDrafts();
+  _draftsCache = drafts || [];
+}
+
+// ── OPEN / RESTORE A DRAFT ────────────────────────────────
+function filterDrafts(query) {
+  const q = (query || '').toLowerCase().trim();
+  const container = document.getElementById('draftListContainer');
+  if (!container) return;
+
+  // Nothing typed — show the prompt, hide all cards
+  if (!q) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Start typing a name above to search your drafts.</div>';
+    return;
+  }
+
+  // Filter from cache
+  const drafts = _draftsCache || [];
+  const matched = drafts.filter(function(d) {
+    var text = ((d.appName || d.name || '') + ' ' + (d.bank || '')).toLowerCase();
+    return text.indexOf(q) > -1;
+  });
+
+  if (matched.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">No drafts matching "' + query + '"</div>';
+    return;
+  }
+
+  const sorted = [...matched].sort(function(a,b) { return new Date(b.savedAt) - new Date(a.savedAt); });
+  const endpoint = getEndpoint();
+  const syncBadge = endpoint
+    ? '<span style="font-size:10px;color:var(--green);margin-left:6px;">☁ Cloud</span>'
+    : '<span style="font-size:10px;color:var(--muted);margin-left:6px;">📱 Local only</span>';
+
+  container.innerHTML = sorted.map(function(d) {
+    // Show drive file count if photos were saved
+    var photoCount = d.driveFiles ? Object.keys(d.driveFiles).length : 0;
+    var photoBadge = photoCount > 0
+      ? '<span style="font-size:10px;color:var(--accent);margin-left:6px;">📎 ' + photoCount + ' photos</span>'
+      : '';
+    return '<div class="draft-card" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);margin-bottom:8px;">'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (d.appName || d.name || 'Unnamed') + syncBadge + photoBadge + '</div>'
+      + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + (d.bank || '') + ' &nbsp;•&nbsp; ' + new Date(d.savedAt).toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'}) + '</div>'
+      + '</div>'
+      + '<button data-dkey="' + d.key + '" class="draft-load-btn" style="background:var(--accent);border:none;border-radius:6px;color:#000;font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;flex-shrink:0;touch-action:manipulation;">Load</button>'
+      + '<button data-dkey="' + d.key + '" class="draft-del-btn" style="background:none;border:1px solid var(--accent2);border-radius:6px;color:var(--accent2);font-size:12px;padding:6px 10px;cursor:pointer;flex-shrink:0;touch-action:manipulation;">🗑</button>'
+      + '</div>';
+  }).join('');
+}
+
+async function openDraft(key) {
+  // Try cloud first, then localStorage
+  let meta = null;
+  const endpoint = getEndpoint();
+  if (endpoint) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'getDraft', key: key })
+      });
+      const data = await res.json();
+      if (data.draft) meta = data.draft;
+    } catch(e) {}
+  }
+  if (!meta) {
+    try { meta = JSON.parse(localStorage.getItem('rka_draft_' + key)); } catch(e) {}
+  }
+  if (!meta) { showToast('Draft not found', 'error'); return; }
+  if (!confirm('Load "' + (meta.appName || meta.name) + '"? Unsaved data will be replaced.')) return;
+  hardClearForm(false);
+  currentDraftKey = key;
+  // Restore Drive file URLs from draft
+  _draftDriveFiles = (meta.driveFiles && typeof meta.driveFiles === 'object') ? meta.driveFiles : {};
+  // Build dynamic sections BEFORE restoring values
+  // so all field IDs (esp. ITR fields) exist in DOM
+  buildItrSection();
+  restoreFormValues(meta);
+  showToast('Loaded: ' + (meta.appName || meta.name), 'success');
+  switchTab(0);
+}
+
+// ── AUTOSAVE ──────────────────────────────────────────────
+let autosaveTimer = null;
+function scheduleAutosave() {
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(async function() {
+    const appName = (document.getElementById('f_app_name') || {}).value || '';
+    if (appName.trim()) {
+      await saveDraft(appName.trim());
+      // Silent — no toast
+    }
+  }, 5000);  // 5 seconds — captures OCR results quickly
+}
+
+async function saveDraftNow() {
+  const appName = (document.getElementById('f_app_name') || {}).value || '';
+  const name = await saveDraft(appName.trim() || ('Draft ' + new Date().toLocaleTimeString('en-IN')));
+  showToast('Saved: ' + name, 'success');
+  renderDraftList();
+}
+
+function hardClearForm(confirm_first) {
+  if (confirm_first && !confirm('Clear all form data?')) return;
+  document.querySelectorAll('input[type=text],input[type=date],input[type=datetime-local],input[type=tel],input[type=email],input[type=number],select,textarea').forEach(function(el) {
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+  uploadedFiles = {};
+  _draftDriveFiles = {};
+  numCoApps = 0;
+  currentDraftKey = null;
+  document.getElementById('coAppContainer').innerHTML = '';
+  document.querySelectorAll('.coapp-tab:not(.add-btn)').forEach(function(t) { t.remove(); });
+  document.querySelectorAll('.file-list').forEach(function(fl) { fl.innerHTML = ''; });
+  document.querySelectorAll('.upload-zone').forEach(function(uz) {
+    uz.classList.remove('has-file');
+    const icon = uz.querySelector('.uz-icon');
+    const text = uz.querySelector('.uz-text');
+    if (icon) icon.textContent = '📄';
+    if (text) text.textContent = text.dataset.orig || 'Tap to upload';
+  });
+  itrStore = {};
+  if (confirm_first) showToast('Form cleared', 'success');
+}
+
+function clearForm() { hardClearForm(true); }
+
+// ── Restore saved config on load ──
+window.addEventListener('DOMContentLoaded', () => {
+  // OCR sheet buttons wired fresh inside showOcrModal() each call
+
+  // Draft list buttons — event delegation so dynamically rendered buttons work
+  document.addEventListener('click', function(e) {
+    var loadBtn = e.target.closest('.draft-load-btn');
+    var delBtn  = e.target.closest('.draft-del-btn');
+    if (loadBtn) { e.preventDefault(); openDraft(loadBtn.getAttribute('data-dkey')); }
+    if (delBtn)  { e.preventDefault(); deleteDraft(delBtn.getAttribute('data-dkey')); }
+  });
+
+  // Endpoint is hardcoded — pre-fill the display field
+  const ep = document.getElementById('f_endpoint');
+  if (ep) {
+    ep.value = getEndpoint();
+    ep.readOnly = true;
+    ep.style.opacity = '0.5';
+  }
+  // Set default visit datetime to now
+  const vdt = document.getElementById('f_visit_dt');
+  if (vdt) {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    vdt.value = now.toISOString().slice(0,16);
+  }
+  // Attach autosave listeners
+  document.addEventListener('change', scheduleAutosave);
+  document.addEventListener('input',  scheduleAutosave);
+  // Render drafts list on first load
+  renderDraftList();
+});
+</script>
+</body>
+</html>
