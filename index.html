@@ -3737,9 +3737,29 @@ function keepDriveFile(key, btn) {
 }
 
 function discardDriveFile(key, index) {
-  // Remove this key entirely from _draftDriveFiles
-  delete _draftDriveFiles[key];
-  _discardedDriveKeys.add(key);
+  // Remove specific file by index, or all files if no index
+  if (typeof index === 'number' && _draftDriveFiles[key] && _draftDriveFiles[key].length > 1) {
+    // Multiple files — remove only the specific one
+    _draftDriveFiles[key] = _draftDriveFiles[key].filter(function(_, i) { return i !== index; });
+  } else {
+    // Single file or no index — remove entire key
+    delete _draftDriveFiles[key];
+    _discardedDriveKeys.add(key);
+  }
+  // Immediately update localStorage so auto-save has correct state
+  if (currentDraftKey) {
+    try {
+      var stored = JSON.parse(localStorage.getItem('rka_draft_' + currentDraftKey) || 'null');
+      if (stored) {
+        stored.driveFiles = Object.assign({}, _draftDriveFiles);
+        stored.savedAt = new Date().toISOString();
+        localStorage.setItem('rka_draft_' + currentDraftKey, JSON.stringify(stored));
+        _updateLocalIndex(stored);
+        var ci = _draftsCache.findIndex(function(d) { return d.key === currentDraftKey; });
+        if (ci > -1) { _draftsCache[ci] = stored; }
+      }
+    } catch(e) {}
+  }
   // Remove Drive-sourced entries from uploadedFiles
   if (uploadedFiles[key]) {
     uploadedFiles[key] = uploadedFiles[key].filter(function(f) { return f.file !== null; });
@@ -3759,24 +3779,8 @@ function discardDriveFile(key, index) {
   if (ocrBtn && !hasLocal) ocrBtn.disabled = true;
   renderFileList(key);
   showToast('Draft photo removed', 'success');
-  // Auto-save draft synchronously so removed file is gone from both cloud and local
-  saveDraft().then(function() {
-    // Also update localStorage directly with current _draftDriveFiles state
-    if (currentDraftKey) {
-      try {
-        var stored = JSON.parse(localStorage.getItem('rka_draft_' + currentDraftKey) || 'null');
-        if (stored) {
-          stored.driveFiles = Object.assign({}, _draftDriveFiles);
-          stored.savedAt = new Date().toISOString();
-          localStorage.setItem('rka_draft_' + currentDraftKey, JSON.stringify(stored));
-          _updateLocalIndex(stored);
-          // Update cache too
-          var ci = _draftsCache.findIndex(function(d) { return d.key === currentDraftKey; });
-          if (ci > -1) { _draftsCache[ci] = stored; }
-        }
-      } catch(e) {}
-    }
-  }).catch(function() {});
+  // Cloud save — localStorage already updated synchronously above
+  saveDraft().catch(function() {});
 }
 
 function keepAllDriveFiles() {
