@@ -209,13 +209,24 @@
     display: flex; align-items: center; gap: 8px;
     background: var(--surface2); border-radius: 6px;
     padding: 6px 10px; font-size: 12px;
+    min-width: 0;
   }
-  .file-item .fi-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-item .fi-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
   .file-item .fi-remove {
     background: none; border: none; color: var(--accent2);
-    cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px;
+    cursor: pointer; font-size: 20px; line-height: 1;
+    padding: 0 4px; flex-shrink: 0;
+    min-width: 32px; min-height: 32px; width: 32px;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   }
-  .file-item .fi-status { font-size: 11px; color: var(--muted); }
+  .file-item .fi-status { font-size: 11px; color: var(--muted); flex-shrink: 0; }
 
   /* ── OCR EXTRACT BUTTON ── */
   .ocr-btn {
@@ -1707,21 +1718,23 @@ function renderFileList(key) {
     </div>
   `).join('');
 
-  // Drive files restored from draft — show thumbnail + Keep/Discard inline
+  // Drive files restored from draft — show thumbnail + inline discard button
   const localNames = new Set(files.filter(f => f.file !== null).map(f => f.name));
   driveFiles.forEach(function(df, di) {
     if (localNames.has(df.name)) return;
     const isImage = df.mimeType && df.mimeType.startsWith('image/');
     const fileId = extractDriveFileId(df.driveUrl);
     const thumbHtml = (isImage && fileId)
-      ? `<img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w60" style="width:36px;height:36px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<span>☁️</span>`;
+      ? `<img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w60" style="width:28px;height:28px;object-fit:cover;border-radius:4px;flex-shrink:0;min-width:28px;" onerror="this.style.display='none'">`
+      : `<span style="flex-shrink:0;min-width:20px;">☁️</span>`;
+    // Truncate long filename for display only
+    const displayName = df.name.length > 22 ? df.name.substring(0, 20) + '…' : df.name;
     html += `
-      <div class="file-item" style="border:1px solid var(--border);background:var(--surface2);" id="drive_item_${key}_${di}">
+      <div class="file-item" style="border:1px solid var(--border);background:var(--surface2);">
         ${thumbHtml}
-        <span class="fi-name" style="color:var(--label);">${df.name}</span>
-        <span class="fi-status" style="color:var(--muted);font-size:10px;">Draft</span>
-        <button onclick="discardDriveFile('${key}')" style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;">×</button>
+        <span class="fi-name" style="color:var(--label);">${displayName}</span>
+        <span class="fi-status" style="flex-shrink:0;color:var(--muted);font-size:10px;">Draft</span>
+        <button class="fi-remove" onclick="discardDriveFile('${key}')" style="color:var(--accent2);flex-shrink:0;min-width:28px;">×</button>
       </div>`;
   });
 
