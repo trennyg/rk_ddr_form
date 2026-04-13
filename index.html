@@ -1692,8 +1692,9 @@ async function uploadFilesToDriveForDraft(key) {
         // Remove old entry with same name if exists
         _draftDriveFiles[key] = _draftDriveFiles[key].filter(function(d) { return d.name !== f.name; });
         _draftDriveFiles[key].push({ driveUrl: data.url, name: f.name, mimeType: f.mimeType, base64: f.base64 });
-        // Mark as not discarded now that we have a fresh upload
-        _discardedDriveKeys.delete(key);
+        // Do NOT clear _discardedDriveKeys here — the submission logic uses trulyLocal
+        // presence to decide whether to include Drive files, so clearing it would cause
+        // old Drive files to re-appear alongside the new upload.
         console.log('Draft photo uploaded to Drive:', key, f.name, data.url);
       }
     } catch(e) {
@@ -3157,7 +3158,7 @@ async function submitForm() {
         const f = trulyLocal[fi];
         // Check if this file was already background-uploaded to Drive
         const alreadyOnDrive = (_draftDriveFiles[key] || []).find(function(d) { return d.name === f.name; });
-        if (alreadyOnDrive && !_discardedDriveKeys.has(key)) {
+        if (alreadyOnDrive) {
           urls.push(alreadyOnDrive.driveUrl);
           continue;
         }
@@ -3179,19 +3180,19 @@ async function submitForm() {
         }
       }
 
-      // Add Drive files from draft (kept by user) that aren't already included
-      const uploadedUrls = new Set(urls);
-      driveFiles.forEach(function(df) {
-        if (!uploadedUrls.has(df.driveUrl)) {
-          urls.push(df.driveUrl);
-        }
-      });
-
-      // If no local files and Drive not discarded, use Drive URLs directly
-      if (trulyLocal.length === 0 && driveFiles.length > 0 && urls.length === 0) {
-        showStatus(`Using saved Drive file(s) for ${key.replace(/_/g,' ')}...`, 'info');
-        driveFiles.forEach(function(df) { urls.push(df.driveUrl); });
+      // Add Drive files from draft ONLY if:
+      //   - user has not discarded them, AND
+      //   - no fresh local upload exists for this key (new upload replaces old)
+      if (trulyLocal.length === 0 && driveFiles.length > 0) {
+        // No new upload — use Drive files as-is
+        const uploadedUrls = new Set(urls);
+        driveFiles.forEach(function(df) {
+          if (!uploadedUrls.has(df.driveUrl)) { urls.push(df.driveUrl); }
+        });
       }
+      // If trulyLocal.length > 0, Drive files are intentionally excluded —
+      // the new upload is the replacement. User can keep both by NOT uploading
+      // a new file (just leave the Drive file visible in the list).
 
       row[col] = urls.join(',');
       uploaded++;
