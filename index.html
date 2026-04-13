@@ -3409,6 +3409,10 @@ async function saveDraft(draftName) {
   localStorage.setItem('rka_draft_' + meta.key, JSON.stringify(meta));
   _updateLocalIndex(meta);
 
+  // Update cache immediately so draft list shows correct data without re-fetch
+  const cacheIdx = _draftsCache.findIndex(function(d) { return d.key === meta.key; });
+  if (cacheIdx > -1) { _draftsCache[cacheIdx] = meta; } else { _draftsCache.push(meta); }
+
   // Try cloud sync if endpoint configured
   const endpoint = getEndpoint();
   if (endpoint) {
