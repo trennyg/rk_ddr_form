@@ -3398,7 +3398,16 @@ function buildDraftMeta(draftName) {
     appName: appName.trim(), bank: bank.trim(),
     savedAt: new Date().toISOString(),
     vals: collectFormValues(),
-    driveFiles: Object.assign({}, _draftDriveFiles)  // Drive URLs for all uploaded files
+    driveFiles: (function() {
+      // Strip base64 before saving — only driveUrl/name/mimeType needed for restore
+      var stripped = {};
+      Object.keys(_draftDriveFiles).forEach(function(k) {
+        stripped[k] = (_draftDriveFiles[k] || []).map(function(df) {
+          return { driveUrl: df.driveUrl, name: df.name, mimeType: df.mimeType };
+        });
+      });
+      return stripped;
+    })()
   };
 }
 
