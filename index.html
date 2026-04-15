@@ -2066,7 +2066,7 @@ async function runOcr(key, docType) {
           throw new Error('Both OpenAI and Gemini structuring failed. OpenAI: ' + oaErr.message + ' | Gemini: ' + geminiErr.message);
         }
       }
-    } else {
+    } else if (!allRawText.trim()) {
       // ── Cloud Vision got nothing — try Gemini direct vision (image as base64) ──
       console.warn('Cloud Vision returned no text — trying Gemini direct vision');
       btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying Gemini vision...</span>');
