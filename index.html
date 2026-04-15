@@ -1986,7 +1986,7 @@ async function runOcr(key, docType) {
 
   try {
     const prompt = OCR_PROMPTS[docType] || OCR_PROMPTS.pan;
-    const maxPages = (docType === 'index2') ? 6 : (['index2','biz','bank'].indexOf(docType) > -1 ? 4 : 1);
+    const maxPages = (docType === 'index2') ? 6 : (['biz','bank'].indexOf(docType) > -1 ? 4 : docType === 'kyc_aadhar' ? 2 : 1);
 
     // ── Step 1: Extract raw text from all pages via Cloud Vision ──
     let allRawText = '';
