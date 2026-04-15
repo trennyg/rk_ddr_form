@@ -2041,13 +2041,19 @@ async function runOcr(key, docType) {
 
     let jsonRaw = null;
 
-    // ── Aadhar shortcut: extract number directly with regex, no AI needed ──
+    // ── Aadhar shortcut: extract number directly with regex, fill immediately ──
     if (docType === 'kyc_aadhar' && allRawText.trim()) {
       const aadharMatch = allRawText.match(/\b(\d{4})\s+(\d{4})\s+(\d{4})\b/);
       if (aadharMatch) {
         const aadharNum = aadharMatch[1] + ' ' + aadharMatch[2] + ' ' + aadharMatch[3];
-        console.log('Aadhar number extracted by regex:', aadharNum);
-        jsonRaw = JSON.stringify({ aadhar: aadharNum });
+        const prefix = key.startsWith('co') ? key.split('_')[0] : 'app';
+        const fieldId = 'f_' + prefix + '_kyc_aadhar_no';
+        const el = document.getElementById(fieldId);
+        if (el) { el.value = aadharNum; el.dispatchEvent(new Event('input')); }
+        console.log('Aadhar filled directly:', aadharNum, '→', fieldId);
+        showToast('Aadhar: ' + aadharNum, 'success');
+        if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
+        return;
       }
     }
 
