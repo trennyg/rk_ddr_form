@@ -1907,17 +1907,16 @@ async function structureWithGemini(rawText, prompt) {
 }
 
 // ── Step 3: OpenAI via Apps Script proxy (avoids CORS) ───
-async function structureWithOpenAI(rawText, prompt) {
+async function structureWithOpenAI(rawText, prompt, base64Image) {
   const endpoint = getEndpoint();
   if (!endpoint) throw new Error('No Apps Script endpoint configured');
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'proxyOpenAI',
-      rawText: rawText.substring(0, 6000),
-      prompt: prompt
-    })
-  });
+  const body = {
+    action: 'proxyOpenAI',
+    rawText: rawText.substring(0, 6000),
+    prompt: prompt
+  };
+  if (base64Image) { body.base64Image = base64Image; }
+  const res = await fetch(endpoint, { method: 'POST', body: JSON.stringify(body) });
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   if (!data.result) throw new Error('No result from OpenAI proxy');
@@ -2038,23 +2037,24 @@ async function runOcr(key, docType) {
 
     console.log('Cloud Vision raw text (' + allRawText.length + ' chars):', allRawText.substring(0, 300));
     btn && (btn.innerHTML = '<span class="spinner"></span><span> Structuring data...</span>');
-    // Regex net pay extraction — runs before AI to prevent wrong figure being picked
+    // Net pay extraction — label-search (handles multi-line tables from Cloud Vision)
     if (docType === 'payslip' && allRawText) {
-      const netPayPatterns = [
-        /net\s+monthly\s+in\s*hand\s*[:\-]?\s*₹?\s*([\d,]+)/i,
-        /net\s+in\s*hand\s*[:\-]?\s*₹?\s*([\d,]+)/i,
-        /net\s+monthly\s+pay\s*[:\-]?\s*₹?\s*([\d,]+)/i,
-        /net\s+monthly\s+salary\s*[:\-]?\s*₹?\s*([\d,]+)/i,
-        /net\s+(?:pay|salary)\s*[:\-]?\s*₹?\s*([\d,]+)/i,
-        /take\s*home\s*(?:pay)?\s*[:\-]?\s*₹?\s*([\d,]+)/i,
-        /in\s*hand\s*(?:salary)?\s*[:\-]?\s*₹?\s*([\d,]+)/i,
-        /net\s+amount\s+payable\s*[:\-]?\s*₹?\s*([\d,]+)/i,
+      const rawNc = allRawText.replace(/,/g, '').toLowerCase();
+      const netLabels = [
+        'net monthly in hand', 'net take home salary', 'net take home pay',
+        'take home salary', 'net monthly salary', 'net monthly pay',
+        'net in hand', 'net amount payable', 'net salary', 'net pay',
+        'take home pay', 'take home', 'in hand'
       ];
-      for (let rpi = 0; rpi < netPayPatterns.length; rpi++) {
-        const rpm = allRawText.match(netPayPatterns[rpi]);
-        if (rpm) {
-          console.log('Net pay extracted by regex:', rpm[1]);
-          window._regexNetPay = rpm[1].replace(/,/g, '');
+      for (let li = 0; li < netLabels.length; li++) {
+        const idx = rawNc.indexOf(netLabels[li]);
+        if (idx === -1) continue;
+        // Scan up to 300 chars after label for first 4+ digit number
+        const after = rawNc.substring(idx + netLabels[li].length, idx + netLabels[li].length + 300);
+        const nm = after.match(/(\d{4,})/);
+        if (nm) {
+          window._regexNetPay = nm[1];
+          console.log('Net pay found via label "' + netLabels[li] + '":', nm[1]);
           break;
         }
       }
@@ -2080,7 +2080,8 @@ async function runOcr(key, docType) {
     if (!jsonRaw && allRawText.trim()) {
       // ── Text extracted — Structure with OpenAI primary, Gemini fallback ──
       try {
-        jsonRaw = await structureWithOpenAI(allRawText, prompt);
+        const b64ForVision = (docType === 'payslip' && files && files.length > 0) ? files[0].base64 : null;
+        jsonRaw = await structureWithOpenAI(allRawText, prompt, b64ForVision);
         console.log('OpenAI structured response:', jsonRaw.substring(0, 200));
       } catch(oaErr) {
         console.warn('OpenAI structuring failed:', oaErr.message, '— trying Gemini fallback');
