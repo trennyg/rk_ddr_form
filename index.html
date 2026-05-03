@@ -2038,7 +2038,27 @@ async function runOcr(key, docType) {
 
     console.log('Cloud Vision raw text (' + allRawText.length + ' chars):', allRawText.substring(0, 300));
     btn && (btn.innerHTML = '<span class="spinner"></span><span> Structuring data...</span>');
-
+    // Regex net pay extraction — runs before AI to prevent wrong figure being picked
+    if (docType === 'payslip' && allRawText) {
+      const netPayPatterns = [
+        /net\s+monthly\s+in\s*hand\s*[:\-]?\s*₹?\s*([\d,]+)/i,
+        /net\s+in\s*hand\s*[:\-]?\s*₹?\s*([\d,]+)/i,
+        /net\s+monthly\s+pay\s*[:\-]?\s*₹?\s*([\d,]+)/i,
+        /net\s+monthly\s+salary\s*[:\-]?\s*₹?\s*([\d,]+)/i,
+        /net\s+(?:pay|salary)\s*[:\-]?\s*₹?\s*([\d,]+)/i,
+        /take\s*home\s*(?:pay)?\s*[:\-]?\s*₹?\s*([\d,]+)/i,
+        /in\s*hand\s*(?:salary)?\s*[:\-]?\s*₹?\s*([\d,]+)/i,
+        /net\s+amount\s+payable\s*[:\-]?\s*₹?\s*([\d,]+)/i,
+      ];
+      for (let rpi = 0; rpi < netPayPatterns.length; rpi++) {
+        const rpm = allRawText.match(netPayPatterns[rpi]);
+        if (rpm) {
+          console.log('Net pay extracted by regex:', rpm[1]);
+          window._regexNetPay = rpm[1].replace(/,/g, '');
+          break;
+        }
+      }
+    }
     let jsonRaw = null;
 
     // ── Aadhar shortcut: extract number directly with regex, fill immediately ──
@@ -2182,7 +2202,9 @@ function applyOcrData() {
     if (d.designation) setVal(`f_${prefix}_designation`, d.designation);
     if (d.empCode)     setVal(`f_${prefix}_emp_code`, d.empCode);
     if (d.branch)      setVal(`f_${prefix}_branch`, d.branch);
-    if (d.netPay)      setVal(`f_${prefix}_net_pay`, d.netPay);
+    const finalNetPay = window._regexNetPay || d.netPay || '';
+    if (finalNetPay) setVal(`f_${prefix}_net_pay`, finalNetPay);
+    window._regexNetPay = null;
     if (d.joining)     setDateVal(`f_${prefix}_joining`, d.joining);
   } else if (docType === 'bank') {
     if (d.bankName)    setVal(`f_${prefix}_bank_name`, d.bankName);
