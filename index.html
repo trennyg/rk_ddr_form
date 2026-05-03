@@ -2050,12 +2050,29 @@ async function runOcr(key, docType) {
         }
         return null;
       }
-      const grossEarnings   = extractAfterLabel(['gross earnings', 'total earnings', 'gross salary', 'total gross']);
-      const grossDeductions = extractAfterLabel(['gross deductions', 'total deductions', 'total deduction']);
-      if (grossEarnings && grossDeductions && grossEarnings > grossDeductions) {
-        window._regexNetPay = String(grossEarnings - grossDeductions);
-        console.log('Net pay computed:', grossEarnings, '-', grossDeductions, '=', window._regexNetPay);
-      } else {
+      // Extract all unique 4-7 digit salary numbers from text
+      const allNums = [...new Set([...rawNc.matchAll(/\b(\d{4,7})\b/g)].map(m => parseInt(m[1])))].sort((a,b) => b-a);
+      const grossEarnings = extractAfterLabel(['gross earnings', 'total earnings', 'gross salary', 'total gross']);
+      if (grossEarnings) {
+        // Find two numbers X and Y where grossEarnings = X + Y
+        // Net Pay is the larger of the two, Gross Deductions is the smaller
+        let found = false;
+        for (let i = 0; i < allNums.length && !found; i++) {
+          const diff = grossEarnings - allNums[i];
+          if (diff > 0 && diff !== grossEarnings && allNums.includes(diff)) {
+            // grossEarnings = allNums[i] + diff
+            // Net Pay is the larger portion (usually > 50% of gross)
+            const netPay = Math.max(allNums[i], diff);
+            const deductions = Math.min(allNums[i], diff);
+            if (deductions < grossEarnings * 0.6) { // deductions should be < 60% of gross
+              window._regexNetPay = String(netPay);
+              console.log('Net pay via arithmetic:', grossEarnings, '=', netPay, '+', deductions);
+              found = true;
+            }
+          }
+        }
+      }
+      if (!window._regexNetPay) {
         const directNetPay = extractAfterLabel(['net monthly in hand', 'net take home salary', 'net monthly salary', 'net monthly pay', 'net in hand', 'net amount payable', 'net salary', 'net pay', 'take home']);
         if (directNetPay) {
           window._regexNetPay = String(directNetPay);
