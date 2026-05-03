@@ -2037,25 +2037,29 @@ async function runOcr(key, docType) {
 
     console.log('Cloud Vision raw text (' + allRawText.length + ' chars):', allRawText.substring(0, 300));
     btn && (btn.innerHTML = '<span class="spinner"></span><span> Structuring data...</span>');
-    // Net pay extraction — label-search (handles multi-line tables from Cloud Vision)
+    // Net pay = Gross Earnings - Total Deductions (works for any payslip layout)
     if (docType === 'payslip' && allRawText) {
       const rawNc = allRawText.replace(/,/g, '').toLowerCase();
-      const netLabels = [
-        'net monthly in hand', 'net take home salary', 'net take home pay',
-        'take home salary', 'net monthly salary', 'net monthly pay',
-        'net in hand', 'net amount payable', 'net salary', 'net pay',
-        'take home pay', 'take home', 'in hand'
-      ];
-      for (let li = 0; li < netLabels.length; li++) {
-        const idx = rawNc.indexOf(netLabels[li]);
-        if (idx === -1) continue;
-        // Scan up to 300 chars after label for first 4+ digit number
-        const after = rawNc.substring(idx + netLabels[li].length, idx + netLabels[li].length + 300);
-        const nm = after.match(/(\d{4,})/);
-        if (nm) {
-          window._regexNetPay = nm[1];
-          console.log('Net pay found via label "' + netLabels[li] + '":', nm[1]);
-          break;
+      function extractAfterLabel(labels) {
+        for (let i = 0; i < labels.length; i++) {
+          const idx = rawNc.indexOf(labels[i]);
+          if (idx === -1) continue;
+          const after = rawNc.substring(idx + labels[i].length, idx + labels[i].length + 200);
+          const m = after.match(/(\d{4,})/);
+          if (m) return parseInt(m[1]);
+        }
+        return null;
+      }
+      const grossEarnings   = extractAfterLabel(['gross earnings', 'total earnings', 'gross salary', 'total gross']);
+      const grossDeductions = extractAfterLabel(['gross deductions', 'total deductions', 'total deduction']);
+      if (grossEarnings && grossDeductions && grossEarnings > grossDeductions) {
+        window._regexNetPay = String(grossEarnings - grossDeductions);
+        console.log('Net pay computed:', grossEarnings, '-', grossDeductions, '=', window._regexNetPay);
+      } else {
+        const directNetPay = extractAfterLabel(['net monthly in hand', 'net take home salary', 'net monthly salary', 'net monthly pay', 'net in hand', 'net amount payable', 'net salary', 'net pay', 'take home']);
+        if (directNetPay) {
+          window._regexNetPay = String(directNetPay);
+          console.log('Net pay from direct label:', window._regexNetPay);
         }
       }
     }
