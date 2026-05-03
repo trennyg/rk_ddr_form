@@ -2225,7 +2225,7 @@ function applyOcrData() {
     if (d.empCode)     setVal(`f_${prefix}_emp_code`, d.empCode);
     if (d.branch)      setVal(`f_${prefix}_branch`, d.branch);
     const finalNetPay = window._regexNetPay || d.netPay || '';
-    if (finalNetPay) setVal(`f_${prefix}_net_pay`, finalNetPay);
+    if (finalNetPay) forceSetVal(`f_${prefix}_net_pay`, finalNetPay);
     window._regexNetPay = null;
     if (d.joining)     setDateVal(`f_${prefix}_joining`, d.joining);
   } else if (docType === 'bank') {
