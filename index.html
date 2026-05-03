@@ -2177,6 +2177,10 @@ function showOcrModal(docType, data) {
   const title = OCR_TITLES[docType] || 'Extracted Data';
   document.getElementById('ocrSheetTitle').textContent = title;
   const body = document.getElementById('ocrSheetBody');
+  // Override netPay in display if regex found a better value
+  if (docType === 'payslip' && window._regexNetPay) {
+    data = Object.assign({}, data, { netPay: window._regexNetPay });
+  }
   const entries = Object.entries(data).filter(function(kv) { return kv[1] && String(kv[1]).trim(); });
   if (entries.length === 0) {
     body.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">No data could be extracted. Please try a clearer image or check browser console (F12) for the raw Gemini response.</div>';
