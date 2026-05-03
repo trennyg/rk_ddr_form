@@ -1712,7 +1712,7 @@ function renderFileList(key) {
   const driveFiles = _discardedDriveKeys.has(key) ? [] : (_draftDriveFiles[key] || []);
 
   // Local files (freshly selected this session) — show with remove button
-  let html = files.filter(f => f.file !== null).map((f, i) => `
+  let html = files.map((f, i) => `
     <div class="file-item">
       <span>📄</span>
       <span class="fi-name">${f.name}</span>
@@ -3171,7 +3171,7 @@ async function submitForm() {
       const urls = [];
 
       // Upload fresh local files first
-      const trulyLocal = files.filter(function(f) { return f.file !== null; });
+      const trulyLocal = files;
       for (let fi = 0; fi < trulyLocal.length; fi++) {
         const f = trulyLocal[fi];
         // Check if this file was already background-uploaded to Drive
