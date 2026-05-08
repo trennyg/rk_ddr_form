@@ -1868,8 +1868,8 @@ const OCR_TITLES = {
 // ══════════════════════════════════════════════════════════
 // OCR PIPELINE
 // Step 1: Cloud Vision API  — extracts raw text from image
-// Step 2: Gemini            — structures raw text into JSON
-// Step 3: OpenAI fallback   — if all Gemini models fail
+// Step 2: OpenAI proxy      — structures raw text into JSON (PRIMARY)
+// Step 3: Gemini fallback   — if OpenAI proxy fails
 // ══════════════════════════════════════════════════════════
 
 // ── Step 1: Cloud Vision text extraction ─────────────────
@@ -1894,7 +1894,7 @@ async function extractTextWithCloudVision(base64, mimeType) {
   return annotation ? annotation.text : '';
 }
 
-// ── Step 2: Gemini JSON structuring ──────────────────────
+// ── Step 2 (fallback): Gemini JSON structuring ───────────
 async function structureWithGemini(rawText, prompt) {
   const key = getGeminiKey();
   const fullPrompt = prompt + '\n\nEXTRACTED TEXT:\n' + rawText.substring(0, 6000);
@@ -1906,17 +1906,20 @@ async function structureWithGemini(rawText, prompt) {
   return data.candidates[0].content.parts[0].text.trim();
 }
 
-// ── Step 3: OpenAI via Apps Script proxy (avoids CORS) ───
+// ── Step 2 (primary): OpenAI via VPS proxy ───────────────
 async function structureWithOpenAI(rawText, prompt, base64Image) {
   const endpoint = getEndpoint();
-  if (!endpoint) throw new Error('No Apps Script endpoint configured');
+  if (!endpoint) throw new Error('No VPS endpoint configured');
   const body = {
-    action: 'proxyOpenAI',
     rawText: rawText.substring(0, 6000),
     prompt: prompt
   };
   if (base64Image) { body.base64Image = base64Image; }
-  const res = await fetch(endpoint, { method: 'POST', body: JSON.stringify(body) });
+  const res = await fetch(endpoint + '/api/proxy-openai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   if (!data.result) throw new Error('No result from OpenAI proxy');
