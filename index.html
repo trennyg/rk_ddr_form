@@ -2783,8 +2783,12 @@ function _applyItrParsed(parsed, docKind, prefix, shortYr) {
     if (inc || ack) { showToast('ITR ' + shortYr + ' extracted ✅', 'success'); }
     else { showToast('Text read but income/ack not found — check console', 'error'); }
   } else {
-    const inc  = parsed.income  || parsed.Income  || parsed.INCOME  || '';
-    const cert = parsed.certNo  || parsed.certno  || parsed.CertNo  || parsed.certificateNo || '';
+    const inc  = parsed.income || parsed.Income || parsed.INCOME
+              || parsed.totalTaxableIncome || parsed.total_taxable_income
+              || parsed.taxableIncome || parsed.grossTotalIncome || parsed.grossIncome || '';
+    const cert = parsed.certNo || parsed.certno || parsed.CertNo
+              || parsed.certificateNo || parsed.certificate_no
+              || parsed.certificateNumber || parsed.CertificateNo || parsed.cert || '';
     if (inc)  { forceSetVal(`f_f16_inc_${prefix}_${shortYr}`, inc);  itrStore[`f_f16_inc_${prefix}_${shortYr}`]  = inc; }
     if (cert) { forceSetVal(`f_f16_cert_${prefix}_${shortYr}`, cert); itrStore[`f_f16_cert_${prefix}_${shortYr}`] = cert; }
     if (inc || cert) { showToast('Form 16 ' + shortYr + ' extracted ✅', 'success'); }
@@ -2896,6 +2900,29 @@ async function runItrOcr(prefix, shortYr, docKind) {
         }
       }
       throw new Error('No text could be extracted. Please re-upload the document and try again.');
+    }
+
+    // ── F16 regex shortcut: extract directly from raw OCR text ──
+    if (docKind === 'f16') {
+      const cleanNum = (s) => s.replace(/[,\s]/g, '');
+      const t = itrText;
+      // Match "Total taxable income" followed by a number (same line or next line)
+      const incRx = /total\s+taxable\s+income[^0-9\n]{0,60}(\d[\d,]+)/i;
+      const grossRx = /gross\s+total\s+income[^0-9\n]{0,60}(\d[\d,]+)/i;
+      const incMatch = t.match(incRx) || t.match(grossRx);
+      // Match certificate number from header
+      const certRx = /(?:certificate|cert)[\s.]*(?:no|number|#)?[\s.:]*([A-Z0-9\/\-]{5,30})/i;
+      const certMatch = t.match(certRx);
+      const regexInc  = incMatch  ? cleanNum(incMatch[1])   : '';
+      const regexCert = certMatch ? certMatch[1].trim() : '';
+      if (regexInc || regexCert) {
+        console.log('F16 regex hit — income:', regexInc, 'cert:', regexCert);
+        _applyItrParsed({ income: regexInc, certNo: regexCert }, docKind, prefix, shortYr);
+        var _an0 = (document.getElementById('f_app_name') || {}).value || '';
+        if (_an0.trim()) saveDraft(_an0.trim()).catch(function() {});
+        if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
+        return;
+      }
     }
 
     btn && (btn.innerHTML = '<span class="spinner"></span><span> Structuring data...</span>');
