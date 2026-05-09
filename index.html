@@ -2815,52 +2815,65 @@ async function runItrOcr(prefix, shortYr, docKind) {
   // Use the same full prompts as the main OCR pipeline for consistency
   const prompt = docKind === 'itr' ? OCR_PROMPTS.itr_doc : OCR_PROMPTS.f16;
 
+  const MAX_ITR_PAGES = 6;
+
   try {
     let itrText = '';
 
     if (files.length > 0) {
-      // Local file — use Cloud Vision
-      const imgData = files[0];
-      btn && (btn.innerHTML = '<span class="spinner"></span><span> Reading text...</span>');
-      try {
-        itrText = await extractTextWithCloudVision(imgData.base64, imgData.mimeType);
-        console.log('ITR/F16 Vision text (' + itrText.length + ' chars):', itrText.substring(0, 200));
-      } catch(vErr) {
-        console.warn('Vision failed for ITR/F16:', vErr.message);
+      // Local files — read ALL pages, not just page 1
+      const pagesToRead = files.slice(0, MAX_ITR_PAGES);
+      for (let pi = 0; pi < pagesToRead.length; pi++) {
+        const imgData = pagesToRead[pi];
+        btn && (btn.innerHTML = `<span class="spinner"></span><span> Reading page ${pi+1}/${pagesToRead.length}...</span>`);
+        try {
+          const pageText = await extractTextWithCloudVision(imgData.base64, imgData.mimeType);
+          if (pageText) {
+            itrText += '\n--- PAGE ' + (pi+1) + ' ---\n' + pageText;
+            console.log(`ITR/F16 page ${pi+1} text (${pageText.length} chars):`, pageText.substring(0, 150));
+          }
+        } catch(vErr) {
+          console.warn(`Vision failed for ITR/F16 page ${pi+1}:`, vErr.message);
+        }
       }
     } else if (driveFiles.length > 0) {
-      // Drive-restored file — fetch via Apps Script proxy to avoid CORS
-      btn && (btn.innerHTML = '<span class="spinner"></span><span> Fetching from Drive...</span>');
-      const df = driveFiles[0];
+      // Drive-restored files — read ALL pages
       const endpoint = getEndpoint();
-      try {
-        let b64 = null;
-        if (endpoint) {
-          const proxyRes = await fetch(endpoint, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'fetchDriveFile', url: df.driveUrl })
-          });
-          const proxyData = await proxyRes.json();
-          if (proxyData.base64) { b64 = proxyData.base64; }
+      const drivePagesToRead = driveFiles.slice(0, MAX_ITR_PAGES);
+      for (let pi = 0; pi < drivePagesToRead.length; pi++) {
+        const df = drivePagesToRead[pi];
+        btn && (btn.innerHTML = `<span class="spinner"></span><span> Fetching page ${pi+1}/${drivePagesToRead.length}...</span>`);
+        try {
+          let b64 = null;
+          if (endpoint) {
+            const proxyRes = await fetch(endpoint, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'fetchDriveFile', url: df.driveUrl })
+            });
+            const proxyData = await proxyRes.json();
+            if (proxyData.base64) { b64 = proxyData.base64; }
+          }
+          if (!b64) {
+            const imgRes = await fetch(df.driveUrl);
+            const blob = await imgRes.blob();
+            b64 = await new Promise(function(res, rej) {
+              const reader = new FileReader();
+              reader.onload = function(e) { res(e.target.result.split(',')[1]); };
+              reader.onerror = rej;
+              reader.readAsDataURL(blob);
+            });
+          }
+          if (b64) {
+            btn && (btn.innerHTML = `<span class="spinner"></span><span> Reading page ${pi+1}...</span>`);
+            const pageText = await extractTextWithCloudVision(b64, df.mimeType || 'image/jpeg');
+            if (pageText) {
+              itrText += '\n--- PAGE ' + (pi+1) + ' ---\n' + pageText;
+              console.log(`ITR/F16 Drive page ${pi+1} text (${pageText.length} chars):`, pageText.substring(0, 150));
+            }
+          }
+        } catch(dfErr) {
+          console.warn(`Drive Vision failed for ITR/F16 page ${pi+1}:`, dfErr.message);
         }
-        if (!b64) {
-          // Direct fetch fallback
-          const imgRes = await fetch(df.driveUrl);
-          const blob = await imgRes.blob();
-          b64 = await new Promise(function(res, rej) {
-            const reader = new FileReader();
-            reader.onload = function(e) { res(e.target.result.split(',')[1]); };
-            reader.onerror = rej;
-            reader.readAsDataURL(blob);
-          });
-        }
-        if (b64) {
-          btn && (btn.innerHTML = '<span class="spinner"></span><span> Reading text...</span>');
-          itrText = await extractTextWithCloudVision(b64, df.mimeType || 'image/jpeg');
-          console.log('ITR/F16 Drive Vision text (' + itrText.length + ' chars):', itrText.substring(0, 200));
-        }
-      } catch(dfErr) {
-        console.warn('Drive Vision failed for ITR/F16:', dfErr.message);
       }
     }
 
