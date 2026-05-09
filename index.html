@@ -1853,10 +1853,9 @@ Do NOT pick any field with the word Loss in it. The value must be a positive num
 Fields: {"ackNo":"acknowledgement number","income":"Gross Total Income or Total Income — NOT any loss figure","year":"assessment year"}`,
   f16: `Extract from Form 16 salary certificate (Indian income tax document). Return ONLY raw JSON no markdown no explanation.
 Look for EXACTLY these two fields:
-1. "Certificate No." — this is the certNo field. It appears in the header of Part A or Part B.
-2. "Total taxable income (9-11)" — this is the income field. It must be a positive number greater than 0.
-If "Total taxable income (9-11)" is missing or zero, also try "Gross total income" as fallback.
-Return: {"certNo":"the certificate number value","income":"the Total taxable income (9-11) value as a positive number"}`
+1. "Certificate No." — this is the certNo field. It appears in the header of Part A or Part B of the form.
+2. Income — look specifically for row/serial number 12 labelled "Total taxable income" (also written as "Total taxable income (9-11)" or "Total taxable income (9+10+11)"). This must be a positive number greater than 0. If row 12 is missing or zero, try "Gross total income" as fallback.
+Return: {"certNo":"the certificate number value","income":"the row 12 total taxable income as a positive number"}`
 };
 
 const OCR_TITLES = {
@@ -2326,14 +2325,6 @@ function applyOcrData() {
   }
 
   showToast('✅ Values applied!', 'success');
-  // Scroll to the first filled field so user can see the result
-  setTimeout(function() {
-    const prefix2 = (pendingOcr === null && typeof key !== 'undefined') ? key : '';
-    // Just scroll to top of active pane
-    const activePane = document.querySelector('.tab-pane.active');
-    if (activePane) activePane.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, 100);
   // Save draft immediately after OCR fills fields
   var _ocrAppName = (document.getElementById('f_app_name') || {}).value || '';
   if (_ocrAppName.trim()) saveDraft(_ocrAppName.trim()).catch(function() {});
@@ -2734,7 +2725,7 @@ function buildItrSection(forceRebuild) {
       html += `
         <div class="itr-year-block">
           <div class="itr-year-label">Assessment Year ${yr}</div>
-          <div class="field-row" style="margin-bottom:10px">
+          <div class="field-row">
             <div class="field">
               <label>ITR Upload ${yr}</label>
               <div class="upload-zone" id="uz_itr_${person.prefix}_${shortYr}">
@@ -2745,6 +2736,10 @@ function buildItrSection(forceRebuild) {
               <button class="ocr-btn" id="ocr_itr_${person.prefix}_${shortYr}" onclick="runItrOcr('${person.prefix}','${shortYr}','itr')" disabled style="margin-top:6px">
                 <span>✨ Extract ITR</span>
               </button>
+              <label style="margin-top:10px">ITR Income ${yr}</label>
+              <input type="text" id="f_itr_${person.prefix}_${shortYr}" placeholder="₹ Income">
+              <label style="margin-top:8px">ITR Ack No.</label>
+              <input type="text" id="f_itr_ack_${person.prefix}_${shortYr}" placeholder="Acknowledgement No." style="font-family:'DM Mono',monospace;font-size:12px">
             </div>
             <div class="field">
               <label>Form 16 Upload ${yr}</label>
@@ -2756,15 +2751,11 @@ function buildItrSection(forceRebuild) {
               <button class="ocr-btn" id="ocr_f16_${person.prefix}_${shortYr}" onclick="runItrOcr('${person.prefix}','${shortYr}','f16')" disabled style="margin-top:6px">
                 <span>✨ Extract F16</span>
               </button>
+              <label style="margin-top:10px">Form 16 Income ${yr}</label>
+              <input type="text" id="f_f16_inc_${person.prefix}_${shortYr}" placeholder="₹ Income">
+              <label style="margin-top:8px">Form 16 Cert No.</label>
+              <input type="text" id="f_f16_cert_${person.prefix}_${shortYr}" placeholder="Certificate No." style="font-family:'DM Mono',monospace;font-size:12px">
             </div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>ITR Income ${yr}</label><input type="text" id="f_itr_${person.prefix}_${shortYr}" placeholder="₹ Income"></div>
-            <div class="field"><label>ITR Ack No.</label><input type="text" id="f_itr_ack_${person.prefix}_${shortYr}" placeholder="Acknowledgement No." style="font-family:'DM Mono',monospace;font-size:12px"></div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Form 16 Income ${yr}</label><input type="text" id="f_f16_inc_${person.prefix}_${shortYr}" placeholder="₹ Income"></div>
-            <div class="field"><label>Form 16 Cert No.</label><input type="text" id="f_f16_cert_${person.prefix}_${shortYr}" placeholder="Certificate No." style="font-family:'DM Mono',monospace;font-size:12px"></div>
           </div>
         </div>
       `;
