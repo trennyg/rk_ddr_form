@@ -1854,8 +1854,8 @@ Fields: {"ackNo":"acknowledgement number","income":"Gross Total Income or Total 
   f16: `Extract from Form 16 salary certificate (Indian income tax document). Return ONLY raw JSON no markdown no explanation.
 Look for EXACTLY these two fields:
 1. "Certificate No." — this is the certNo field. It appears in the header of Part A or Part B of the form.
-2. Income — look specifically for row/serial number 12 labelled "Total taxable income" (also written as "Total taxable income (9-11)" or "Total taxable income (9+10+11)"). This must be a positive number greater than 0. If row 12 is missing or zero, try "Gross total income" as fallback.
-Return: {"certNo":"the certificate number value","income":"the row 12 total taxable income as a positive number"}`
+2. Income — find ONLY the row explicitly numbered 12 and labelled "Total taxable income (9-11)". Do NOT use Gross Salary, Total Salary, Salary Provision, Gross total income, or any other row. Only row 12. Extract the rupee amount from that row as a plain number with no commas or symbols.
+Return: {"certNo":"the certificate number value","income":"the row 12 total taxable income (9-11) amount as digits only"}`
 };
 
 const OCR_TITLES = {
@@ -2906,10 +2906,11 @@ async function runItrOcr(prefix, shortYr, docKind) {
     if (docKind === 'f16') {
       const cleanNum = (s) => s.replace(/[,\s]/g, '');
       const t = itrText;
-      // Match "Total taxable income" followed by a number (same line or next line)
-      const incRx = /total\s+taxable\s+income[^0-9\n]{0,60}(\d[\d,]+)/i;
-      const grossRx = /gross\s+total\s+income[^0-9\n]{0,60}(\d[\d,]+)/i;
-      const incMatch = t.match(incRx) || t.match(grossRx);
+      // Match row 12 "Total taxable income (9-11)" — require the "12" prefix to avoid wrong rows
+      const incRx  = /12\s*[.):\-]?\s*total\s+taxable\s+income[^0-9\n]{0,80}(\d[\d,]+)/i;
+      // Fallback: plain "Total taxable income (9-11)" without row number
+      const incRx2 = /total\s+taxable\s+income\s*\(?9[-–]11\)?[^0-9\n]{0,60}(\d[\d,]+)/i;
+      const incMatch = t.match(incRx) || t.match(incRx2);
       // Match certificate number from header
       const certRx = /(?:certificate|cert)[\s.]*(?:no|number|#)?[\s.:]*([A-Z0-9\/\-]{5,30})/i;
       const certMatch = t.match(certRx);
