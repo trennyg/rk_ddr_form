@@ -2819,10 +2819,13 @@ async function runItrOcr(prefix, shortYr, docKind) {
 
   try {
     let itrText = '';
+    // Keep first page b64/mime for Gemini direct-vision fallback
+    let fallbackB64 = null, fallbackMime = 'image/jpeg';
 
     if (files.length > 0) {
-      // Local files — read ALL pages, not just page 1
+      // Local files — read ALL pages
       const pagesToRead = files.slice(0, MAX_ITR_PAGES);
+      fallbackB64 = pagesToRead[0].base64; fallbackMime = pagesToRead[0].mimeType;
       for (let pi = 0; pi < pagesToRead.length; pi++) {
         const imgData = pagesToRead[pi];
         btn && (btn.innerHTML = `<span class="spinner"></span><span> Reading page ${pi+1}/${pagesToRead.length}...</span>`);
@@ -2830,10 +2833,10 @@ async function runItrOcr(prefix, shortYr, docKind) {
           const pageText = await extractTextWithCloudVision(imgData.base64, imgData.mimeType);
           if (pageText) {
             itrText += '\n--- PAGE ' + (pi+1) + ' ---\n' + pageText;
-            console.log(`ITR/F16 page ${pi+1} text (${pageText.length} chars):`, pageText.substring(0, 150));
+            console.log(`ITR/F16 page ${pi+1} (${pageText.length} chars):`, pageText.substring(0, 150));
           }
         } catch(vErr) {
-          console.warn(`Vision failed for ITR/F16 page ${pi+1}:`, vErr.message);
+          console.warn(`Vision failed page ${pi+1}:`, vErr.message);
         }
       }
     } else if (driveFiles.length > 0) {
@@ -2864,28 +2867,28 @@ async function runItrOcr(prefix, shortYr, docKind) {
             });
           }
           if (b64) {
+            if (!fallbackB64) { fallbackB64 = b64; fallbackMime = df.mimeType || 'image/jpeg'; }
             btn && (btn.innerHTML = `<span class="spinner"></span><span> Reading page ${pi+1}...</span>`);
             const pageText = await extractTextWithCloudVision(b64, df.mimeType || 'image/jpeg');
             if (pageText) {
               itrText += '\n--- PAGE ' + (pi+1) + ' ---\n' + pageText;
-              console.log(`ITR/F16 Drive page ${pi+1} text (${pageText.length} chars):`, pageText.substring(0, 150));
+              console.log(`ITR/F16 Drive page ${pi+1} (${pageText.length} chars):`, pageText.substring(0, 150));
             }
           }
         } catch(dfErr) {
-          console.warn(`Drive Vision failed for ITR/F16 page ${pi+1}:`, dfErr.message);
+          console.warn(`Drive Vision failed page ${pi+1}:`, dfErr.message);
         }
       }
     }
 
     if (!itrText || itrText.trim().length < 10) {
-      // Cloud Vision failed — try Gemini direct vision if we have local file
-      if (files.length > 0) {
+      // Cloud Vision got nothing — try Gemini direct vision with the first page image
+      if (fallbackB64) {
         console.warn('Cloud Vision got no text — trying Gemini direct vision for ITR/F16');
         btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying Gemini vision...</span>');
-        const imgData = files[0];
         try {
           const d = await callGemini(geminiKey, {
-            contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: imgData.mimeType, data: imgData.base64 } }] }],
+            contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: fallbackMime, data: fallbackB64 } }] }],
             generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
           });
           const raw = d.candidates[0].content.parts[0].text.trim();
@@ -2897,19 +2900,8 @@ async function runItrOcr(prefix, shortYr, docKind) {
           if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
           return;
         } catch(gemVisionErr) {
-          console.warn('Gemini direct also failed:', gemVisionErr.message, '— trying OpenAI proxy');
-          btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying OpenAI fallback...</span>');
-          try {
-            const raw = await structureWithOpenAI('Extract income and certificate/acknowledgement number from this ' + docKind + ' document image. ' + prompt, prompt);
-            const parsed = parseOcrJson(raw, docKind);
-            _applyItrParsed(parsed, docKind, prefix, shortYr);
-            var _an2 = (document.getElementById('f_app_name') || {}).value || '';
-            if (_an2.trim()) saveDraft(_an2.trim()).catch(function() {});
-            if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
-            return;
-          } catch(oaErr) {
-            throw new Error('All extraction methods failed. Please try a clearer photo.');
-          }
+          console.warn('Gemini direct also failed:', gemVisionErr.message);
+          throw new Error('All extraction methods failed. Please try a clearer photo.');
         }
       }
       throw new Error('No text could be extracted. Please re-upload the document and try again.');
@@ -2921,17 +2913,14 @@ async function runItrOcr(prefix, shortYr, docKind) {
       const t = itrText;
       // Match row 12 "Total taxable income (9-11)" — require the "12" prefix to avoid wrong rows
       const incRx  = /12\s*[.):\-]?\s*total\s+taxable\s+income[^0-9\n]{0,80}(\d[\d,]+)/i;
-      // Fallback: plain "Total taxable income (9-11)" without row number
+      // Fallback: plain "Total taxable income (9-11)" with the (9-11) suffix
       const incRx2 = /total\s+taxable\s+income\s*\(?9[-–]11\)?[^0-9\n]{0,60}(\d[\d,]+)/i;
       const incMatch = t.match(incRx) || t.match(incRx2);
-      // Match certificate number from header
-      const certRx = /(?:certificate|cert)[\s.]*(?:no|number|#)?[\s.:]*([A-Z0-9\/\-]{5,30})/i;
-      const certMatch = t.match(certRx);
-      const regexInc  = incMatch  ? cleanNum(incMatch[1])   : '';
-      const regexCert = certMatch ? certMatch[1].trim() : '';
-      if (regexInc || regexCert) {
-        console.log('F16 regex hit — income:', regexInc, 'cert:', regexCert);
-        _applyItrParsed({ income: regexInc, certNo: regexCert }, docKind, prefix, shortYr);
+      const regexInc = incMatch ? cleanNum(incMatch[1]) : '';
+      // certNo: leave to AI — regex is too unreliable for cert number format variation
+      if (regexInc) {
+        console.log('F16 regex hit — income:', regexInc);
+        _applyItrParsed({ income: regexInc, certNo: '' }, docKind, prefix, shortYr);
         var _an0 = (document.getElementById('f_app_name') || {}).value || '';
         if (_an0.trim()) saveDraft(_an0.trim()).catch(function() {});
         if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
