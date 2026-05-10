@@ -691,7 +691,7 @@
         <input type="file" id="fu_app_bank_stmt" accept="image/*,.pdf" multiple onchange="handleFileSelect('app_bank_stmt', this.files)" onclick="event.stopPropagation()">
         <div class="uz-icon">📊</div>
         <div class="uz-text">Upload Bank Statement</div>
-        <div class="uz-hint">JPG, PNG or PDF — multi-page OK</div>
+        <div class="uz-hint">JPG, PNG or PDF — page 1 only</div>
       </div>
       <div class="file-list" id="fl_app_bank_stmt"></div>
       <button class="ocr-btn" id="ocr_app_bank_stmt" onclick="runOcr('app_bank_stmt','bank')" disabled>
@@ -1568,7 +1568,8 @@ async function handleFileSelect(key, files) {
     if (file.type === 'application/pdf') {
       showToast('Converting PDF...', 'info');
       try {
-        const pages = await pdfToImages(file);
+        const isBankStmt = key === 'app_bank_stmt' || key.endsWith('_bank_stmt');
+        const pages = await pdfToImages(file, isBankStmt ? 1 : 0);
         pages.forEach((p, idx) => {
           uploadedFiles[key].push({ file: null, base64: p.base64, mimeType: 'image/jpeg', name: file.name + ` (page ${idx+1})` });
         });
@@ -1600,11 +1601,12 @@ async function handleFileSelect(key, files) {
   uploadFilesToDriveForDraft(key);
 }
 
-async function pdfToImages(file) {
+async function pdfToImages(file, maxPages) {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const pages = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
+  const limit = (maxPages && maxPages > 0) ? Math.min(maxPages, pdf.numPages) : pdf.numPages;
+  for (let i = 1; i <= limit; i++) {
     const page = await pdf.getPage(i);
     const viewport = page.getViewport({ scale: 2.0 });
     const canvas = document.createElement('canvas');
