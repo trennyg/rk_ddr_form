@@ -1627,34 +1627,83 @@ function fileToBase64(file) {
   });
 }
 
-// Compress image to max 1400px and 0.75 quality before upload
-// Keeps file size under ~300KB per image so payload stays within Apps Script limits
+function getExifOrientation(buf) {
+  try {
+    var view = new DataView(buf);
+    if (view.byteLength < 2 || view.getUint16(0, false) !== 0xFFD8) return 1;
+    var off = 2;
+    while (off + 4 < view.byteLength) {
+      var marker = view.getUint16(off, false);
+      var segLen = view.getUint16(off + 2, false);
+      if (marker === 0xFFE1) {
+        if (off + 10 > view.byteLength || view.getUint32(off + 4, false) !== 0x45786966) return 1;
+        var le = view.getUint16(off + 10, false) === 0x4949;
+        var ifdOff = off + 10 + view.getUint32(off + 14, le);
+        if (ifdOff + 2 > view.byteLength) return 1;
+        var numTags = view.getUint16(ifdOff, le);
+        for (var ti = 0; ti < numTags; ti++) {
+          var t = ifdOff + 2 + ti * 12;
+          if (t + 10 > view.byteLength) break;
+          if (view.getUint16(t, le) === 0x0112) return view.getUint16(t + 8, le);
+        }
+        return 1;
+      }
+      if ((marker & 0xFF00) !== 0xFF00 || segLen < 2) break;
+      off += 2 + segLen;
+    }
+  } catch(e) {}
+  return 1;
+}
+
 function compressImage(file, maxDim, quality) {
   maxDim = maxDim || 1400;
   quality = quality || 0.75;
   return new Promise(function(res, rej) {
     if (file.type === 'application/pdf') { fileToBase64(file).then(res).catch(rej); return; }
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var img = new Image();
-      img.onload = function() {
-        var w = img.width, h = img.height;
-        if (w > maxDim || h > maxDim) {
-          var scale = Math.min(maxDim/w, maxDim/h);
-          w = Math.round(w * scale);
-          h = Math.round(h * scale);
-        }
-        var canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        var b64 = canvas.toDataURL('image/jpeg', quality).split(',')[1];
-        res(b64);
+    var doCompress = function(orient) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+          var iw = img.width, ih = img.height;
+          // Draw into a rotated canvas, then scale down
+          var swap = orient >= 5 && orient <= 8;
+          var rotCanvas = document.createElement('canvas');
+          rotCanvas.width  = swap ? ih : iw;
+          rotCanvas.height = swap ? iw : ih;
+          var rctx = rotCanvas.getContext('2d');
+          switch (orient) {
+            case 2: rctx.transform(-1, 0,  0,  1, iw, 0);  break;
+            case 3: rctx.transform(-1, 0,  0, -1, iw, ih); break;
+            case 4: rctx.transform( 1, 0,  0, -1, 0,  ih); break;
+            case 5: rctx.transform( 0, 1,  1,  0, 0,  0);  break;
+            case 6: rctx.transform( 0, 1, -1,  0, ih, 0);  break;
+            case 7: rctx.transform( 0,-1, -1,  0, ih, iw); break;
+            case 8: rctx.transform( 0,-1,  1,  0, 0,  iw); break;
+          }
+          rctx.drawImage(img, 0, 0);
+          var rw = rotCanvas.width, rh = rotCanvas.height;
+          var outW = rw, outH = rh;
+          if (rw > maxDim || rh > maxDim) {
+            var sc = Math.min(maxDim / rw, maxDim / rh);
+            outW = Math.round(rw * sc); outH = Math.round(rh * sc);
+          }
+          var finalCanvas = document.createElement('canvas');
+          finalCanvas.width = outW; finalCanvas.height = outH;
+          finalCanvas.getContext('2d').drawImage(rotCanvas, 0, 0, outW, outH);
+          res(finalCanvas.toDataURL('image/jpeg', quality).split(',')[1]);
+        };
+        img.onerror = rej;
+        img.src = e.target.result;
       };
-      img.onerror = rej;
-      img.src = e.target.result;
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
     };
-    reader.onerror = rej;
-    reader.readAsDataURL(file);
+    if (file.arrayBuffer) {
+      file.arrayBuffer().then(function(buf) { doCompress(getExifOrientation(buf)); }).catch(function() { doCompress(1); });
+    } else {
+      doCompress(1);
+    }
   });
 }
 
