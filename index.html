@@ -2908,9 +2908,14 @@ async function runItrOcr(prefix, shortYr, docKind) {
     }
 
     // ── F16 regex shortcut: extract directly from raw OCR text ──
+    let f16RegexCert = '';
     if (docKind === 'f16') {
       const cleanNum = (s) => s.replace(/[,\s]/g, '');
       const t = itrText;
+      // Certificate No. regex — extract before income so we can use it even when AI runs
+      const certRx = /certificate\s+no\.?\s*[:\-]?\s*([A-Z0-9]{6,25})/i;
+      const certMatch = t.match(certRx);
+      f16RegexCert = certMatch ? certMatch[1].toUpperCase() : '';
       // Match "12. Total taxable income (9-11)" — number on same line
       const incRx  = /12\s*[.):\-]?\s*total\s+taxable\s+income[^0-9\n]{0,80}(\d[\d,]+)/i;
       // Fallback: "Total taxable income (9-11)" with suffix, same line
@@ -2919,18 +2924,16 @@ async function runItrOcr(prefix, shortYr, docKind) {
       const incRx3 = /12\s*[.):\-]?\s*total\s+taxable\s+income[^\n]*\n[\s\S]{0,40}?(\d[\d,]{3,})/i;
       const incMatch = t.match(incRx) || t.match(incRx2) || t.match(incRx3);
       const regexInc = incMatch ? cleanNum(incMatch[1]) : '';
-      // Certificate No. regex — label appears in Part A header; do not match TAN/PAN/Ack No
-      const certRx = /certificate\s+no\.?\s*[:\-]?\s*([A-Z0-9]{6,25})/i;
-      const certMatch = t.match(certRx);
-      const regexCert = certMatch ? certMatch[1].toUpperCase() : '';
-      if (regexInc || regexCert) {
-        console.log('F16 regex hit — income:', regexInc, 'certNo:', regexCert);
-        _applyItrParsed({ income: regexInc, certNo: regexCert }, docKind, prefix, shortYr);
+      if (regexInc) {
+        // Both found by regex — no need to call AI
+        console.log('F16 regex hit — income:', regexInc, 'certNo:', f16RegexCert);
+        _applyItrParsed({ income: regexInc, certNo: f16RegexCert }, docKind, prefix, shortYr);
         var _an0 = (document.getElementById('f_app_name') || {}).value || '';
         if (_an0.trim()) saveDraft(_an0.trim()).catch(function() {});
         if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
         return;
       }
+      // Income not found by regex — fall through to AI; f16RegexCert will override AI certNo below
     }
 
     btn && (btn.innerHTML = '<span class="spinner"></span><span> Structuring data...</span>');
@@ -2952,6 +2955,8 @@ async function runItrOcr(prefix, shortYr, docKind) {
 
     console.log('ITR/F16 raw response:', raw);
     const parsed = parseOcrJson(raw, docKind);
+    // For F16: prefer regex certNo over AI (AI frequently picks wrong field)
+    if (docKind === 'f16' && f16RegexCert) parsed.certNo = f16RegexCert;
     console.log('ITR/F16 parsed:', JSON.stringify(parsed));
     _applyItrParsed(parsed, docKind, prefix, shortYr);
 
