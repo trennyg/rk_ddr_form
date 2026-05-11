@@ -30,7 +30,7 @@
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    font-size: 14px;
+    font-size: 16px;
   }
 
   /* ── HEADER ── */
@@ -50,15 +50,15 @@
     background: var(--accent);
     border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 13px; color: #000; flex-shrink: 0;
+    font-weight: 700; font-size: 15px; color: #000; flex-shrink: 0;
   }
-  .app-header .title { font-weight: 600; font-size: 15px; line-height: 1.2; }
-  .app-header .subtitle { font-size: 11px; color: var(--muted); }
+  .app-header .title { font-weight: 600; font-size: 17px; line-height: 1.2; }
+  .app-header .subtitle { font-size: 13px; color: var(--muted); }
   .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
   .api-key-btn {
     background: var(--surface2); border: 1px solid var(--border);
     color: var(--label); border-radius: 7px; padding: 6px 11px;
-    font-size: 12px; font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-family: 'DM Sans', sans-serif;
     cursor: pointer;
   }
   .api-key-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -83,7 +83,7 @@
     padding: 0 16px;
     height: var(--tab-h);
     font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 500;
     color: var(--muted);
     background: none;
@@ -99,7 +99,7 @@
     width: 18px; height: 18px;
     border-radius: 50%;
     background: var(--border);
-    font-size: 10px;
+    font-size: 12px;
     display: flex; align-items: center; justify-content: center;
     font-weight: 600;
   }
@@ -124,7 +124,7 @@
     background: var(--surface2);
     border-bottom: 1px solid var(--border);
     padding: 11px 15px;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -143,7 +143,7 @@
   }
 
   label {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--label);
     letter-spacing: 0.04em;
@@ -159,7 +159,7 @@
     border-radius: 8px;
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
+    font-size: 16px;
     padding: 9px 12px;
     outline: none;
     transition: border-color 0.15s;
@@ -171,7 +171,7 @@
   }
   select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a8099' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
   textarea { resize: vertical; min-height: 80px; }
-  input::placeholder, textarea::placeholder { color: var(--muted); font-size: 13px; }
+  input::placeholder, textarea::placeholder { color: var(--muted); font-size: 15px; }
 
   /* ── UPLOAD ZONE ── */
   .upload-zone {
@@ -194,9 +194,9 @@
     /* Covers entire zone — tap anywhere opens file picker directly */
     /* No JS onclick needed — browser handles it natively */
   }
-  .upload-zone .uz-icon { font-size: 24px; margin-bottom: 6px; }
-  .upload-zone .uz-text { font-size: 12px; color: var(--muted); }
-  .upload-zone .uz-hint { font-size: 11px; color: var(--border); margin-top: 3px; }
+  .upload-zone .uz-icon { font-size: 26px; margin-bottom: 6px; }
+  .upload-zone .uz-text { font-size: 14px; color: var(--muted); }
+  .upload-zone .uz-hint { font-size: 13px; color: var(--border); margin-top: 3px; }
   .upload-zone.has-file {
     border-color: var(--green);
     background: #0d1a13;
@@ -208,7 +208,7 @@
   .file-item {
     display: flex; align-items: center; gap: 8px;
     background: var(--surface2); border-radius: 6px;
-    padding: 6px 10px; font-size: 12px;
+    padding: 6px 10px; font-size: 14px;
     min-width: 0;
   }
   .file-item .fi-name {
@@ -220,20 +220,20 @@
   }
   .file-item .fi-remove {
     background: none; border: none; color: var(--accent2);
-    cursor: pointer; font-size: 20px; line-height: 1;
+    cursor: pointer; font-size: 22px; line-height: 1;
     padding: 0 4px; flex-shrink: 0;
     min-width: 32px; min-height: 32px; width: 32px;
     display: flex; align-items: center; justify-content: center;
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   }
-  .file-item .fi-status { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .file-item .fi-status { font-size: 13px; color: var(--muted); flex-shrink: 0; }
 
   /* ── OCR EXTRACT BUTTON ── */
   .ocr-btn {
     display: flex; align-items: center; gap: 6px;
     background: var(--accent); color: #000;
     border: none; border-radius: 7px;
-    padding: 8px 14px; font-size: 13px;
+    padding: 8px 14px; font-size: 15px;
     font-weight: 600; font-family: 'DM Sans', sans-serif;
     cursor: pointer; transition: opacity 0.15s;
     width: fit-content;
@@ -248,7 +248,7 @@
   }
   .coapp-tab {
     padding: 6px 14px; border-radius: 20px;
-    font-size: 12px; font-weight: 600;
+    font-size: 14px; font-weight: 600;
     background: var(--surface2); border: 1.5px solid var(--border);
     color: var(--muted); cursor: pointer; transition: all 0.15s;
   }
@@ -262,7 +262,7 @@
   /* ── BUTTONS ── */
   .btn {
     padding: 10px 20px; border-radius: 8px;
-    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
     cursor: pointer; border: none; transition: opacity 0.15s;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
@@ -298,7 +298,7 @@
   .modal-hdr {
     padding: 16px 18px;
     border-bottom: 1px solid var(--border);
-    font-weight: 600; font-size: 15px;
+    font-weight: 600; font-size: 17px;
     display: flex; align-items: center; gap: 8px;
   }
   .modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
@@ -308,8 +308,8 @@
   .extracted-field {
     background: var(--surface2); border-radius: 8px; padding: 10px 12px;
   }
-  .extracted-field .ef-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
-  .extracted-field .ef-value { font-size: 14px; color: var(--text); font-family: 'DM Mono', monospace; }
+  .extracted-field .ef-label { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .extracted-field .ef-value { font-size: 16px; color: var(--text); font-family: 'DM Mono', monospace; }
   .extracted-field .ef-value.empty { color: var(--muted); font-style: italic; font-family: 'DM Sans', sans-serif; }
 
   /* ── SUBMIT TAB ── */
@@ -324,9 +324,9 @@
     background: var(--bg); cursor: pointer;
     text-align: center; transition: all 0.15s;
   }
-  .submit-type-btn .st-icon { font-size: 24px; margin-bottom: 6px; }
-  .submit-type-btn .st-title { font-size: 13px; font-weight: 600; color: var(--text); }
-  .submit-type-btn .st-desc { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .submit-type-btn .st-icon { font-size: 26px; margin-bottom: 6px; }
+  .submit-type-btn .st-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .submit-type-btn .st-desc { font-size: 13px; color: var(--muted); margin-top: 3px; }
   .submit-type-btn.selected { border-color: var(--accent); background: #1a1a0a; }
   .submit-type-btn.selected .st-title { color: var(--accent); }
 
@@ -334,7 +334,7 @@
   .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; width: 0%; }
 
   .status-msg {
-    padding: 12px 14px; border-radius: 8px; font-size: 13px;
+    padding: 12px 14px; border-radius: 8px; font-size: 15px;
     margin-top: 10px; display: none;
   }
   .status-msg.success { background: #0d2318; border: 1px solid var(--green); color: var(--green); }
@@ -354,7 +354,7 @@
   }
   .biz-fields.visible { display: flex; }
   .biz-fields-hdr {
-    font-size: 11px; font-weight: 700; color: #5a8ac0;
+    font-size: 13px; font-weight: 700; color: #5a8ac0;
     text-transform: uppercase; letter-spacing: 0.08em;
     padding-bottom: 8px; border-bottom: 1px solid #2a3a5a;
   }
@@ -367,7 +367,7 @@
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 10px; padding: 12px 18px;
-    font-size: 13px; color: var(--text); z-index: 2000;
+    font-size: 15px; color: var(--text); z-index: 2000;
     transition: transform 0.3s; white-space: nowrap;
     box-shadow: 0 4px 24px rgba(0,0,0,0.5);
   }
@@ -392,15 +392,15 @@
 
   /* ── MISC ── */
   .divider { height: 1px; background: var(--border); margin: 4px 0; }
-  .hint { font-size: 11px; color: var(--muted); }
+  .hint { font-size: 13px; color: var(--muted); }
   .badge {
     display: inline-flex; align-items: center;
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: 4px; padding: 2px 6px;
-    font-size: 11px; font-family: 'DM Mono', monospace; color: var(--label);
+    font-size: 13px; font-family: 'DM Mono', monospace; color: var(--label);
   }
   .section-title {
-    font-size: 13px; font-weight: 700; color: var(--accent);
+    font-size: 15px; font-weight: 700; color: var(--accent);
     text-transform: uppercase; letter-spacing: 0.06em;
     margin-bottom: 2px;
   }
@@ -409,7 +409,7 @@
     border-radius: 8px; padding: 12px; margin-bottom: 8px;
   }
   .itr-year-label {
-    font-size: 11px; font-weight: 700; color: var(--accent);
+    font-size: 13px; font-weight: 700; color: var(--accent);
     text-transform: uppercase; margin-bottom: 10px;
     letter-spacing: 0.06em;
   }
@@ -1139,21 +1139,21 @@
 
   <!-- SAVED DRAFTS — load any past applicant to edit -->
   <div class="submit-card">
-    <div style="font-size:13px;font-weight:600;margin-bottom:4px;">📂 Saved Drafts</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Load any previous applicant to edit and re-submit. Data auto-saves every time you type.</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px;">📂 Saved Drafts</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:10px;">Load any previous applicant to edit and re-submit. Data auto-saves every time you type.</div>
     <div style="position:relative;margin-bottom:10px;">
     <input type="text" id="draftSearch" placeholder="🔍  Type a name to search drafts..." 
       oninput="filterDrafts(this.value)"
-      style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;">
+      style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:15px;font-family:inherit;">
   </div>
-  <div id="draftListContainer"><div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Start typing a name above to search your drafts.</div></div>
-    <button onclick="saveDraftNow()" style="margin-top:8px;background:none;border:1px dashed var(--border);border-radius:7px;color:var(--muted);font-size:12px;padding:7px 14px;cursor:pointer;width:100%;">
+  <div id="draftListContainer"><div style="color:var(--muted);font-size:14px;text-align:center;padding:12px;">Start typing a name above to search your drafts.</div></div>
+    <button onclick="saveDraftNow()" style="margin-top:8px;background:none;border:1px dashed var(--border);border-radius:7px;color:var(--muted);font-size:14px;padding:7px 14px;cursor:pointer;width:100%;">
       💾 Save current form as draft now
     </button>
   </div>
   <div class="submit-card">
-    <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Submission Type</div>
-    <div style="font-size:12px;color:var(--muted);">Choose whether this is a final submission or an intermediate save.</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px;">Submission Type</div>
+    <div style="font-size:14px;color:var(--muted);">Choose whether this is a final submission or an intermediate save.</div>
     <div class="submit-type-row">
       <div class="submit-type-btn" id="btn_intermediate" onclick="setSubmitType('intermediate')">
         <div class="st-icon">💾</div>
@@ -1168,23 +1168,23 @@
     </div>
   </div>
   <div class="submit-card">
-    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Upload Summary</div>
-    <div id="uploadSummary" style="font-size:12px;color:var(--muted);">Loading...</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:8px;">Upload Summary</div>
+    <div id="uploadSummary" style="font-size:14px;color:var(--muted);">Loading...</div>
   </div>
   <div class="submit-card">
-    <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Apps Script Endpoint</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Paste your deployed Apps Script Web App URL here.</div>
-    <input type="text" id="f_endpoint" placeholder="https://script.google.com/macros/s/.../exec" style="font-size:12px;font-family:'DM Mono',monospace;">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px;">Apps Script Endpoint</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:8px;">Paste your deployed Apps Script Web App URL here.</div>
+    <input type="text" id="f_endpoint" placeholder="https://script.google.com/macros/s/.../exec" style="font-size:14px;font-family:'DM Mono',monospace;">
   </div>
 
   <div class="progress-bar"><div class="progress-fill" id="submitProgress"></div></div>
   <div class="status-msg" id="statusMsg"></div>
 
   <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
-    <button class="btn btn-primary" id="submitBtn" onclick="submitForm()" style="width:100%;padding:14px;font-size:15px;">
+    <button class="btn btn-primary" id="submitBtn" onclick="submitForm()" style="width:100%;padding:14px;font-size:17px;">
       🚀 Submit Form
     </button>
-    <button class="btn btn-secondary" type="button" onclick="clearForm()" style="width:100%;font-size:13px;">
+    <button class="btn btn-secondary" type="button" onclick="clearForm()" style="width:100%;font-size:15px;">
       🗑 Clear All Data
     </button>
   </div>
@@ -1210,20 +1210,20 @@
 ">
   <!-- HEADER — fixed, never scrolls -->
   <div style="padding:14px 18px 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); flex-shrink:0;">
-    <div style="font-size:15px; font-weight:700; color:var(--accent);">✨ <span id="ocrSheetTitle">Extracted Data</span></div>
-    <button id="ocrSheetClose" type="button" onclick="closeOcrModal()" style="background:none;border:none;color:var(--muted);font-size:28px;line-height:1;padding:4px 10px;cursor:pointer;">×</button>
+    <div style="font-size:17px; font-weight:700; color:var(--accent);">✨ <span id="ocrSheetTitle">Extracted Data</span></div>
+    <button id="ocrSheetClose" type="button" onclick="closeOcrModal()" style="background:none;border:none;color:var(--muted);font-size:30px;line-height:1;padding:4px 10px;cursor:pointer;">×</button>
   </div>
   <!-- BODY — scrollable -->
   <div id="ocrSheetBody" style="padding:14px 18px; flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:10px;"></div>
   <!-- FOOTER — fixed, never scrolls, buttons always visible and tappable -->
   <div style="padding:14px 18px 28px; display:flex; gap:12px; border-top:1px solid var(--border); flex-shrink:0; background:var(--surface);">
     <button id="ocrSheetDiscard" type="button" onclick="closeOcrModal()" style="
-      flex:1; padding:16px 10px; border-radius:10px; font-size:15px; font-weight:600;
+      flex:1; padding:16px 10px; border-radius:10px; font-size:17px; font-weight:600;
       background:var(--surface2); border:1px solid var(--border); color:var(--text);
       cursor:pointer;
     ">Discard</button>
     <button id="ocrSheetApply" type="button" onclick="applyOcrData()" style="
-      flex:2; padding:16px 10px; border-radius:10px; font-size:16px; font-weight:700;
+      flex:2; padding:16px 10px; border-radius:10px; font-size:18px; font-weight:700;
       background:var(--accent); border:none; color:#000;
       cursor:pointer;
     ">✓ Use These Values</button>
@@ -1426,8 +1426,8 @@ function showError(msg) {
   document.querySelectorAll('.err-banner').forEach(function(e) { e.remove(); });
   const banner = document.createElement('div');
   banner.className = 'err-banner';
-  banner.style.cssText = 'background:#200f0e;border:1px solid #e85d4a;color:#e85d4a;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;align-items:center;justify-content:space-between;margin:0 0 12px 0;';
-  banner.innerHTML = '<span>&#9888; ' + msg + '</span><button onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;font-size:20px;line-height:1;padding:0 0 0 10px;">&times;</button>';
+  banner.style.cssText = 'background:#200f0e;border:1px solid #e85d4a;color:#e85d4a;border-radius:8px;padding:10px 14px;font-size:15px;display:flex;align-items:center;justify-content:space-between;margin:0 0 12px 0;';
+  banner.innerHTML = '<span>&#9888; ' + msg + '</span><button onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 10px;">&times;</button>';
   const activePane = document.querySelector('.tab-pane.active');
   if (activePane) activePane.insertBefore(banner, activePane.firstChild);
 }
@@ -1710,7 +1710,7 @@ function renderFileList(key) {
     <div class="file-item">
       <span>📄</span>
       <span class="fi-name">${f.name}</span>
-      <span class="fi-status" style="color:var(--green);font-size:10px;">New</span>
+      <span class="fi-status" style="color:var(--green);font-size:12px;">New</span>
       <button class="fi-remove" onclick="removeFile('${key}',${i})">×</button>
     </div>
   `).join('');
@@ -1730,7 +1730,7 @@ function renderFileList(key) {
       <div class="file-item" style="border:1px solid var(--border);background:var(--surface2);">
         ${thumbHtml}
         <span class="fi-name" style="color:var(--label);">${displayName}</span>
-        <span class="fi-status" style="flex-shrink:0;color:var(--muted);font-size:10px;">Draft</span>
+        <span class="fi-status" style="flex-shrink:0;color:var(--muted);font-size:12px;">Draft</span>
         <button class="fi-remove" onclick="discardDriveFile('${key}', ${di})" style="color:var(--accent2);flex-shrink:0;min-width:28px;">×</button>
       </div>`;
   });
@@ -2189,7 +2189,7 @@ function showOcrModal(docType, data) {
   }
   const entries = Object.entries(data).filter(function(kv) { return kv[1] && String(kv[1]).trim(); });
   if (entries.length === 0) {
-    body.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">No data could be extracted. Please try a clearer image or check browser console (F12) for the raw Gemini response.</div>';
+    body.innerHTML = '<div style="color:var(--muted);font-size:15px;text-align:center;padding:16px;">No data could be extracted. Please try a clearer image or check browser console (F12) for the raw Gemini response.</div>';
   } else {
     body.innerHTML = entries.map(function(kv) {
       return '<div class="extracted-field"><div class="ef-label">' + kv[0] + '</div><div class="ef-value">' + (kv[1] || '') + '</div></div>';
@@ -2605,7 +2605,7 @@ function buildCoAppBlock(n) {
       </div>
     </div>
     <div style="text-align:right;margin-bottom:16px">
-      <button class="btn btn-danger" onclick="removeCoApp(${n})" style="font-size:12px;padding:7px 14px">Remove Co-App ${n}</button>
+      <button class="btn btn-danger" onclick="removeCoApp(${n})" style="font-size:14px;padding:7px 14px">Remove Co-App ${n}</button>
     </div>
   `;
   container.appendChild(div);
@@ -2723,7 +2723,7 @@ function buildItrSection(forceRebuild) {
               <label style="margin-top:10px">ITR Income ${yr}</label>
               <input type="text" id="f_itr_${person.prefix}_${shortYr}" placeholder="₹ Income">
               <label style="margin-top:8px">ITR Ack No.</label>
-              <input type="text" id="f_itr_ack_${person.prefix}_${shortYr}" placeholder="Acknowledgement No." style="font-family:'DM Mono',monospace;font-size:12px">
+              <input type="text" id="f_itr_ack_${person.prefix}_${shortYr}" placeholder="Acknowledgement No." style="font-family:'DM Mono',monospace;font-size:14px">
             </div>
             <div class="field">
               <label>Form 16 Upload ${yr}</label>
@@ -2738,7 +2738,7 @@ function buildItrSection(forceRebuild) {
               <label style="margin-top:10px">Form 16 Income ${yr}</label>
               <input type="text" id="f_f16_inc_${person.prefix}_${shortYr}" placeholder="₹ Income">
               <label style="margin-top:8px">Form 16 Cert No.</label>
-              <input type="text" id="f_f16_cert_${person.prefix}_${shortYr}" placeholder="Certificate No." style="font-family:'DM Mono',monospace;font-size:12px">
+              <input type="text" id="f_f16_cert_${person.prefix}_${shortYr}" placeholder="Certificate No." style="font-family:'DM Mono',monospace;font-size:14px">
             </div>
           </div>
         </div>
@@ -3632,7 +3632,7 @@ async function renderDraftList() {
   if (searchBox) searchBox.value = '';
 
   // Show prompt — no cards visible yet
-  container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Start typing a name above to search your drafts.</div>';
+  container.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:12px;">Start typing a name above to search your drafts.</div>';
 
   // Load drafts into cache in background
   const drafts = await fetchDrafts();
@@ -3647,7 +3647,7 @@ function filterDrafts(query) {
 
   // Nothing typed — show the prompt, hide all cards
   if (!q) {
-    container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Start typing a name above to search your drafts.</div>';
+    container.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:12px;">Start typing a name above to search your drafts.</div>';
     return;
   }
 
@@ -3659,29 +3659,29 @@ function filterDrafts(query) {
   });
 
   if (matched.length === 0) {
-    container.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">No drafts matching "' + query + '"</div>';
+    container.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:12px;">No drafts matching "' + query + '"</div>';
     return;
   }
 
   const sorted = [...matched].sort(function(a,b) { return new Date(b.savedAt) - new Date(a.savedAt); });
   const endpoint = getEndpoint();
   const syncBadge = endpoint
-    ? '<span style="font-size:10px;color:var(--green);margin-left:6px;">☁ Cloud</span>'
-    : '<span style="font-size:10px;color:var(--muted);margin-left:6px;">📱 Local only</span>';
+    ? '<span style="font-size:12px;color:var(--green);margin-left:6px;">☁ Cloud</span>'
+    : '<span style="font-size:12px;color:var(--muted);margin-left:6px;">📱 Local only</span>';
 
   container.innerHTML = sorted.map(function(d) {
     // Show drive file count if photos were saved
     var photoCount = d.driveFiles ? Object.keys(d.driveFiles).length : 0;
     var photoBadge = photoCount > 0
-      ? '<span style="font-size:10px;color:var(--accent);margin-left:6px;">📎 ' + photoCount + ' photos</span>'
+      ? '<span style="font-size:12px;color:var(--accent);margin-left:6px;">📎 ' + photoCount + ' photos</span>'
       : '';
     return '<div class="draft-card" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);margin-bottom:8px;">'
       + '<div style="flex:1;min-width:0;">'
-      + '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (d.appName || d.name || 'Unnamed') + syncBadge + photoBadge + '</div>'
-      + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + (d.bank || '') + ' &nbsp;•&nbsp; ' + new Date(d.savedAt).toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'}) + '</div>'
+      + '<div style="font-size:15px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (d.appName || d.name || 'Unnamed') + syncBadge + photoBadge + '</div>'
+      + '<div style="font-size:13px;color:var(--muted);margin-top:2px;">' + (d.bank || '') + ' &nbsp;•&nbsp; ' + new Date(d.savedAt).toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'}) + '</div>'
       + '</div>'
-      + '<button data-dkey="' + d.key + '" class="draft-load-btn" style="background:var(--accent);border:none;border-radius:6px;color:#000;font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;flex-shrink:0;touch-action:manipulation;">Load</button>'
-      + '<button data-dkey="' + d.key + '" class="draft-del-btn" style="background:none;border:1px solid var(--accent2);border-radius:6px;color:var(--accent2);font-size:12px;padding:6px 10px;cursor:pointer;flex-shrink:0;touch-action:manipulation;">🗑</button>'
+      + '<button data-dkey="' + d.key + '" class="draft-load-btn" style="background:var(--accent);border:none;border-radius:6px;color:#000;font-size:14px;font-weight:600;padding:6px 12px;cursor:pointer;flex-shrink:0;touch-action:manipulation;">Load</button>'
+      + '<button data-dkey="' + d.key + '" class="draft-del-btn" style="background:none;border:1px solid var(--accent2);border-radius:6px;color:var(--accent2);font-size:14px;padding:6px 10px;cursor:pointer;flex-shrink:0;touch-action:manipulation;">🗑</button>'
       + '</div>';
   }).join('');
 }
@@ -3801,15 +3801,15 @@ function showDriveFilesModal(driveFiles) {
     const isImage = df[0] && df[0].mimeType && df[0].mimeType.startsWith('image/');
     const thumbHtml = (isImage && fileId)
       ? '<img src="https://drive.google.com/thumbnail?id=' + fileId + '&sz=w80" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.style.display=\'none\'">'
-      : '<span style="font-size:24px;">📄</span>';
+      : '<span style="font-size:26px;">📄</span>';
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
       + thumbHtml
       + '<div style="flex:1;min-width:0;">'
-      + '<div style="font-size:13px;font-weight:600;color:var(--text);">' + keyLabel(key) + '</div>'
-      + '<div style="font-size:11px;color:var(--muted);">' + df.length + ' file(s) from draft</div>'
+      + '<div style="font-size:15px;font-weight:600;color:var(--text);">' + keyLabel(key) + '</div>'
+      + '<div style="font-size:13px;color:var(--muted);">' + df.length + ' file(s) from draft</div>'
       + '</div>'
-      + '<button onclick="keepDriveFile(\'' + key + '\', this)" style="background:var(--green);border:none;border-radius:6px;color:#000;font-size:12px;font-weight:600;padding:6px 10px;cursor:pointer;touch-action:manipulation;">✓ Keep</button>'
-      + '<button onclick="discardDriveFile(\'' + key + '\', this)" style="background:none;border:1px solid var(--accent2);border-radius:6px;color:var(--accent2);font-size:12px;padding:6px 10px;cursor:pointer;touch-action:manipulation;margin-left:4px;">✕ Discard</button>'
+      + '<button onclick="keepDriveFile(\'' + key + '\', this)" style="background:var(--green);border:none;border-radius:6px;color:#000;font-size:14px;font-weight:600;padding:6px 10px;cursor:pointer;touch-action:manipulation;">✓ Keep</button>'
+      + '<button onclick="discardDriveFile(\'' + key + '\', this)" style="background:none;border:1px solid var(--accent2);border-radius:6px;color:var(--accent2);font-size:14px;padding:6px 10px;cursor:pointer;touch-action:manipulation;margin-left:4px;">✕ Discard</button>'
       + '</div>';
   }).join('');
 
@@ -3821,12 +3821,12 @@ function showDriveFilesModal(driveFiles) {
   modal.id = 'driveFilesModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:3000;padding:16px;';
   modal.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">'
-    + '<div style="padding:16px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:15px;color:var(--accent);">📎 Previous Photos Found</div>'
+    + '<div style="padding:16px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:17px;color:var(--accent);">📎 Previous Photos Found</div>'
     + '<div style="padding:4px 18px 0;">' + rows + '</div>'
     + '<div style="padding:14px 18px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border);margin-top:8px;">'
-    + '<button onclick="keepAllDriveFiles()" style="background:var(--green);border:none;border-radius:8px;color:#000;font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;touch-action:manipulation;">✓ Keep All</button>'
-    + '<button onclick="discardAllDriveFiles()" style="background:var(--accent2);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;touch-action:manipulation;">✕ Discard All</button>'
-    + '<button onclick="closeDriveFilesModal()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;touch-action:manipulation;">Done</button>'
+    + '<button onclick="keepAllDriveFiles()" style="background:var(--green);border:none;border-radius:8px;color:#000;font-size:16px;font-weight:600;padding:10px 18px;cursor:pointer;touch-action:manipulation;">✓ Keep All</button>'
+    + '<button onclick="discardAllDriveFiles()" style="background:var(--accent2);border:none;border-radius:8px;color:#fff;font-size:16px;font-weight:600;padding:10px 18px;cursor:pointer;touch-action:manipulation;">✕ Discard All</button>'
+    + '<button onclick="closeDriveFilesModal()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;font-weight:600;padding:10px 18px;cursor:pointer;touch-action:manipulation;">Done</button>'
     + '</div></div>';
   document.body.appendChild(modal);
 }
