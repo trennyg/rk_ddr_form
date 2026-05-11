@@ -360,7 +360,6 @@
   }
 
   /* ── API KEY MODAL ── */
-  #apiKeyModal .modal { max-width: 400px; }
   .config-row { display: flex; flex-direction: column; gap: 6px; }
 
   /* ── TOAST ── */
@@ -426,7 +425,6 @@
     <div class="subtitle">DDR Field Data Entry Form</div>
   </div>
   <div class="header-right">
-    <button class="api-key-btn" onclick="openApiKeyModal()">⚙ Config</button>
   </div>
 </div>
 
@@ -1237,29 +1235,6 @@
 "></div>
 
 <!-- API KEY MODAL -->
-<div class="modal-overlay" id="apiKeyModal">
-  <div class="modal">
-    <div class="modal-hdr">⚙ Configuration</div>
-    <div class="modal-body">
-      <div class="config-row">
-        <label>Gemini API Key</label>
-        <input type="password" id="f_gemini_key" placeholder="AIza..." style="font-family:'DM Mono',monospace;font-size:13px;">
-        <span class="hint">Get a free key at <strong>aistudio.google.com</strong></span>
-        <div id="keyTestResult" style="margin-top:8px;font-size:12px;display:none;padding:8px 10px;border-radius:6px;"></div>
-      </div>
-      <div class="config-row" style="margin-top:12px;">
-        <label>Cloud Vision API Key</label>
-        <input type="password" id="f_vision_key" placeholder="AIza..." style="font-family:'DM Mono',monospace;font-size:13px;">
-        <span class="hint">Google Cloud Vision API key — used for text extraction from photos</span>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-secondary" type="button" onclick="closeApiKeyModal()">Cancel</button>
-      <button class="btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="testApiKey()">🔍 Test Key</button>
-      <button class="btn btn-primary" type="button" onclick="saveApiKey()">Save Key</button>
-    </div>
-  </div>
-</div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
@@ -1284,8 +1259,7 @@ let numCoApps = 0;
 let _draftDriveFiles = {}; // key -> [{driveUrl, name, mimeType}] — Drive URLs only, no base64
 let _discardedDriveKeys = new Set(); // keys where user chose to discard the Drive file
 
-// Gemini API — discovers available models dynamically from user's key
-const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+// Gemini — model discovery cached; calls proxied through VPS server
 let _workingModel = null;
 
 // Preferred model names in priority order (will be validated against user's account)
@@ -1302,15 +1276,13 @@ const PREFERRED_MODELS = [
   'gemini-1.5-pro',
 ];
 
-// Fetch the real list of models available for this API key, pick best multimodal one
-async function discoverWorkingModel(key) {
+// Fetch available Gemini models via VPS proxy, pick best multimodal one
+async function discoverWorkingModel() {
   if (_workingModel) return _workingModel;
   try {
-    const listRes = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models?key=' + key
-    );
+    const listRes = await fetch(getEndpoint() + '/api/proxy-gemini/models');
     const listData = await listRes.json();
-    if (listData.error) throw new Error('API key error: ' + listData.error.message);
+    if (listData.error) throw new Error('Gemini model list error: ' + listData.error.message);
 
     // Build set of model IDs that support generateContent
     const available = new Set();
@@ -1356,9 +1328,10 @@ async function discoverWorkingModel(key) {
   }
 }
 
-async function callGemini(key, payload) {
-  // Discover working model if not cached
-  const discovered = await discoverWorkingModel(key);
+async function callGemini(payload) {
+  // Discover working model if not cached; all calls go through VPS proxy
+  const endpoint = getEndpoint();
+  const discovered = await discoverWorkingModel();
   const modelsToTry = discovered ? [discovered] : PREFERRED_MODELS;
 
   let lastError = '';
@@ -1367,10 +1340,10 @@ async function callGemini(key, payload) {
     // Retry up to 2 times on overload before moving to next model
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const res = await fetch(GEMINI_BASE + model + ':generateContent?key=' + key, {
+        const res = await fetch(endpoint + '/api/proxy-gemini', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ model, payload })
         });
         const data = await res.json();
         if (data.error) {
@@ -1464,38 +1437,8 @@ function setProgress(pct) {
   if (el) el.style.width = pct + '%';
 }
 
-function openApiKeyModal() {
-  const el = document.getElementById('f_gemini_key');
-  if (el) el.value = localStorage.getItem('rka_gemini_key') || '';
-  const vEl = document.getElementById('f_vision_key');
-  if (vEl) vEl.value = localStorage.getItem('rka_vision_key') || '';
-  const modal = document.getElementById('apiKeyModal');
-  if (modal) modal.classList.add('open');
-}
-function closeApiKeyModal() {
-  const modal = document.getElementById('apiKeyModal');
-  if (modal) modal.classList.remove('open');
-}
-function saveApiKey() {
-  const el = document.getElementById('f_gemini_key');
-  const key = el ? el.value.trim() : '';
-  if (key) { localStorage.setItem('rka_gemini_key', key); _workingModel = null; }
-  const vEl = document.getElementById('f_vision_key');
-  const vKey = vEl ? vEl.value.trim() : '';
-  if (vKey) { localStorage.setItem('rka_vision_key', vKey); }
-  showToast('Keys saved!', 'success');
-  closeApiKeyModal();
-}
-function getGeminiKey()     { return localStorage.getItem('rka_gemini_key') || ''; }
-function getCloudVisionKey() { return localStorage.getItem('rka_vision_key') || ''; }
-function getOpenAiKey() {
-  // Stored in localStorage — set once via the ⚙ Config button
-  return localStorage.getItem('rka_openai_key') || '';
-}
-
 async function testApiKey() {
-  const el = document.getElementById('f_gemini_key');
-  const key = el ? el.value.trim() : getGeminiKey();
+  const key = '';
   const resultEl = document.getElementById('keyTestResult');
   if (resultEl) {
     resultEl.style.display = 'block';
@@ -1922,37 +1865,27 @@ const OCR_TITLES = {
 // Step 3: Gemini fallback   — if OpenAI proxy fails
 // ══════════════════════════════════════════════════════════
 
-// ── Step 1: Cloud Vision text extraction ─────────────────
+// ── Step 1: Cloud Vision text extraction (via VPS proxy) ─
 async function extractTextWithCloudVision(base64, mimeType) {
-  const visionKey = getCloudVisionKey();
-  const res = await fetch(
-    'https://vision.googleapis.com/v1/images:annotate?key=' + visionKey,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        requests: [{
-          image: { content: base64 },
-          features: [{ type: 'DOCUMENT_TEXT_DETECTION' }]
-        }]
-      })
-    }
-  );
+  const endpoint = getEndpoint();
+  const res = await fetch(endpoint + '/api/ocr', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base64, mimeType })
+  });
   const data = await res.json();
-  if (data.error) throw new Error('Cloud Vision error: ' + data.error.message);
-  const annotation = data.responses && data.responses[0] && data.responses[0].fullTextAnnotation;
-  return annotation ? annotation.text : '';
+  if (data.error) throw new Error('Cloud Vision error: ' + data.error);
+  return data.text || '';
 }
 
 // ── Step 2 (fallback): Gemini JSON structuring ───────────
 async function structureWithGemini(rawText, prompt) {
-  const key = getGeminiKey();
   const fullPrompt = prompt + '\n\nEXTRACTED TEXT:\n' + rawText.substring(0, 6000);
   const payload = {
     contents: [{ parts: [{ text: fullPrompt }] }],
     generationConfig: { temperature: 0.1, maxOutputTokens: 2048 }
   };
-  const data = await callGemini(key, payload);
+  const data = await callGemini(payload);
   return data.candidates[0].content.parts[0].text.trim();
 }
 
@@ -2201,7 +2134,7 @@ async function runOcr(key, docType) {
 
       if (imgParts.length > 0) {
         try {
-          const d = await callGemini(getGeminiKey(), {
+          const d = await callGemini({
             contents: [{ parts: [{ text: prompt }, ...imgParts] }],
             generationConfig: { temperature: 0.1, maxOutputTokens: 2048 }
           });
@@ -2849,9 +2782,6 @@ function _applyItrParsed(parsed, docKind, prefix, shortYr) {
 
 async function runItrOcr(prefix, shortYr, docKind) {
   const key = `${docKind}_${prefix}_${shortYr}`;
-  const geminiKey = getGeminiKey();
-  if (!geminiKey) { openApiKeyModal(); return; }
-
   // Check local files first, then Drive-restored files
   const files = uploadedFiles[key] || [];
   const driveFiles = (_draftDriveFiles[key] || []);
@@ -3996,15 +3926,6 @@ function closeDriveFilesModal() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Prompt for API keys on first use if not set
-  const hasGemini = !!localStorage.getItem('rka_gemini_key');
-  const hasVision = !!localStorage.getItem('rka_vision_key');
-  if (!hasGemini || !hasVision) {
-    setTimeout(function() {
-      openApiKeyModal();
-      showToast('Please enter your API keys to get started', 'info');
-    }, 800);
-  }
   // OCR sheet buttons wired fresh inside showOcrModal() each call
 
   // Draft list buttons — event delegation so dynamically rendered buttons work
