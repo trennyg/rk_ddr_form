@@ -1848,8 +1848,16 @@ Fields: {"ackNo":"acknowledgement number","income":"Gross Total Income or Total 
   f16: `Extract from Form 16 salary certificate (Indian income tax document). Return ONLY raw JSON no markdown no explanation.
 Look for EXACTLY these two fields:
 1. certNo — the value that appears immediately after the label "CERTIFICATE No." or "Certificate No." in the document header (Part A). This is a unique alphanumeric code issued by TRACES. Do NOT use TAN number, PAN number, Acknowledgement number, Assessment Year, or any other field — only the value labelled "Certificate No."
-2. income — find ONLY the row explicitly numbered 12 and labelled "Total taxable income (9-11)". Do NOT use Gross Salary, Total Salary, Salary Provision, Gross total income, or any other row. The amount may appear on the same line or on the next line below row 12. Only row 12. Extract the rupee amount as a plain number with no commas or symbols.
-Return: {"certNo":"the certificate number value","income":"the row 12 total taxable income (9-11) amount as digits only"}`
+2. income — CRITICAL RULES (read carefully):
+   - ALWAYS target row 12 labelled "Total taxable income (9-11)" or "12. Total taxable income". This is the ONLY correct field.
+   - NEVER pick row 13 "Tax on total income" — this is tax, not income.
+   - NEVER pick row 6 "Income chargeable under salaries" — unless rows 9, 10, 11, and 12 are ALL zero.
+   - The income value is ALWAYS the LARGER number between rows 12 and 13. Income is always larger than tax.
+   - DO NOT return any value labelled Tax, TDS, or Surcharge.
+   - The amount may appear on the same line as row 12 or on the next line below it.
+   - Extract the rupee amount as a plain positive number greater than 0, with no commas or symbols.
+   - If the document has two financial year sections (e.g. 2024-25 and 2025-26), apply these same rules to each section separately.
+Return: {"certNo":"certificate number","income":"positive number greater than 0"}`
 };
 
 const OCR_TITLES = {
@@ -2868,7 +2876,7 @@ async function runItrOcr(prefix, shortYr, docKind) {
         console.warn('Cloud Vision got no text — trying Gemini direct vision for ITR/F16');
         btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying Gemini vision...</span>');
         try {
-          const d = await callGemini(geminiKey, {
+          const d = await callGemini({
             contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: fallbackMime, data: fallbackB64 } }] }],
             generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
           });
@@ -2922,16 +2930,16 @@ async function runItrOcr(prefix, shortYr, docKind) {
 
     let raw;
     try {
-      // Try Gemini structuring first
-      const d = await callGemini(geminiKey, {
+      console.log('Using OpenAI for structuring');
+      raw = await structureWithOpenAI(itrText, prompt);
+    } catch(oaErr) {
+      console.log('OpenAI failed, falling back to Gemini');
+      btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying Gemini fallback...</span>');
+      const d = await callGemini({
         contents: [{ parts: [{ text: textPrompt }] }],
         generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
       });
       raw = d.candidates[0].content.parts[0].text.trim();
-    } catch(gemErr) {
-      console.warn('Gemini failed for ITR/F16, trying OpenAI proxy:', gemErr.message);
-      btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying OpenAI fallback...</span>');
-      raw = await structureWithOpenAI(itrText, prompt);
     }
 
     console.log('ITR/F16 raw response:', raw);
