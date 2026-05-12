@@ -1845,19 +1845,12 @@ Return ONLY this JSON (no markdown, no explanation, every value on one line):
 Look for fields labelled Gross Total Income, Total Income, or Net Taxable Income.
 Do NOT pick any field with the word Loss in it. The value must be a positive number.
 Fields: {"ackNo":"acknowledgement number","income":"Gross Total Income or Total Income — NOT any loss figure","year":"assessment year"}`,
-  f16: `Extract from Form 16 salary certificate (Indian income tax document). Return ONLY raw JSON no markdown no explanation.
-Look for EXACTLY these two fields:
-1. certNo — the value that appears immediately after the label "CERTIFICATE No." or "Certificate No." in the document header (Part A). This is a unique alphanumeric code issued by TRACES. Do NOT use TAN number, PAN number, Acknowledgement number, Assessment Year, or any other field — only the value labelled "Certificate No."
-2. income — CRITICAL RULES (read carefully):
-   - ALWAYS target row 12 labelled "Total taxable income (9-11)" or "12. Total taxable income". This is the ONLY correct field.
-   - NEVER pick row 13 "Tax on total income" — this is tax, not income.
-   - NEVER pick row 6 "Income chargeable under salaries" — unless rows 9, 10, 11, and 12 are ALL zero.
-   - The income value is ALWAYS the LARGER number between rows 12 and 13. Income is always larger than tax.
-   - DO NOT return any value labelled Tax, TDS, or Surcharge.
-   - The amount may appear on the same line as row 12 or on the next line below it.
-   - Extract the rupee amount as a plain positive number greater than 0, with no commas or symbols.
-   - If the document has two financial year sections (e.g. 2024-25 and 2025-26), apply these same rules to each section separately.
-Return: {"certNo":"certificate number","income":"positive number greater than 0"}`
+  f16: `Extract from Form 16 Part B. Return ONLY raw JSON no markdown.
+STEP 1 — Find the row explicitly labelled '12.' or '12' followed by the words 'Total taxable income'. The value next to it is your income figure.
+STEP 2 — Verify your answer: income must be GREATER than the value in row 13 'Tax on total income'. If your picked value is LESS than row 13 value you have picked the wrong row — go back to STEP 1.
+STEP 3 — NEVER pick any row labelled Tax, TDS, Net tax, Tax payable, Surcharge, Cess, Rebate or Relief. These are all tax figures not income figures.
+STEP 4 — Certificate number is in the header of Part A or Part B.
+Return: {"certNo":"certificate number","income":"row 12 Total taxable income value as positive number"}`
 };
 
 const OCR_TITLES = {
