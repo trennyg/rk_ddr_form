@@ -1779,7 +1779,7 @@ function enableOcrBtn(key) {
 // ══════════════════════════════════════════════════════════
 const OCR_PROMPTS = {
   pan: `Extract from PAN card image. Return ONLY raw JSON no markdown: {"name":"full name on card","dob":"date of birth DD/MM/YYYY","pan":"PAN number"}`,
-  payslip: `Extract from payslip or salary certificate. Return ONLY raw JSON no markdown.\nIMPORTANT: For netPay, you MUST find a field explicitly labelled one of these exact terms (case-insensitive): Net Pay, Net Monthly Pay, Net Salary, Net Monthly Salary, Net In Hand, Net Monthly In Hand, In Hand, Take Home, Take Home Pay, Amount Payable, Net Amount Payable.\nDo NOT use Gross Pay, Gross Salary, Total Earnings, Total Deductions, Gross Deductions, CTC, Basic, Basic Pay, or any deduction figure. Net pay is always smaller than gross pay — it is the final amount after all deductions are subtracted.\nIf you cannot find a field with one of the exact labels above, set netPay to empty string — do not guess.\nReturn ONLY: {"company":"company name","designation":"job title","empCode":"employee code","branch":"branch or location","netPay":"value from an explicitly labelled Net Pay or In Hand or Take Home field only — empty string if not found","isAnnual":"false","joining":"date of joining DD/MM/YYYY"}`,
+  payslip: `Extract from payslip or salary certificate. Return ONLY raw JSON no markdown.\nIMPORTANT: For netPay, you MUST find a field explicitly labelled one of these exact terms (case-insensitive): Net Pay, Net Monthly Pay, Net Salary, Net Monthly Salary, Net In Hand, Net Monthly In Hand, In Hand, Take Home, Take Home Pay, Amount Payable, Net Amount Payable.\nDo NOT use Gross Pay, Gross Salary, Total Earnings, Total Deductions, Gross Deductions, CTC, Basic, Basic Pay, or any deduction figure. Net pay is always smaller than gross pay — it is the final amount after all deductions are subtracted.\nIf you cannot find a field with one of the exact labels above, set netPay to empty string — do not guess.\nReturn ONLY: {"company":"company name","designation":"job title","empCode":"employee code","branch":"branch or location","netPay":"value from an explicitly labelled Net Pay or In Hand or Take Home field only — empty string if not found","isAnnual":"false","joining":"date of joining DD/MM/YYYY"}\nIf a [PRE-COMPUTED NET PAY HINT] appears at the end of the extracted text, use it as a cross-check for netPay but only if you can also find a matching labelled field in the payslip. Do not use the hint alone if you cannot verify it against a label.`,
   bank: `Extract from bank statement. Return ONLY raw JSON no markdown: {"bankName":"bank name","branchName":"branch name","accountNo":"account number","accountType":"Savings or Current or Salary","accountHolder":"account holder name"}`,
   biz: `You are reading an Indian GST Registration Certificate or Udyam (MSME) Registration Certificate. Extract ALL fields listed below.
 
@@ -2027,44 +2027,39 @@ async function runOcr(key, docType) {
     // Net pay = Gross Earnings - Total Deductions (works for any payslip layout)
     if (docType === 'payslip' && allRawText) {
       const rawNc = allRawText.replace(/,/g, '').toLowerCase();
-      function extractAfterLabel(labels) {
+
+      function extractLabelledAmount(labels) {
         for (let i = 0; i < labels.length; i++) {
-          const idx = rawNc.indexOf(labels[i]);
-          if (idx === -1) continue;
-          const after = rawNc.substring(idx + labels[i].length, idx + labels[i].length + 200);
-          const m = after.match(/(\d{4,})/);
+          // Match label at word boundary, grab first number (4-7 digits) within 80 chars
+          const re = new RegExp('\\b' + labels[i].replace(/\s+/g, '\\s+') + '[\\s:₹Rs.]*([\\d]{4,7})\\b');
+          const m = rawNc.match(re);
           if (m) return parseInt(m[1]);
         }
         return null;
       }
-      // Extract all unique 4-7 digit salary numbers from text
-      const allNums = [...new Set([...rawNc.matchAll(/\b(\d{4,7})\b/g)].map(m => parseInt(m[1])))].sort((a,b) => b-a);
-      const grossEarnings = extractAfterLabel(['gross earnings', 'total earnings', 'gross salary', 'total gross']);
-      if (grossEarnings) {
-        // Find two numbers X and Y where grossEarnings = X + Y
-        // Net Pay is the larger of the two, Gross Deductions is the smaller
-        let found = false;
-        for (let i = 0; i < allNums.length && !found; i++) {
-          const diff = grossEarnings - allNums[i];
-          if (diff > 0 && diff !== grossEarnings && allNums.includes(diff)) {
-            // grossEarnings = allNums[i] + diff
-            // Net Pay is the larger portion (usually > 50% of gross)
-            const netPay = Math.max(allNums[i], diff);
-            const deductions = Math.min(allNums[i], diff);
-            if (deductions < grossEarnings * 0.6) { // deductions should be < 60% of gross
-              window._regexNetPay = String(netPay);
-              console.log('Net pay via arithmetic:', grossEarnings, '=', netPay, '+', deductions);
-              found = true;
-            }
-          }
+
+      const grossAmt = extractLabelledAmount(['gross earnings', 'gross salary', 'total earnings', 'gross pay', 'total gross pay']);
+      const deductAmt = extractLabelledAmount(['total deductions', 'total deduction', 'deductions total', 'less deductions']);
+      const netDirectLabels = ['net take home', 'net pay', 'net salary', 'net monthly salary', 'take home pay', 'in hand', 'net in hand', 'amount payable', 'net amount payable', 'net monthly pay'];
+      const netDirectAmt = extractLabelledAmount(netDirectLabels);
+
+      // Priority 1: directly labelled net pay field
+      // Priority 2: arithmetic (gross - deductions), only if result passes sanity check
+      let computedNet = null;
+      if (grossAmt && deductAmt) {
+        const diff = grossAmt - deductAmt;
+        // Sanity: net must be at least 20% of gross and less than gross
+        if (diff > 0 && diff < grossAmt && diff >= grossAmt * 0.2) {
+          computedNet = diff;
         }
       }
-      if (!window._regexNetPay) {
-        const directNetPay = extractAfterLabel(['net monthly in hand', 'net take home salary', 'net monthly salary', 'net monthly pay', 'net in hand', 'net amount payable', 'net salary', 'net pay', 'take home']);
-        if (directNetPay) {
-          window._regexNetPay = String(directNetPay);
-          console.log('Net pay from direct label:', window._regexNetPay);
-        }
+
+      const finalNet = netDirectAmt || computedNet || null;
+
+      if (finalNet) {
+        // Inject as a strong hint into the prompt — do NOT override AI result directly
+        allRawText = allRawText + '\n\n[PRE-COMPUTED NET PAY HINT: The net take-home pay appears to be ' + finalNet + '. Use this as netPay if it matches a labelled field in the document. Reject this hint if it seems incorrect.]';
+        console.log('Payslip net pay hint injected:', finalNet, '(gross:', grossAmt, 'deductions:', deductAmt, 'direct:', netDirectAmt, ')');
       }
     }
     let jsonRaw = null;
