@@ -1949,32 +1949,43 @@ function parseOcrJson(raw, docType) {
 }
 
 function extractPayslipNetPayJS(rawText) {
-  // Works on raw Cloud Vision text — handles Indian number formats:
-  // "88,106"  "88 106"  "88106"  "1,11,910"  "1 11 910"
   const t = rawText.toLowerCase();
 
+  // ── Strategy 1: "In words" line (most reliable on Indian payslips) ──
+  // Legally required to state the net take-home amount.
+  const wordsMatch = t.match(/in\s+words\s*[:\-]?\s*([a-z\s\-]+?)(?:rupees?|only|$)/i);
+  if (wordsMatch) {
+    const parsed = parseWordsINR(wordsMatch[1].trim());
+    if (parsed && parsed >= 1000) {
+      console.log('Payslip JS: "In words" parsed =', parsed);
+      return parsed;
+    }
+  }
+
+  // ── Strategy 2: Label search using lastIndexOf ──
+  // lastIndexOf skips header occurrences (e.g. "NET PAY SLIP" title)
+  // and finds the data row further down.
   function parseIndianNum(s) {
     if (!s) return null;
     const n = parseInt(s.replace(/[,\s]/g, ''));
     return (isNaN(n) || n < 1000) ? null : n;
   }
 
-  function findAfterLabel(labels) {
+  function findLastLabel(labels) {
     for (let i = 0; i < labels.length; i++) {
-      const idx = t.indexOf(labels[i]);
+      const idx = t.lastIndexOf(labels[i]);
       if (idx === -1) continue;
       const win = t.substring(idx + labels[i].length, idx + labels[i].length + 200);
-      const m = win.match(/[\s:₹Rs.]*(\d[\d,]*(?:[ ]\d{2,3})*)/);
+      const m = win.match(/[\s:₹Rs.]*(\d[\d,\s]*\d|\d{4,})/);
       if (!m) continue;
       const n = parseIndianNum(m[1]);
-      if (n) return n;
+      if (n && n >= 1000) return n;
     }
     return null;
   }
 
-  // Strategy 1: direct label — 'net pay' before 'total pay' (total pay is fallback only)
-  const directNet = findAfterLabel([
-    'net take home pay', 'net take home', 'net monthly take home',
+  const directNet = findLastLabel([
+    'net take home pay', 'net take home',
     'net in hand', 'net monthly in hand',
     'take home pay',
     'net pay',
@@ -1983,31 +1994,44 @@ function extractPayslipNetPayJS(rawText) {
     'total pay'
   ]);
 
-  // Strategy 2: arithmetic — gross minus deductions
-  const gross  = findAfterLabel(['gross earnings', 'gross salary', 'total earnings', 'gross pay']);
-  const deduct = findAfterLabel(['gross deductions', 'total deductions', 'total deduction', 'net deductions']);
-  const arith  = (gross && deduct && gross > deduct && (gross - deduct) >= gross * 0.1)
+  const gross  = findLastLabel(['gross earnings', 'gross salary', 'total earnings', 'gross pay']);
+  const deduct = findLastLabel(['gross deductions', 'total deductions', 'total deduction']);
+  const arith  = (gross && deduct && gross > deduct && (gross - deduct) > gross * 0.1)
                  ? (gross - deduct) : null;
 
-  // If direct label returned gross earnings itself, it's a mismatch — discard it
-  const directIsGross = directNet && gross && directNet === gross;
-  if (directIsGross) {
-    console.log('Payslip JS: direct label matched gross earnings — discarding, using arithmetic:', arith);
+  if (directNet && gross && directNet === gross) {
+    console.log('Payslip JS: direct label returned gross earnings — using arithmetic:', arith);
     return arith || null;
-  }
-
-  if (directNet && arith) {
-    const diff = Math.abs(directNet - arith) / Math.max(directNet, arith);
-    if (diff <= 0.05) {
-      console.log('Payslip JS: direct and arithmetic agree:', directNet);
-      return directNet;
-    }
-    console.log('Payslip JS: direct(' + directNet + ') vs arithmetic(' + arith + ') — using direct');
-    return directNet;
   }
 
   console.log('Payslip JS: directNet=' + directNet + ' arith=' + arith);
   return directNet || arith || null;
+}
+
+function parseWordsINR(words) {
+  const ones = {
+    zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7,
+    eight:8, nine:9, ten:10, eleven:11, twelve:12, thirteen:13,
+    fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19
+  };
+  const tens = {
+    twenty:20, thirty:30, forty:40, fifty:50,
+    sixty:60, seventy:70, eighty:80, ninety:90
+  };
+  const w = words.toLowerCase().replace(/-/g, ' ').split(/\s+/);
+  let total = 0, current = 0;
+  for (let i = 0; i < w.length; i++) {
+    const p = w[i];
+    if (p === 'and') continue;
+    if (ones[p] !== undefined)       current += ones[p];
+    else if (tens[p] !== undefined)  current += tens[p];
+    else if (p === 'hundred')        current = current === 0 ? 100 : current * 100;
+    else if (p === 'thousand')     { total += (current || 1) * 1000;     current = 0; }
+    else if (p === 'lakh')         { total += (current || 1) * 100000;   current = 0; }
+    else if (p === 'crore')        { total += (current || 1) * 10000000; current = 0; }
+  }
+  total += current;
+  return total > 0 ? total : null;
 }
 
 // ── Main OCR entry point ──────────────────────────────────
