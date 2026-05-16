@@ -1948,6 +1948,68 @@ function parseOcrJson(raw, docType) {
   return rebuilt;
 }
 
+function extractPayslipNetPayJS(rawText) {
+  // Works on raw Cloud Vision text — handles Indian number formats:
+  // "88,106"  "88 106"  "88106"  "1,11,910"  "1 11 910"
+  const t = rawText.toLowerCase();
+
+  function parseIndianNum(s) {
+    if (!s) return null;
+    const n = parseInt(s.replace(/[,\s]/g, ''));
+    return (isNaN(n) || n < 1000) ? null : n;
+  }
+
+  function findAfterLabel(labels) {
+    for (let i = 0; i < labels.length; i++) {
+      const idx = t.indexOf(labels[i]);
+      if (idx === -1) continue;
+      const win = t.substring(idx + labels[i].length, idx + labels[i].length + 200);
+      const m = win.match(/[\s:₹Rs.]*(\d[\d,]*(?:[ ]\d{2,3})*)/);
+      if (!m) continue;
+      const n = parseIndianNum(m[1]);
+      if (n) return n;
+    }
+    return null;
+  }
+
+  // Strategy 1: direct label — 'net pay' before 'total pay' (total pay is fallback only)
+  const directNet = findAfterLabel([
+    'net take home pay', 'net take home', 'net monthly take home',
+    'net in hand', 'net monthly in hand',
+    'take home pay',
+    'net pay',
+    'net salary', 'net monthly salary', 'net monthly pay',
+    'amount payable', 'net amount payable',
+    'total pay'
+  ]);
+
+  // Strategy 2: arithmetic — gross minus deductions
+  const gross  = findAfterLabel(['gross earnings', 'gross salary', 'total earnings', 'gross pay']);
+  const deduct = findAfterLabel(['gross deductions', 'total deductions', 'total deduction', 'net deductions']);
+  const arith  = (gross && deduct && gross > deduct && (gross - deduct) >= gross * 0.1)
+                 ? (gross - deduct) : null;
+
+  // If direct label returned gross earnings itself, it's a mismatch — discard it
+  const directIsGross = directNet && gross && directNet === gross;
+  if (directIsGross) {
+    console.log('Payslip JS: direct label matched gross earnings — discarding, using arithmetic:', arith);
+    return arith || null;
+  }
+
+  if (directNet && arith) {
+    const diff = Math.abs(directNet - arith) / Math.max(directNet, arith);
+    if (diff <= 0.05) {
+      console.log('Payslip JS: direct and arithmetic agree:', directNet);
+      return directNet;
+    }
+    console.log('Payslip JS: direct(' + directNet + ') vs arithmetic(' + arith + ') — using direct');
+    return directNet;
+  }
+
+  console.log('Payslip JS: directNet=' + directNet + ' arith=' + arith);
+  return directNet || arith || null;
+}
+
 // ── Main OCR entry point ──────────────────────────────────
 async function runOcr(key, docType) {
   const files = uploadedFiles[key];
@@ -2024,69 +2086,7 @@ async function runOcr(key, docType) {
 
     console.log('Cloud Vision raw text (' + allRawText.length + ' chars):', allRawText.substring(0, 300));
     btn && (btn.innerHTML = '<span class="spinner"></span><span> Structuring data...</span>');
-    if (docType === 'payslip' && allRawText) {
-      const rawNc = allRawText.replace(/,/g, '').toLowerCase();
-
-      // Robustly extract first 4-7 digit number after a label
-      // Handles: "Net Pay : 88106", "Net Pay 88106", "Net Pay\n88106"
-      function findAmountAfterLabel(labels) {
-        for (let i = 0; i < labels.length; i++) {
-          const idx = rawNc.indexOf(labels[i]);
-          if (idx === -1) continue;
-          // Look in next 120 chars for a 4-7 digit standalone number
-          const win = rawNc.substring(idx + labels[i].length, idx + labels[i].length + 120);
-          const m = win.match(/\b(\d{4,7})\b/);
-          if (m) return parseInt(m[1]);
-        }
-        return null;
-      }
-
-      // Strategy 1: Direct label match — highest priority
-      const netDirectAmt = findAmountAfterLabel([
-        'net take home pay', 'net take home', 'net monthly take home',
-        'net in hand', 'net monthly in hand',
-        'take home pay', 'take home',
-        'in hand salary', 'in hand',
-        'net pay',
-        'net salary', 'net monthly salary', 'net monthly pay',
-        'amount payable', 'net amount payable',
-        'total pay'          // "Total Pay" = Net Pay on many Indian payslips
-      ]);
-
-      // Strategy 2: Arithmetic — gross minus deductions
-      // Covers "Gross Deductions" (not just "Total Deductions")
-      const grossAmt = findAmountAfterLabel([
-        'gross earnings', 'gross salary', 'total earnings',
-        'gross pay', 'total gross pay', 'total gross'
-      ]);
-      const deductAmt = findAmountAfterLabel([
-        'gross deductions',    // label used on many Indian payslips
-        'total deductions', 'total deduction',
-        'deductions total', 'less deductions',
-        'net deductions'
-      ]);
-      let arithmeticNet = null;
-      if (grossAmt && deductAmt) {
-        const diff = grossAmt - deductAmt;
-        // Sanity: result must be positive, less than gross, at least 20% of gross
-        if (diff > 0 && diff < grossAmt && diff >= grossAmt * 0.20) {
-          arithmeticNet = diff;
-        }
-      }
-
-      // Priority: direct label > arithmetic > nothing
-      const finalNet = netDirectAmt || arithmeticNet || null;
-
-      if (netDirectAmt && arithmeticNet && Math.abs(netDirectAmt - arithmeticNet) / Math.max(netDirectAmt, arithmeticNet) > 0.1) {
-        console.warn('Payslip: Direct net label (' + netDirectAmt + ') differs from arithmetic net (' + arithmeticNet + '). Using direct label.');
-      }
-
-      console.log('Payslip pre-process:', { grossAmt, deductAmt, netDirectAmt, arithmeticNet, finalNet });
-
-      if (finalNet) {
-        allRawText = allRawText + '\n\n[NET PAY PRE-COMPUTED: ' + finalNet + ' — this was derived from explicit label or gross minus deductions. Use as netPay ONLY if you can verify a matching Net Pay / Take Home / Total Pay label in the document. Do NOT use this hint if the document shows a different figure for Net Pay.]';
-      }
-    }
+    // netPay override applied after AI response — see extractPayslipNetPayJS()
     let jsonRaw = null;
 
     // ── Aadhar shortcut: extract number directly with regex, fill immediately ──
@@ -2184,6 +2184,18 @@ async function runOcr(key, docType) {
     }
 
     const parsed = parseOcrJson(jsonRaw, docType);
+
+    // Payslip: always override netPay with JS extraction — AI is unreliable for this field
+    if (docType === 'payslip' && allRawText) {
+      const jsNet = extractPayslipNetPayJS(allRawText);
+      if (jsNet) {
+        console.log('Payslip JS override: replacing AI netPay "' + parsed.netPay + '" with "' + jsNet + '"');
+        parsed.netPay = String(jsNet);
+      } else {
+        console.warn('Payslip JS override: could not extract netPay — keeping AI value "' + parsed.netPay + '"');
+      }
+    }
+
     console.log('OCR parsed result for', docType, ':', JSON.stringify(parsed));
 
     pendingOcr = { key, docType, extracted: parsed };
