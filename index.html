@@ -2204,7 +2204,7 @@ async function runOcr(key, docType) {
     if (!jsonRaw && allRawText.trim()) {
       // ── Text extracted — Structure with OpenAI primary, Gemini fallback ──
       try {
-        const b64ForVision = (docType === 'payslip' && files && files.length > 0) ? files[0].base64 : null;
+        const b64ForVision = ((docType === 'payslip' || docType === 'index2') && files && files.length > 0) ? files[0].base64 : null;
         jsonRaw = await structureWithOpenAI(allRawText, prompt, b64ForVision);
         console.log('OpenAI structured response:', jsonRaw.substring(0, 200));
       } catch(oaErr) {
