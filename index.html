@@ -1804,81 +1804,94 @@ Return ONLY a single-line JSON object — no markdown, no newlines in values, no
 {"gstNo":"GSTIN or empty","udyamNo":"UDYAM number or empty","legalName":"business name","constitution":"org type","designation":"role","directors":"all names comma-separated","address":"registered address","businessAddress":"business/activity address if different or empty","incorporationDate":"DD/MM/YYYY or empty","udyamEntType":"Micro or Small or Medium or empty"}`,
   kyc_pan: `Extract PAN number from this PAN card image. Return ONLY raw JSON: {"pan":"PAN number — 5 letters, 4 digits, 1 letter","name":"full name"}`,
   kyc_aadhar: `Extract the Aadhar number from the FRONT side of this Aadhar card only. The front side contains the person's photo, name, DOB (date of birth), and gender. IGNORE the back side entirely — do not use any text from address lines, S/O, D/O, W/O, C/O relationship lines, village, district, state, or PIN code sections. The Aadhar number is exactly 12 digits in groups of 4 like "4503 8096 6365". It is NOT a PIN code, NOT a phone number, NOT a year. Return ONLY raw JSON: {"aadhar":"12 digit number with spaces like XXXX XXXX XXXX"}`,
-  index2: `You are reading an Indian property registration document. This is an
-Index II extract (इंडेक्स-२ उतारा / अनुक्रमणिका क्र. २) from the Maharashtra
-Department of Registration and Stamps (नोंदणी व मुद्रांक विभाग), issued by a
-Sub-Registrar Office (दुय्यम निबंधक कार्यालय / दुय्यम निबंधक कार्यालय).
+  index2: `You are reading an Indian property registration document — an
+Index II extract (अनुक्रमणिका क्र. २) from Maharashtra's Department of
+Registration and Stamps (नोंदणी व मुद्रांक विभाग).
 
-TRANSLATION: All Marathi text must be translated to English. Names must be
-transliterated phonetically (e.g. श्री रमेश कुमार → Shri Ramesh Kumar).
+TRANSLATION: Translate all Marathi to English. Transliterate names
+phonetically (e.g. श्री रमेश कुमार → Shri Ramesh Kumar).
 
-NUMBERS: Extract digits only — no ₹, no commas, no spaces (e.g. ₹5,00,000 → 500000).
+NUMBERS: Digits only — strip ₹, commas, spaces (₹5,00,000 → 500000).
 
-EXTRACT THESE FIELDS — search the ENTIRE document for each one:
+━━━ FIELD EXTRACTION RULES ━━━
 
-deedType → Type of document/deed. Labels: "विलेखाचा प्रकार", "दस्तऐवजाचा प्रकार",
-"Deed Type", "Type of Document". Common values: Sale Deed (विक्रीपत्र),
-Agreement/Contract (कारारनामा), Mortgage (गहाणखत), Gift Deed (दानपत्र),
-Leave & Licence (परवाना करार). Translate to English.
+deedType → Type of deed. Label: "विलेखाचा प्रकार". Common values:
+Sale Deed (विक्रीपत्र), Agreement (कारारनामा), Mortgage (गहाणखत),
+Gift Deed (दानपत्र). Translate to English.
 
-regNo → Registration/Document number. Labels: "दस्त क्रमांक", "नोंदणी क्रमांक",
-"दस्तऐवज क्रमांक", "Document No", "Dast Kramank", "Reg No", "Serial No"
+regNo → Document/registration number. Labels: "दस्त क्रमांक",
+"नोंदणी क्रमांक", "दस्तऐवज क्रमांक", "Document No", "Reg No"
 
-regDate → Date of registration (officially recorded date). Labels:
-"नोंदणी केल्याचा दिनांक", "नोंदणी दिनांक", "Nondani Kelyacha Dinank",
-"Date of Registration", "Registered on". Format: DD/MM/YYYY
+regDate → Date of registration. Labels: "नोंदणी केल्याचा दिनांक",
+"नोंदणी दिनांक", "Date of Registration". Format: DD/MM/YYYY
 
-executionDate → Date the deed was signed/executed. Labels:
-"दस्तऐवज करून दिल्याचा दिनांक", "Dastaiwaj Karun Dilyacha Dinank",
-"Date of Execution", "Execution Date". Format: DD/MM/YYYY
+index2No → Index II serial number. Labels: "अनुक्रमांक",
+"इंडेक्स क्र.", "Index No", "Sr. No." — short number at top.
 
-index2No → The Index II extract's own serial number. Labels: "अनुक्रमांक",
-"अनुक्रमणिका क्र.", "Anukramank", "इंडेक्स क्र.", "Index No", "Sr. No." —
-usually a short number at the top of the extract
+index2Date → Date of this extract. Labels: "उतार्याचा दिनांक",
+"Extract Date". Format: DD/MM/YYYY
 
-index2Date → Date of the Index II extract itself. Labels: "उतार्याचा दिनांक",
-"Extract Date", "Date of Issue". Format: DD/MM/YYYY
+━━━ PARTY NAMES — READ CAREFULLY ━━━
 
-seller → Name of seller/executant (First Party — the person giving the property).
-Labels: "दस्तऐवज करून देणाऱ्याचे नाव", "Dastaiwaj Karun Denaryache Naav",
-"विक्रेत्याचे नाव", "विक्रेता", "Executant", "First Party", "प्रथम पक्ष",
-"Vendor Name", "Seller". Give full name transliterated to English.
+seller → The person GIVING / SELLING the property. This is the
+FIRST PARTY / EXECUTANT. Labels (search for ALL of these):
+"दस्तऐवज करून देणाऱ्याचे नाव", "Dastaiwaj Karun Denaryache Naav",
+"विक्रेत्याचे नाव", "विक्रेता", "Executant", "First Party",
+"प्रथम पक्ष", "Vendor", "Seller", row 7 of the document.
+RULE: This person loses ownership. Give full name in English.
 
-purchaser → Name of buyer/claimant (Second Party — the person receiving the property).
-Labels: "दस्तऐवज करून घेणाऱ्याचे नाव", "Dastaiwaj Karun Ghenaryache Naav",
-"खरेदीदाराचे नाव", "खरेदीदार", "Claimant", "Second Party", "द्वितीय पक्ष",
-"Purchaser Name", "Buyer". Give full name transliterated to English.
+purchaser → The person BUYING / RECEIVING the property. This is the
+SECOND PARTY / CLAIMANT. Labels (search for ALL of these):
+"दस्तऐवज करून घेणाऱ्याचे नाव", "Dastaiwaj Karun Ghenaryache Naav",
+"खरेदीदाराचे नाव", "खरेदीदार", "Claimant", "Second Party",
+"द्वितीय पक्ष", "Purchaser", "Buyer", row 8 of the document.
+RULE: This person gains ownership. Give full name in English.
+
+ANTI-SWAP CHECK: seller and purchaser must NEVER be the same name.
+If you are unsure which is which, the seller is listed FIRST in the
+document (row 7) and the purchaser is listed SECOND (row 8).
+
+━━━ PROPERTY ━━━
 
 propAddress → Full property address. Labels: "मालमत्तेचे वर्णन",
-"Malamatteche Varnan", "मालमत्तेचा पत्ता", "Property Address", "Premises",
-"मालमत्ता". Include flat no, wing, floor, building, society, area, city.
-Write in English.
+"मालमत्तेचा पत्ता", "Property Address". Include flat, wing, floor,
+building, society, area, city. Write in English.
 
-propArea → Area of property with unit. Labels: "क्षेत्रफळ", "Kshetraphala",
-"एकूण क्षेत्र", "Area", "Carpet Area", "Built-up Area", "चटई क्षेत्र".
-Include unit: sq.mt / sq.ft / चौ.मी. / चौ.फु.
+propArea → Area with unit. Labels: "क्षेत्रफळ", "चटई क्षेत्र",
+"Area", "Carpet Area". Include unit (sq.mt / sq.ft / चौ.मी.).
 
-houseRef → Land/survey reference number. Labels: "सर्व्हे नंबर", "सी.टी.एस. नंबर",
-"नगर भूमापन क्रमांक", "गट नंबर", "हिस्सा नंबर", "Survey No", "CTS No",
-"Gat No", "Plot No", "House No"
+houseRef → Survey/plot reference. Labels: "सर्व्हे नंबर",
+"सी.टी.एस. नंबर", "नगर भूमापन क्रमांक", "Survey No", "CTS No",
+"Gat No", "Plot No"
 
-actualPrice → Actual sale price / consideration amount. Labels:
-"मोबदला", "मोबदल्याची रक्कम", "Mobadla", "Mobadlyachi Rakkam",
-"Consideration Amount", "Sale Price", "Agreement Value",
-"प्रत्यक्ष मोबदला". Digits only.
+━━━ FINANCIAL VALUES — READ CAREFULLY ━━━
 
-stampDuty → Stamp duty paid. Labels: "मुद्रांक शुल्क", "Mudrank Shulka",
-"Stamp Duty Paid", "Stamp Duty". Digits only.
+actualPrice → Agreed sale/consideration price. Labels:
+"मोबदला", "मोबदल्याची रक्कम", "Consideration Amount",
+"Sale Price", "Agreement Value", "प्रत्यक्ष मोबदला".
+RULE: This is what the buyer PAID the seller. Digits only.
 
-regFee → Registration fee paid. Labels: "नोंदणी फी", "Nondani Fee",
-"Registration Fee", "नोंदणी शुल्क". Digits only.
+readyReckoner → Government assessed market value. Labels:
+"बाजारमूल्य", "Bazaarmulya", "Market Value", "Ready Reckoner Rate",
+"मार्गदर्शक मूल्य". Appears near ROW 3 at the TOP of the document.
+RULE: Always a LARGE number — typically in lakhs. Digits only.
 
-readyReckoner → Ready reckoner / market value (government valuation). Labels:
-"बाजारमूल्य", "Bazaarmulya", "Ready Reckoner Rate", "Circle Rate",
-"मार्गदर्शक मूल्य". Digits only.
+stampDuty → Government tax paid for registration. Labels:
+"मुद्रांक शुल्क", "Mudrank Shulka", "Stamp Duty".
+Appears near ROW 12 at the BOTTOM of the document.
+RULE: Always SMALLER than readyReckoner — typically 4-7% of it.
+ANTI-SWAP CHECK: stampDuty must be LESS THAN readyReckoner.
+If the number you found for stampDuty is LARGER than readyReckoner,
+you have them swapped — correct it before returning.
 
-Return ONLY this JSON (no markdown, no explanation, every value on one line):
-{"deedType":"","regNo":"","regDate":"","executionDate":"","index2No":"","index2Date":"","seller":"","purchaser":"","propAddress":"","propArea":"","houseRef":"","actualPrice":"","stampDuty":"","regFee":"","readyReckoner":""}`,
+regFee → Registration fee. Labels: "नोंदणी फी", "Registration Fee",
+"नोंदणी शुल्क". Appears near row 13. Always the SMALLEST of the
+three financial values. Digits only.
+
+━━━ OUTPUT ━━━
+
+Return ONLY this JSON — no markdown, no explanation:
+{"deedType":"","regNo":"","regDate":"","index2No":"","index2Date":"","seller":"","purchaser":"","propAddress":"","propArea":"","houseRef":"","actualPrice":"","stampDuty":"","regFee":"","readyReckoner":""}`,
   car: `Extract from car quotation/proforma invoice. Return ONLY raw JSON no markdown: {"carModel":"car company and model","carPrice":"total on-road price","dealershipName":"dealership name","dealershipAddr":"dealership address","dealershipContact":"phone number","execName":"sales executive name","execContact":"sales executive contact"}`,
   itr_doc: `Extract from Income Tax Return (ITR) document. Return ONLY raw JSON no markdown.
 Look for fields labelled Gross Total Income, Total Income, or Net Taxable Income.
