@@ -1743,7 +1743,14 @@ function extractDriveFileId(url) {
 }
 
 function removeFile(key, idx) {
-  uploadedFiles[key].splice(idx, 1);
+  const removed = uploadedFiles[key] ? uploadedFiles[key][idx] : null;
+  if (uploadedFiles[key]) uploadedFiles[key].splice(idx, 1);
+  if (removed && removed.name && _draftDriveFiles[key]) {
+    _draftDriveFiles[key] = _draftDriveFiles[key].filter(
+      function(d) { return d.name !== removed.name; }
+    );
+    if (_draftDriveFiles[key].length === 0) delete _draftDriveFiles[key];
+  }
   renderFileList(key);
   updateUploadZone(key);
   if (!uploadedFiles[key] || uploadedFiles[key].length === 0) {
@@ -2502,6 +2509,7 @@ function addCoApp() {
   showCoApp(n);
   // Force rebuild ITR section to include new co-app
   buildItrSection(true);
+  scheduleAutosave();
 }
 
 function showCoApp(n) {
@@ -2749,6 +2757,7 @@ function removeCoApp(n) {
     remaining[remaining.length-1].style.display = 'block';
   }
   showToast(`Co-App ${n} removed`, 'success');
+  scheduleAutosave();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2867,6 +2876,7 @@ function buildItrSection(forceRebuild) {
   });
   // Also restore from persistent itrStore (OCR results survive here)
   restoreItrFieldsFromStore();
+  scheduleAutosave();
 }
 
 // Helper — apply parsed ITR/F16 result to form fields
@@ -3837,7 +3847,7 @@ function _debouncedSaveAfterUpload() {
   _driveUploadSaveTimer = setTimeout(function() {
     _driveUploadSaveTimer = null;
     saveDraft().catch(function() {});
-  }, 2000); // wait 2s after last upload completes before saving
+  }, 12000); // wait 12s after last upload completes before saving
 }
 function scheduleAutosave() {
   if (autosaveTimer) clearTimeout(autosaveTimer);
