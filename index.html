@@ -978,27 +978,17 @@
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Index II Number</label>
-          <input type="text" id="f_index2_no" placeholder="Index II number">
-        </div>
-        <div class="field">
           <label>Index II Date</label>
           <input type="date" id="f_index2_date">
         </div>
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Index II Verified By</label>
-          <input type="text" id="f_index2_by" placeholder="Verifying officer">
-        </div>
-        <div class="field">
-          <label>Ownership Document</label>
-          <select id="f_ownership_doc">
-            <option value="">Select</option>
-            <option>Sale Deed</option><option>Agreement to Sale</option>
-            <option>Gift Deed</option><option>Will</option><option>Other</option>
-          </select>
-        </div>
+      <div class="field">
+        <label>Ownership Document</label>
+        <select id="f_ownership_doc">
+          <option value="">Select</option>
+          <option>Sale Deed</option><option>Agreement to Sale</option>
+          <option>Gift Deed</option><option>Will</option><option>Other</option>
+        </select>
       </div>
     </div>
   </div>
@@ -1825,9 +1815,6 @@ regNo → Document/registration number. Labels: "दस्त क्रमां
 regDate → Date of registration. Labels: "नोंदणी केल्याचा दिनांक",
 "नोंदणी दिनांक", "Date of Registration". Format: DD/MM/YYYY
 
-index2No → Index II serial number. Labels: "अनुक्रमांक",
-"इंडेक्स क्र.", "Index No", "Sr. No." — short number at top.
-
 index2Date → Date of this extract. Labels: "उतार्याचा दिनांक",
 "Extract Date". Format: DD/MM/YYYY
 
@@ -1891,7 +1878,7 @@ three financial values. Digits only.
 ━━━ OUTPUT ━━━
 
 Return ONLY this JSON — no markdown, no explanation:
-{"deedType":"","regNo":"","regDate":"","index2No":"","index2Date":"","seller":"","purchaser":"","propAddress":"","propArea":"","houseRef":"","actualPrice":"","stampDuty":"","regFee":"","readyReckoner":""}`,
+{"deedType":"","regNo":"","regDate":"","index2Date":"","seller":"","purchaser":"","propAddress":"","propArea":"","houseRef":"","actualPrice":"","stampDuty":"","regFee":"","readyReckoner":""}`,
   car: `Extract from car quotation/proforma invoice. Return ONLY raw JSON no markdown: {"carModel":"car company and model","carPrice":"total on-road price","dealershipName":"dealership name","dealershipAddr":"dealership address","dealershipContact":"phone number","execName":"sales executive name","execContact":"sales executive contact"}`,
   itr_doc: `Extract from Income Tax Return (ITR) document. Return ONLY raw JSON no markdown.
 Look for fields labelled Gross Total Income, Total Income, or Net Taxable Income.
@@ -1979,7 +1966,7 @@ function parseOcrJson(raw, docType) {
 
   // Strategy 3: line-by-line extraction
   const allKeys = [
-    'regNo','regDate','index2No','index2Date','stampDuty','regFee',
+    'regNo','regDate','index2Date','stampDuty','regFee',
     'readyReckoner','propArea','houseRef','purchaser','seller','propAddress','actualPrice',
     'name','dob','pan','company','designation','empCode','branch','netPay','joining',
     'bankName','branchName','accountNo','accountType','accountHolder',
@@ -2408,7 +2395,6 @@ function applyOcrData() {
     if (d.actualPrice)   forceSetVal('f_prop_price', d.actualPrice);
     if (d.regFee)        forceSetVal('f_reg_fee', d.regFee);
     // Index II specific number and date (separate from registration number/date)
-    if (d.index2No)   forceSetVal('f_index2_no', d.index2No);
     if (d.index2Date) { const el2 = document.getElementById('f_index2_date'); if(el2){el2.value=''; setDateVal('f_index2_date', d.index2Date);} }
   } else if (docType === 'car') {
     if (d.carModel)       setVal('f_car_model', d.carModel);
@@ -3271,9 +3257,9 @@ function buildRow() {
   const regFeeVal = g('f_reg_fee');
   row[271] = g('f_stamp_duty') + (regFeeVal ? ' | Reg.Fee: ' + regFeeVal : '');
   row[272] = g('f_ready_reckoner');
-  row[273] = g('f_index2_no');
+  row[273] = '';
   row[274] = g('f_index2_date');
-  row[275] = g('f_index2_by');
+  row[275] = '';
   row[276] = g('f_ownership_doc');
 
   // References 277-282
