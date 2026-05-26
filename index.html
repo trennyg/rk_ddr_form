@@ -3010,6 +3010,31 @@ async function runItrOcr(prefix, shortYr, docKind) {
       throw new Error('No text could be extracted. Please re-upload the document and try again.');
     }
 
+    // ── F16 page selection: keep page 1 (cert no.) + best income page ──
+    if (docKind === 'f16') {
+      const pageChunks = itrText.split(/---\s*PAGE\s*\d+\s*---/i);
+      // pageChunks[0] = '' (before first marker), pageChunks[1] = page 1 text, etc.
+      let bestPageIdx = 1; // default: first page
+      for (var fpi = 1; fpi < pageChunks.length; fpi++) {
+        if (/total\s+taxable\s+income/i.test(pageChunks[fpi])) {
+          bestPageIdx = fpi;
+          break;
+        }
+      }
+      // Use page 1 text + relevant page text combined
+      const page1Text = pageChunks[1] || ''; // index 1 = first page content
+      const incomePageText = pageChunks[bestPageIdx] || '';
+      itrText = '--- PAGE 1 ---\n' + page1Text + '\n--- INCOME PAGE ---\n' + incomePageText;
+      // Trim uploadedFiles: keep page 1 (index 0) AND the file containing the income page
+      const filesForKey = uploadedFiles[key] || [];
+      if (filesForKey.length > 1) {
+        const keepIdx = Math.max(0, Math.floor(bestPageIdx / 2) - 1);
+        uploadedFiles[key] = filesForKey.filter(function(_, i) {
+          return i === 0 || i === keepIdx;
+        });
+      }
+    }
+
     // ── F16 regex shortcut: extract directly from raw OCR text ──
     let f16RegexCert = '';
     if (docKind === 'f16') {
