@@ -888,6 +888,14 @@
       <button class="ocr-btn" id="ocr_index2" onclick="runOcr('index2','index2')" disabled style="margin-top:8px">
         <span>✨ Extract &amp; Translate Index II</span>
       </button>
+      <div class="field" style="margin-top:12px">
+        <label>Was Index II provided by the bank?</label>
+        <select id="f_index2_provided">
+          <option value="">Select</option>
+          <option value="yes">Yes — Provided</option>
+          <option value="no">No — Not Provided by Bank</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -2449,7 +2457,7 @@ function setDateVal(id, val) {
 // ══════════════════════════════════════════════════════════
 // EMPLOYMENT STATUS TOGGLE
 // ══════════════════════════════════════════════════════════
-const NON_WORKING = ['retired','homemaker','student','unemployed'];
+const NON_WORKING = ['retired','homemaker','student','unemployed','income not considered'];
 const BIZ_STATUSES = ['business owner','self employed'];
 
 function handleEmpStatusChange(prefix) {
@@ -2576,6 +2584,7 @@ function buildCoAppBlock(n) {
             <option value="Homemaker">Homemaker</option>
             <option value="Student">Student</option>
             <option value="Unemployed">Unemployed</option>
+            <option value="Income Not Considered">Income Not Considered</option>
           </select>
         </div>
         <div id="${p}_salaried_fields">
@@ -2789,11 +2798,17 @@ function buildItrSection(forceRebuild) {
   });
   container.innerHTML = '';
 
-  const persons = [{ label: 'Applicant', prefix: 'app' }];
+  var persons = [{ label: 'Applicant', prefix: 'app' }];
   for (let i = 1; i <= numCoApps; i++) {
     const name = g(`f_co${i}_name`) || `Co-App ${i}`;
     persons.push({ label: name, prefix: `co${i}` });
   }
+  persons = persons.filter(function(person) {
+    if (person.prefix === 'app') return true;
+    const empSel = document.getElementById('f_' + person.prefix + '_emp_status');
+    const empVal = empSel ? empSel.value : '';
+    return empVal.toLowerCase() !== 'income not considered';
+  });
 
   persons.forEach(person => {
     const card = document.createElement('div');
@@ -3259,7 +3274,7 @@ function buildRow() {
   row[272] = g('f_ready_reckoner');
   row[273] = '';
   row[274] = g('f_index2_date');
-  row[275] = '';
+  row[275] = g('f_index2_provided');
   row[276] = g('f_ownership_doc');
 
   // References 277-282
