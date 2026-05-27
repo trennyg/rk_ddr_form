@@ -1512,7 +1512,7 @@ async function handleFileSelect(key, files) {
         const isBankStmt = key === 'app_bank_stmt' || key.endsWith('_bank_stmt');
         const pages = await pdfToImages(file, isBankStmt ? 1 : 0);
         pages.forEach((p, idx) => {
-          uploadedFiles[key].push({ file: null, base64: p.base64, mimeType: 'image/jpeg', name: file.name + ` (page ${idx+1})` });
+          uploadedFiles[key].push({ file: null, base64: p.base64, mimeType: 'image/png', name: file.name + ` (page ${idx+1})` });
         });
         showToast(`PDF converted: ${pages.length} page(s)`, 'success');
       } catch(e) {
@@ -1549,13 +1549,13 @@ async function pdfToImages(file, maxPages) {
   const limit = (maxPages && maxPages > 0) ? Math.min(maxPages, pdf.numPages) : pdf.numPages;
   for (let i = 1; i <= limit; i++) {
     const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 2.0 });
+    const viewport = page.getViewport({ scale: 3.5 });
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     const ctx = canvas.getContext('2d');
     await page.render({ canvasContext: ctx, viewport }).promise;
-    const base64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+    const base64 = canvas.toDataURL('image/png').split(',')[1];
     pages.push({ base64 });
   }
   return pages;
