@@ -784,7 +784,19 @@
       <div class="field-row">
         <div class="field">
           <label>Executive Name</label>
-          <input type="text" id="f_exec_name" placeholder="Field executive name">
+          <select id="f_exec_name" onchange="handleExecNameChange(this)">
+            <option value="">Select Executive</option>
+            <option>MR. RAJENDRA VARGAONKAR</option>
+            <option>MR. RAJNIKANT PALKAR</option>
+            <option>MR. JAYESH DHAWAL</option>
+            <option>MR. OMKAR PANCHAL</option>
+            <option>MR. VIJAY RAVATE</option>
+            <option>MR. RAVINDRA SHARMA</option>
+            <option>MR. ROSHAN THAKUR</option>
+            <option value="Other">Other</option>
+          </select>
+          <input type="text" id="f_exec_name_other" placeholder="Type executive name"
+            style="margin-top:8px;display:none;">
         </div>
         <div class="field">
           <label>Visit Date & Time</label>
@@ -2735,6 +2747,13 @@ function buildCoAppBlock(n) {
   container.appendChild(div);
 }
 
+function handleExecNameChange(sel) {
+  var otherInput = document.getElementById('f_exec_name_other');
+  if (!otherInput) return;
+  otherInput.style.display = sel.value === 'Other' ? 'block' : 'none';
+  if (sel.value !== 'Other') otherInput.value = '';
+}
+
 function handleCoResidenceChange(n) {
   var p = 'co' + n;
   var sel = document.getElementById('f_' + p + '_residence');
@@ -3244,7 +3263,7 @@ function buildRow() {
   }
 
   // Field Visit cols 141-150
-  row[141] = g('f_exec_name');
+  row[141] = (g('f_exec_name') === 'Other' ? g('f_exec_name_other') : g('f_exec_name'));
   row[142] = g('f_visit_dt');
   row[143] = g('f_current_addr');
   row[144] = g('f_perm_addr');
