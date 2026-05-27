@@ -2058,8 +2058,18 @@ function extractPayslipNetPayJS(rawText) {
     return arith || null;
   }
 
-  console.log('Payslip JS: directNet=' + directNet + ' arith=' + arith);
-  return directNet || arith || null;
+  if (directNet) {
+    console.log('Payslip JS: returning directNet:', directNet);
+    return directNet;
+  }
+
+  if (arith) {
+    console.log('Payslip JS: directNet not found — using arithmetic fallback:', arith);
+    return arith;
+  }
+
+  console.log('Payslip JS: no net pay found');
+  return null;
 }
 
 function parseWordsINR(words) {
