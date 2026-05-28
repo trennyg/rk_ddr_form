@@ -536,6 +536,7 @@
         <select id="f_app_emp_status" onchange="handleEmpStatusChange('app')">
           <option value="">Select</option>
           <option value="Salaried">Salaried</option>
+          <option value="Salaried (NRI)">Salaried (NRI)</option>
           <option value="Business Owner">Business Owner</option>
           <option value="Self Employed">Self Employed</option>
           <option value="Retired">Retired</option>
@@ -2608,6 +2609,7 @@ function buildCoAppBlock(n) {
           <select id="f_${p}_emp_status" onchange="handleEmpStatusChange('${p}')">
             <option value="">Select</option>
             <option value="Salaried">Salaried</option>
+            <option value="Salaried (NRI)">Salaried (NRI)</option>
             <option value="Business Owner">Business Owner</option>
             <option value="Self Employed">Self Employed</option>
             <option value="Retired">Retired</option>
@@ -2842,10 +2844,12 @@ function buildItrSection(forceRebuild) {
     persons.push({ label: name, prefix: `co${i}` });
   }
   persons = persons.filter(function(person) {
-    if (person.prefix === 'app') return true;
     const empSel = document.getElementById('f_' + person.prefix + '_emp_status');
-    const empVal = empSel ? empSel.value : '';
-    return empVal.toLowerCase() !== 'income not considered';
+    const empVal = empSel ? (empSel.value || '') : '';
+    const v = empVal.toLowerCase();
+    if (v.includes('nri')) return false;
+    if (person.prefix !== 'app' && v === 'income not considered') return false;
+    return true;
   });
 
   persons.forEach(person => {
