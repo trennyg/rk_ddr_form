@@ -591,7 +591,8 @@
           </div>
           <div class="field">
             <label>Office Address</label>
-            <textarea id="f_app_office_addr" placeholder="Full office address" rows="2"></textarea>
+            <textarea id="f_app_office_addr" placeholder="Full office address" rows="2" oninput="var w=document.getElementById('warn-office-addr');if(w)w.style.display='none';"></textarea>
+            <span id="warn-office-addr" style="display:none;color:#cc0000;font-size:0.82em;margin-top:3px;">Office address not filled — please enter manually. Required for cover page.</span>
           </div>
         </div>
       </div>
@@ -2372,6 +2373,11 @@ function applyOcrData() {
     if (finalNetPay) forceSetVal(`f_${prefix}_net_pay`, finalNetPay);
     window._regexNetPay = null;
     if (d.joining)     setDateVal(`f_${prefix}_joining`, d.joining);
+    if (prefix === 'app') {
+      const _oa = document.getElementById('f_app_office_addr');
+      const _w  = document.getElementById('warn-office-addr');
+      if (_w) _w.style.display = (_oa && !_oa.value.trim()) ? 'block' : 'none';
+    }
   } else if (docType === 'bank') {
     if (d.bankName)    setVal(`f_${prefix}_bank_name`, d.bankName);
     if (d.branchName)  setVal(`f_${prefix}_bank_branch`, d.branchName);
