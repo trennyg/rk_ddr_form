@@ -2373,9 +2373,10 @@ function applyOcrData() {
     if (finalNetPay) forceSetVal(`f_${prefix}_net_pay`, finalNetPay);
     window._regexNetPay = null;
     if (d.joining)     setDateVal(`f_${prefix}_joining`, d.joining);
-    if (prefix === 'app') {
-      const _oa = document.getElementById('f_app_office_addr');
-      const _w  = document.getElementById('warn-office-addr');
+    {
+      const _oa = document.getElementById(`f_${prefix}_office_addr`);
+      const _wid = prefix === 'app' ? 'warn-office-addr' : `warn-office-addr-${prefix}`;
+      const _w  = document.getElementById(_wid);
       if (_w) _w.style.display = (_oa && !_oa.value.trim()) ? 'block' : 'none';
     }
   } else if (docType === 'bank') {
@@ -2651,7 +2652,7 @@ function buildCoAppBlock(n) {
               <div class="field"><label>Net Monthly Pay</label><input type="text" id="f_${p}_net_pay" placeholder="₹"></div>
               <div class="field"><label>Date of Joining</label><input type="date" id="f_${p}_joining"></div>
             </div>
-            <div class="field"><label>Office Address</label><textarea id="f_${p}_office_addr" rows="2" placeholder="Office address"></textarea></div>
+            <div class="field"><label>Office Address</label><textarea id="f_${p}_office_addr" rows="2" placeholder="Office address" oninput="var w=document.getElementById('warn-office-addr-${p}');if(w)w.style.display='none';"></textarea><span id="warn-office-addr-${p}" style="display:none;color:#cc0000;font-size:0.82em;margin-top:3px;">Office address not filled — please enter manually. Required for cover page.</span></div>
             <div class="field"><label>Employment Verification Remarks</label><textarea id="f_${p}_emp_remarks" rows="2" placeholder="e.g. Office premises visited. Employment confirmed. Verification found satisfactory."></textarea></div>
           </div>
         </div>
