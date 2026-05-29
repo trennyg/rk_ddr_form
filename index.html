@@ -3262,7 +3262,7 @@ function buildRow() {
     row[base+14] = bizCo ? g(`f_${p}_biz_net_pay`) : g(`f_${p}_net_pay`);
     row[base+15] = bizCo ? g(`f_${p}_biz_joining`) : g(`f_${p}_joining`);
     row[base+16] = g(`f_${p}_mobile`);
-    row[base+17] = g(`f_${p}_office_addr`);
+    row[base+17] = bizCo ? (g(`f_${p}_biz_office_addr`) || g(`f_${p}_office_addr`)) : g(`f_${p}_office_addr`);
     row[base+18] = `__FILE__${p}_bank_stmt`;
     row[base+19] = g(`f_${p}_bank_name`);
     row[base+20] = g(`f_${p}_bank_branch`);
