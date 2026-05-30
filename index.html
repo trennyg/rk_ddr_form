@@ -3694,6 +3694,7 @@ function buildDraftMeta(draftName) {
     key, name: draftName,
     appName: appName.trim(), bank: bank.trim(),
     savedAt: new Date().toISOString(),
+    caseSessionId: currentCaseId,
     vals: collectFormValues(),
     driveFiles: Object.assign({}, _draftDriveFiles)  // Drive URLs only (no base64)
   };
@@ -3910,6 +3911,7 @@ async function openDraft(key) {
   if (!meta) { showToast('Draft not found', 'error'); return; }
   if (!confirm('Load "' + (meta.appName || meta.name) + '"? Unsaved data will be replaced.')) return;
   hardClearForm(false);
+  currentCaseId = meta.caseSessionId || _newCaseId();
   currentDraftKey = key;
   // Restore Drive file URLs from draft
   _draftDriveFiles = (meta.driveFiles && typeof meta.driveFiles === 'object') ? meta.driveFiles : {};
