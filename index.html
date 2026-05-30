@@ -3520,6 +3520,7 @@ async function submitForm() {
     setProgress(100);
     showStatus('✅ ' + (result.message || 'Form submitted successfully!'), 'success');
     showToast('Submitted!', 'success');
+    setSubmitType('final');
   } catch(e) {
     showStatus('❌ Submission failed: ' + e.message, 'error');
     showToast('Submission failed', 'error');
@@ -3958,6 +3959,7 @@ function hardClearForm(confirm_first) {
     if (text) text.textContent = text.dataset.orig || 'Tap to upload';
   });
   itrStore = {};
+  setSubmitType('final');
   if (confirm_first) showToast('Form cleared', 'success');
 }
 
