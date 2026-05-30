@@ -1267,6 +1267,13 @@ let _draftsCache = [];
 let _isSyncing = false;
 let pendingOcr = null;    // {key, docType, extracted}
 let submitType = 'final';
+let submitting = false;
+function _newCaseId() {
+  return (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : ('cid_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9));
+}
+let currentCaseId = _newCaseId();
 let numCoApps = 0;
 let _draftDriveFiles = {}; // key -> [{driveUrl, name, mimeType}] — Drive URLs only, no base64
 let _discardedDriveKeys = new Set(); // keys where user chose to discard the Drive file
@@ -3406,6 +3413,8 @@ async function submitForm() {
     showStatus('Please enter the Apps Script Web App URL above.', 'error');
     return;
   }
+  if (submitting) return;
+  submitting = true;
 
   setProgress(5);
   showStatus('Preparing form data...', 'info');
@@ -3506,7 +3515,8 @@ async function submitForm() {
         row,
         files: {},  // empty — all files already uploaded above
         isFinal: submitType === 'final',
-        draftKey: currentDraftKey
+        draftKey: currentDraftKey,
+        case_session_id: currentCaseId
       })
     });
 
@@ -3524,8 +3534,10 @@ async function submitForm() {
   } catch(e) {
     showStatus('❌ Submission failed: ' + e.message, 'error');
     showToast('Submission failed', 'error');
+  } finally {
+    submitting = false;
+    document.getElementById('submitBtn').disabled = false;
   }
-  document.getElementById('submitBtn').disabled = false;
 }
 
 function getEndpoint() {
@@ -3960,6 +3972,7 @@ function hardClearForm(confirm_first) {
   });
   itrStore = {};
   setSubmitType('final');
+  currentCaseId = _newCaseId();
   if (confirm_first) showToast('Form cleared', 'success');
 }
 
