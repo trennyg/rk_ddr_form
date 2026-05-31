@@ -485,6 +485,16 @@
     touch-action: manipulation;
   }
   .pp-remove:hover { background: var(--accent2); }
+  .pp-rotate {
+    position: absolute; top: 5px; left: 5px;
+    background: rgba(0,0,0,0.75); border: none;
+    color: #fff; border-radius: 50%;
+    width: 26px; height: 26px; cursor: pointer;
+    font-size: 14px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation;
+  }
+  .pp-rotate:hover { background: rgba(30,40,80,0.95); }
 </style>
 </head>
 <body>
@@ -1922,11 +1932,11 @@ function renderPreviewPanel() {
       var f = localFiles[li];
       var pageLabel = multi ? baseLabel + ' (Page ' + (li + 1) + ')' : baseLabel;
       var imgSrc = 'data:' + f.mimeType + ';base64,' + f.base64;
-      // Capture li for onclick closure
       html += '<div class="pp-slot">'
         + '<div class="pp-slot-label">' + pageLabel + '</div>'
         + '<div class="pp-img-wrap">'
         + '<img src="' + imgSrc + '" alt="' + pageLabel + '" loading="lazy">'
+        + '<button class="pp-rotate" onclick="rotatePreviewImage(\'' + key + '\',' + li + ',false)" title="Rotate">&#x1F504;</button>'
         + '<button class="pp-remove" onclick="removeFile(\'' + key + '\',' + li + ')" title="Remove">\xd7</button>'
         + '</div></div>';
     }
@@ -1935,21 +1945,91 @@ function renderPreviewPanel() {
       var df = driveFiles[di];
       var pageNum = localFiles.length + di + 1;
       var dPageLabel = multi ? baseLabel + ' (Page ' + pageNum + ')' : baseLabel;
-      var fileId = extractDriveFileId(df.driveUrl);
-      var thumbSrc = fileId ? 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w800' : '';
-      var imgHtml = thumbSrc
-        ? '<img src="' + thumbSrc + '" alt="' + dPageLabel + '" loading="lazy" onerror="this.style.opacity=\'0.3\'">'
-        : '<div class="pp-img-placeholder">Preview not available</div>';
+      var dImgHtml;
+      if (df.base64) {
+        dImgHtml = '<img src="data:' + (df.mimeType || 'image/jpeg') + ';base64,' + df.base64 + '" alt="' + dPageLabel + '" loading="lazy">';
+      } else {
+        var fileId = extractDriveFileId(df.driveUrl);
+        var thumbSrc = fileId ? 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w800' : '';
+        dImgHtml = thumbSrc
+          ? '<img src="' + thumbSrc + '" alt="' + dPageLabel + '" loading="lazy" onerror="this.style.opacity=\'0.3\'">'
+          : '<div class="pp-img-placeholder">Preview not available</div>';
+      }
       html += '<div class="pp-slot">'
         + '<div class="pp-slot-label">' + dPageLabel + ' <span class="pp-draft-badge">Draft</span></div>'
         + '<div class="pp-img-wrap">'
-        + imgHtml
+        + dImgHtml
+        + '<button class="pp-rotate" onclick="rotatePreviewImage(\'' + key + '\',' + di + ',true)" title="Rotate">&#x1F504;</button>'
         + '<button class="pp-remove" onclick="discardDriveFile(\'' + key + '\',' + di + ')" title="Remove">\xd7</button>'
         + '</div></div>';
     }
   }
 
   body.innerHTML = html || '<div class="pp-empty">No documents uploaded yet</div>';
+}
+
+async function rotatePreviewImage(key, index, isDraft) {
+  var b64, mimeType;
+
+  if (isDraft) {
+    var df = (_draftDriveFiles[key] || [])[index];
+    if (!df) return;
+    if (df.base64) {
+      b64 = df.base64;
+      mimeType = df.mimeType || 'image/jpeg';
+    } else {
+      // Fetch the Drive image via proxy so we have pixels to rotate
+      var endpoint = getEndpoint();
+      if (!endpoint) { showToast('Cannot rotate — no endpoint configured', 'error'); return; }
+      try {
+        showToast('Loading image...', 'info');
+        var proxyRes = await fetch(endpoint, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'fetchDriveFile', url: df.driveUrl })
+        });
+        var proxyData = await proxyRes.json();
+        if (!proxyData.base64) throw new Error('No data from proxy');
+        b64 = proxyData.base64;
+        mimeType = proxyData.mimeType || df.mimeType || 'image/jpeg';
+      } catch(e) {
+        showToast('Could not load image for rotation: ' + e.message, 'error');
+        return;
+      }
+    }
+  } else {
+    var f = (uploadedFiles[key] || [])[index];
+    if (!f) return;
+    b64 = f.base64;
+    mimeType = f.mimeType || 'image/jpeg';
+  }
+
+  // Draw rotated 90° clockwise on a canvas, produce new JPEG base64
+  var rotatedB64 = await new Promise(function(resolve, reject) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      canvas.width  = img.height;
+      canvas.height = img.width;
+      var ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(Math.PI / 2);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = reject;
+    img.src = 'data:' + mimeType + ';base64,' + b64;
+  });
+
+  if (isDraft) {
+    _draftDriveFiles[key][index].base64    = rotatedB64;
+    _draftDriveFiles[key][index].mimeType  = 'image/jpeg';
+  } else {
+    uploadedFiles[key][index].base64   = rotatedB64;
+    uploadedFiles[key][index].mimeType = 'image/jpeg';
+  }
+
+  renderPreviewPanel();
+  renderFileList(key);
 }
 
 function removeFile(key, idx) {
