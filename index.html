@@ -413,9 +413,93 @@
     text-transform: uppercase; margin-bottom: 10px;
     letter-spacing: 0.06em;
   }
+
+  /* ── PREVIEW PANEL (PC only, >900px) ── */
+  #preview-panel { display: none; }
+
+  @media (min-width: 901px) {
+    #preview-panel {
+      display: block;
+      position: fixed;
+      left: 0; top: 0;
+      width: 50%;
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-right: 2px solid var(--border);
+      z-index: 50;
+    }
+    #form-col { margin-left: 50%; }
+  }
+
+  .pp-hdr {
+    padding: 14px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 15px; font-weight: 700;
+    color: var(--accent);
+    position: sticky; top: 0; z-index: 10;
+    letter-spacing: 0.04em;
+  }
+  .pp-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .pp-slot {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
+  }
+  .pp-slot-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--label);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 7px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .pp-draft-badge {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px;
+    font-size: 10px; color: var(--muted);
+    font-weight: 600; text-transform: none; letter-spacing: 0;
+  }
+  .pp-img-wrap { position: relative; }
+  .pp-img-wrap img {
+    width: 100%; display: block; border-radius: 6px;
+    background: var(--bg); max-height: 320px; object-fit: contain;
+  }
+  .pp-img-placeholder {
+    padding: 18px; text-align: center;
+    color: var(--muted); font-size: 13px;
+    background: var(--bg); border-radius: 6px;
+  }
+  .pp-remove {
+    position: absolute; top: 5px; right: 5px;
+    background: rgba(0,0,0,0.75); border: none;
+    color: #fff; border-radius: 50%;
+    width: 26px; height: 26px; cursor: pointer;
+    font-size: 15px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation;
+  }
+  .pp-remove:hover { background: var(--accent2); }
 </style>
 </head>
 <body>
+<div id="app-layout">
+
+<!-- LEFT: IMAGE PREVIEW PANEL -->
+<div id="preview-panel">
+  <div class="pp-hdr">&#128206; Documents</div>
+  <div id="preview-panel-body">
+    <div class="pp-empty">No documents uploaded yet</div>
+  </div>
+</div>
+
+<!-- RIGHT: FORM COLUMN -->
+<div id="form-col">
 
 <!-- HEADER -->
 <div class="app-header">
@@ -1251,6 +1335,9 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+</div><!-- #form-col -->
+</div><!-- #app-layout -->
+
 <script>
 // ══════════════════════════════════════════════════════════
 // PDF.js setup
@@ -1558,9 +1645,6 @@ async function handleFileSelect(key, files) {
     _discardedDriveKeys.add(key);
     renderFileList(key); // re-render to hide Drive file now new one is present
   }
-
-  // Upload to Drive immediately so photos persist in drafts across devices
-  uploadFilesToDriveForDraft(key);
 }
 
 async function pdfToImages(file, maxPages) {
@@ -1709,8 +1793,6 @@ async function uploadFilesToDriveForDraft(key) {
         // presence to decide whether to include Drive files, so clearing it would cause
         // old Drive files to re-appear alongside the new upload.
         console.log('Draft photo uploaded to Drive:', key, f.name, data.url);
-        // Debounced auto-save — collapses multiple rapid uploads into one save
-        _debouncedSaveAfterUpload();
       }
     } catch(e) {
       console.warn('Draft photo Drive upload failed for', key, f.name, e.message);
@@ -1720,7 +1802,7 @@ async function uploadFilesToDriveForDraft(key) {
 
 function renderFileList(key) {
   const fl = document.getElementById('fl_' + key);
-  if (!fl) return;
+  if (!fl) { renderPreviewPanel(); return; }
   const files = uploadedFiles[key] || [];
   const driveFiles = _discardedDriveKeys.has(key) ? [] : (_draftDriveFiles[key] || []);
 
@@ -1755,12 +1837,119 @@ function renderFileList(key) {
   });
 
   fl.innerHTML = html || '';
+  renderPreviewPanel();
 }
 
 function extractDriveFileId(url) {
   if (!url) return null;
   var m = url.match(/[?&]id=([^&]+)/);
   return m ? m[1] : null;
+}
+
+// ── Image preview panel ───────────────────────────────────
+
+const SLOT_ORDER = [
+  'app_pan','app_payslip','app_bank_stmt','app_biz_cert','app_kyc_pan','app_kyc_aadhar',
+  'co1_pan','co1_payslip','co1_bank_stmt','co1_biz_cert','co1_kyc_pan','co1_kyc_aadhar',
+  'co2_pan','co2_payslip','co2_bank_stmt','co2_biz_cert','co2_kyc_pan','co2_kyc_aadhar',
+  'co3_pan','co3_payslip','co3_bank_stmt','co3_biz_cert','co3_kyc_pan','co3_kyc_aadhar',
+  'co4_pan','co4_payslip','co4_bank_stmt','co4_biz_cert','co4_kyc_pan','co4_kyc_aadhar',
+  'co5_pan','co5_payslip','co5_bank_stmt','co5_biz_cert','co5_kyc_pan','co5_kyc_aadhar',
+  'itr_app_2425','itr_app_2526','itr_app_2627',
+  'f16_app_2425','f16_app_2526','f16_app_2627',
+  'itr_co1_2425','itr_co1_2526','itr_co1_2627','f16_co1_2425','f16_co1_2526','f16_co1_2627',
+  'itr_co2_2425','itr_co2_2526','itr_co2_2627','f16_co2_2425','f16_co2_2526','f16_co2_2627',
+  'itr_co3_2425','itr_co3_2526','itr_co3_2627','f16_co3_2425','f16_co3_2526','f16_co3_2627',
+  'itr_co4_2425','itr_co4_2526','itr_co4_2627','f16_co4_2425','f16_co4_2526','f16_co4_2627',
+  'itr_co5_2425','itr_co5_2526','itr_co5_2627','f16_co5_2425','f16_co5_2526','f16_co5_2627',
+  'index2','car_quotation',
+];
+
+function getSlotLabel(key) {
+  const LABELS = {
+    app_pan:        'Applicant — PAN Card',
+    app_payslip:    'Applicant — Payslip',
+    app_bank_stmt:  'Applicant — Bank Statement',
+    app_biz_cert:   'Applicant — Business Certificate',
+    app_kyc_pan:    'Applicant — KYC PAN',
+    app_kyc_aadhar: 'Applicant — KYC Aadhar',
+    index2:         'Index II',
+    car_quotation:  'Car Quotation',
+  };
+  if (LABELS[key]) return LABELS[key];
+  var coSlot = key.match(/^(co\d)_(pan|payslip|bank_stmt|biz_cert|kyc_pan|kyc_aadhar)$/);
+  if (coSlot) {
+    var num = coSlot[1].replace('co','');
+    var typeLabels = { pan:'PAN Card', payslip:'Payslip', bank_stmt:'Bank Statement', biz_cert:'Business Certificate', kyc_pan:'KYC PAN', kyc_aadhar:'KYC Aadhar' };
+    return 'Co-App ' + num + ' — ' + (typeLabels[coSlot[2]] || coSlot[2]);
+  }
+  var itrSlot = key.match(/^(itr|f16)_(app|co\d)_(2425|2526|2627)$/);
+  if (itrSlot) {
+    var kind = itrSlot[1] === 'itr' ? 'ITR' : 'Form 16';
+    var who = itrSlot[2] === 'app' ? 'Applicant' : ('Co-App ' + itrSlot[2].replace('co',''));
+    var yrMap = { '2425':'2024-25', '2526':'2025-26', '2627':'2026-27' };
+    return who + ' — ' + kind + ' ' + (yrMap[itrSlot[3]] || itrSlot[3]);
+  }
+  return key.replace(/_/g,' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
+function renderPreviewPanel() {
+  var body = document.getElementById('preview-panel-body');
+  if (!body) return;
+
+  var html = '';
+  var seen = new Set();
+
+  // Build key list: SLOT_ORDER first, then any unexpected keys
+  var keys = SLOT_ORDER.slice();
+  Object.keys(uploadedFiles).forEach(function(k) { if (!seen.has(k) && keys.indexOf(k) === -1) keys.push(k); });
+  Object.keys(_draftDriveFiles).forEach(function(k) { if (!seen.has(k) && keys.indexOf(k) === -1) keys.push(k); });
+
+  for (var ki = 0; ki < keys.length; ki++) {
+    var key = keys[ki];
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    var localFiles = uploadedFiles[key] || [];
+    var driveFiles = _discardedDriveKeys.has(key) ? [] : (_draftDriveFiles[key] || []);
+    if (localFiles.length === 0 && driveFiles.length === 0) continue;
+
+    var baseLabel = getSlotLabel(key);
+    var total = localFiles.length + driveFiles.length;
+    var multi = total > 1;
+
+    for (var li = 0; li < localFiles.length; li++) {
+      var f = localFiles[li];
+      var pageLabel = multi ? baseLabel + ' (Page ' + (li + 1) + ')' : baseLabel;
+      var imgSrc = 'data:' + f.mimeType + ';base64,' + f.base64;
+      // Capture li for onclick closure
+      html += '<div class="pp-slot">'
+        + '<div class="pp-slot-label">' + pageLabel + '</div>'
+        + '<div class="pp-img-wrap">'
+        + '<img src="' + imgSrc + '" alt="' + pageLabel + '" loading="lazy">'
+        + '<button class="pp-remove" onclick="removeFile(\'' + key + '\',' + li + ')" title="Remove">\xd7</button>'
+        + '</div></div>';
+    }
+
+    for (var di = 0; di < driveFiles.length; di++) {
+      var df = driveFiles[di];
+      var pageNum = localFiles.length + di + 1;
+      var dPageLabel = multi ? baseLabel + ' (Page ' + pageNum + ')' : baseLabel;
+      var fileId = extractDriveFileId(df.driveUrl);
+      var thumbSrc = fileId ? 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w800' : '';
+      var imgHtml = thumbSrc
+        ? '<img src="' + thumbSrc + '" alt="' + dPageLabel + '" loading="lazy" onerror="this.style.opacity=\'0.3\'">'
+        : '<div class="pp-img-placeholder">Preview not available</div>';
+      html += '<div class="pp-slot">'
+        + '<div class="pp-slot-label">' + dPageLabel + ' <span class="pp-draft-badge">Draft</span></div>'
+        + '<div class="pp-img-wrap">'
+        + imgHtml
+        + '<button class="pp-remove" onclick="discardDriveFile(\'' + key + '\',' + di + ')" title="Remove">\xd7</button>'
+        + '</div></div>';
+    }
+  }
+
+  body.innerHTML = html || '<div class="pp-empty">No documents uploaded yet</div>';
 }
 
 function removeFile(key, idx) {
@@ -2307,6 +2496,7 @@ async function runOcr(key, docType) {
 
     console.log('OCR parsed result for', docType, ':', JSON.stringify(parsed));
 
+    uploadFilesToDriveForDraft(key);
     pendingOcr = { key, docType, extracted: parsed };
     showOcrModal(docType, parsed);
 
@@ -3048,6 +3238,7 @@ async function runItrOcr(prefix, shortYr, docKind) {
           const raw = d.candidates[0].content.parts[0].text.trim();
           const parsed = parseOcrJson(raw, docKind);
           console.log('Gemini direct ITR/F16 parsed:', JSON.stringify(parsed));
+          uploadFilesToDriveForDraft(key);
           _applyItrParsed(parsed, docKind, prefix, shortYr);
           var _an = (document.getElementById('f_app_name') || {}).value || '';
           if (_an.trim()) saveDraft(_an.trim()).catch(function() {});
@@ -3106,6 +3297,7 @@ async function runItrOcr(prefix, shortYr, docKind) {
       if (regexInc) {
         // Both found by regex — no need to call AI
         console.log('F16 regex hit — income:', regexInc, 'certNo:', f16RegexCert);
+        uploadFilesToDriveForDraft(key);
         _applyItrParsed({ income: regexInc, certNo: f16RegexCert }, docKind, prefix, shortYr);
         var _an0 = (document.getElementById('f_app_name') || {}).value || '';
         if (_an0.trim()) saveDraft(_an0.trim()).catch(function() {});
@@ -3137,6 +3329,7 @@ async function runItrOcr(prefix, shortYr, docKind) {
     // For F16: prefer regex certNo over AI (AI frequently picks wrong field)
     if (docKind === 'f16' && f16RegexCert) parsed.certNo = f16RegexCert;
     console.log('ITR/F16 parsed:', JSON.stringify(parsed));
+    uploadFilesToDriveForDraft(key);
     _applyItrParsed(parsed, docKind, prefix, shortYr);
 
     // Save draft after extraction
@@ -3925,14 +4118,6 @@ async function openDraft(key) {
 
 // ── AUTOSAVE ──────────────────────────────────────────────
 let autosaveTimer = null;
-let _driveUploadSaveTimer = null;
-function _debouncedSaveAfterUpload() {
-  if (_driveUploadSaveTimer) clearTimeout(_driveUploadSaveTimer);
-  _driveUploadSaveTimer = setTimeout(function() {
-    _driveUploadSaveTimer = null;
-    saveDraft().catch(function() {});
-  }, 12000); // wait 12s after last upload completes before saving
-}
 function scheduleAutosave() {
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(async function() {
@@ -3975,6 +4160,7 @@ function hardClearForm(confirm_first) {
   itrStore = {};
   setSubmitType('final');
   currentCaseId = _newCaseId();
+  renderPreviewPanel();
   if (confirm_first) showToast('Form cleared', 'success');
 }
 
