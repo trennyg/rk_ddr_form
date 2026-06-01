@@ -453,11 +453,13 @@
   }
   .pp-slot {
     height: 100vh;
+    min-height: 100vh;
     position: relative;
     display: flex;
     flex-direction: column;
     scroll-snap-align: start;
     background: var(--bg);
+    overflow: hidden;
   }
   .pp-slot-label {
     position: absolute;
@@ -480,15 +482,18 @@
     font-weight: 600; text-transform: none; letter-spacing: 0;
   }
   .pp-img-wrap {
-    flex: 1;
+    flex: 1 1 0;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--bg);
     min-height: 0;
+    height: 0;
   }
   .pp-img-wrap img {
+    position: absolute;
+    top: 0; left: 0;
     width: 100%; height: 100%;
     display: block;
     object-fit: contain;
@@ -2523,6 +2528,7 @@ async function runOcr(key, docType) {
         if (el) { el.value = aadharNum; el.dispatchEvent(new Event('input')); }
         console.log('Aadhar filled directly:', aadharNum, '→', fieldId);
         showToast('Aadhar: ' + aadharNum, 'success');
+        uploadFilesToDriveForDraft(key);
         if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
         return;
       }
