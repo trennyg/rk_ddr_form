@@ -3296,15 +3296,15 @@ function buildCoAppBlock(n) {
     </div>
   `;
   // Activate any slots pre-filled from combined PDF before this co-app block existed
-  var p = 'co' + n;
+  var _coPrefix = 'co' + n;
   var coKeys = [
-    p + '_pan', p + '_payslip', p + '_bank_stmt',
-    p + '_biz_cert', p + '_kyc_pan', p + '_kyc_aadhar'
+    _coPrefix + '_pan', _coPrefix + '_payslip', _coPrefix + '_bank_stmt',
+    _coPrefix + '_biz_cert', _coPrefix + '_kyc_pan', _coPrefix + '_kyc_aadhar'
   ];
   var shortYrs = ['2425', '2526', '2627'];
   for (var si = 0; si < shortYrs.length; si++) {
-    coKeys.push('itr_' + p + '_' + shortYrs[si]);
-    coKeys.push('f16_' + p + '_' + shortYrs[si]);
+    coKeys.push('itr_' + _coPrefix + '_' + shortYrs[si]);
+    coKeys.push('f16_' + _coPrefix + '_' + shortYrs[si]);
   }
   _activatePrefilledSlots(coKeys);
   container.appendChild(div);
