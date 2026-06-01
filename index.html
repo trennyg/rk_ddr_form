@@ -2837,7 +2837,7 @@ async function runOcr(key, docType) {
 
     console.log('OCR parsed result for', docType, ':', JSON.stringify(parsed));
 
-    uploadFilesToDriveForDraft(key);
+    uploadFilesToDriveForDraft(key); // intentionally not awaited — upload runs while exec reviews modal
     pendingOcr = { key, docType, extracted: parsed };
     showOcrModal(docType, parsed);
 
@@ -2880,7 +2880,7 @@ function closeOcrModal() {
   pendingOcr = null;
 }
 
-function applyOcrData() {
+async function applyOcrData() {
   console.log('applyOcrData called, pendingOcr:', pendingOcr);
   if (!pendingOcr) {
     showToast('No data to apply — please extract again', 'error');
@@ -2991,7 +2991,7 @@ function applyOcrData() {
   showToast('✅ Values applied!', 'success');
   // Save draft immediately after OCR fills fields
   var _ocrAppName = (document.getElementById('f_app_name') || {}).value || '';
-  if (_ocrAppName.trim()) saveDraft(_ocrAppName.trim()).catch(function() {});
+  if (_ocrAppName.trim()) { try { await saveDraft(_ocrAppName.trim()); } catch(e) {} }
 }
 
 function setVal(id, val) {
@@ -3602,10 +3602,10 @@ async function runItrOcr(prefix, shortYr, docKind) {
           const raw = d.candidates[0].content.parts[0].text.trim();
           const parsed = parseOcrJson(raw, docKind);
           console.log('Gemini direct ITR/F16 parsed:', JSON.stringify(parsed));
-          uploadFilesToDriveForDraft(key);
+          await uploadFilesToDriveForDraft(key);
           _applyItrParsed(parsed, docKind, prefix, shortYr);
           var _an = (document.getElementById('f_app_name') || {}).value || '';
-          if (_an.trim()) saveDraft(_an.trim()).catch(function() {});
+          if (_an.trim()) { try { await saveDraft(_an.trim()); } catch(e) {} }
           if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
           return;
         } catch(gemVisionErr) {
@@ -3661,10 +3661,10 @@ async function runItrOcr(prefix, shortYr, docKind) {
       if (regexInc) {
         // Both found by regex — no need to call AI
         console.log('F16 regex hit — income:', regexInc, 'certNo:', f16RegexCert);
-        uploadFilesToDriveForDraft(key);
+        await uploadFilesToDriveForDraft(key);
         _applyItrParsed({ income: regexInc, certNo: f16RegexCert }, docKind, prefix, shortYr);
         var _an0 = (document.getElementById('f_app_name') || {}).value || '';
-        if (_an0.trim()) saveDraft(_an0.trim()).catch(function() {});
+        if (_an0.trim()) { try { await saveDraft(_an0.trim()); } catch(e) {} }
         if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
         return;
       }
@@ -3693,12 +3693,12 @@ async function runItrOcr(prefix, shortYr, docKind) {
     // For F16: prefer regex certNo over AI (AI frequently picks wrong field)
     if (docKind === 'f16' && f16RegexCert) parsed.certNo = f16RegexCert;
     console.log('ITR/F16 parsed:', JSON.stringify(parsed));
-    uploadFilesToDriveForDraft(key);
+    await uploadFilesToDriveForDraft(key);
     _applyItrParsed(parsed, docKind, prefix, shortYr);
 
     // Save draft after extraction
     var _appName = (document.getElementById('f_app_name') || {}).value || '';
-    if (_appName.trim()) saveDraft(_appName.trim()).catch(function() {});
+    if (_appName.trim()) { try { await saveDraft(_appName.trim()); } catch(e) {} }
 
   } catch(e) {
     showError('OCR failed: ' + e.message);
