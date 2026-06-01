@@ -1727,7 +1727,8 @@ async function handleCombinedPdf(files) {
   }
   showToast('Splitting PDF pages...', 'info');
   try {
-    var pages = await pdfToImages(file, 0); // 0 = all pages
+    _combinedPdfBuffer = await file.arrayBuffer();
+    var pages = await pdfToImages(file, 0, 1.5); // preview only — re-rendered at 3.5 on assign
     unassignedPages = [];
     for (var i = 0; i < pages.length; i++) {
       unassignedPages.push({
@@ -1768,6 +1769,7 @@ async function handleCombinedPdf(files) {
 
 function clearCombinedPdf() {
   unassignedPages = [];
+  _combinedPdfBuffer = null;
   var uz = document.getElementById('uz_combined_pdf');
   var fl = document.getElementById('fl_combined_pdf');
   if (uz) {
@@ -1781,14 +1783,15 @@ function clearCombinedPdf() {
   renderPreviewPanel();
 }
 
-async function pdfToImages(file, maxPages) {
+async function pdfToImages(file, maxPages, scale) {
+  scale = scale || 3.5;
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const pages = [];
   const limit = (maxPages && maxPages > 0) ? Math.min(maxPages, pdf.numPages) : pdf.numPages;
   for (let i = 1; i <= limit; i++) {
     const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 3.5 });
+    const viewport = page.getViewport({ scale: scale });
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
@@ -2123,8 +2126,8 @@ function renderPreviewPanel() {
         + '<div class="pp-slot-label" style="pointer-events:auto;display:flex;flex-direction:column;gap:4px;background:rgba(0,0,0,0.82);padding:6px 8px;right:8px;">'
         + '<span style="font-size:11px;color:#e8eaf0;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;">Page ' + (ui + 1) + ' — Unassigned</span>'
         + '<div style="display:flex;gap:4px;margin-top:2px;">'
-        + '<select style="flex:1;font-size:12px;padding:3px 4px;border-radius:4px;background:#1e2334;color:#e8eaf0;border:1px solid #2a3048;min-width:0;" onchange="assignPage(' + ui + ', this.value, undefined)">' + personOptions + '</select>'
-        + '<select style="flex:1;font-size:12px;padding:3px 4px;border-radius:4px;background:#1e2334;color:#e8eaf0;border:1px solid #2a3048;min-width:0;" onchange="assignPage(' + ui + ', undefined, this.value)">' + docOptions + '</select>'
+        + '<select style="flex:1;font-size:12px;padding:3px 4px;border-radius:4px;background:#1e2334;color:#e8eaf0;border:1px solid #2a3048;min-width:0;" onchange="(function(el){assignPage(' + ui + ', el.value, undefined);})(this)">' + personOptions + '</select>'
+        + '<select style="flex:1;font-size:12px;padding:3px 4px;border-radius:4px;background:#1e2334;color:#e8eaf0;border:1px solid #2a3048;min-width:0;" onchange="(function(el){assignPage(' + ui + ', undefined, el.value);})(this)">' + docOptions + '</select>'
         + '</div></div>'
         + '<div class="pp-img-wrap">'
         + '<img src="' + imgSrc + '" alt="Page ' + (ui + 1) + '" loading="lazy">'
@@ -2136,53 +2139,91 @@ function renderPreviewPanel() {
   body.innerHTML = (unassignedHtml + html) || '<div class="pp-empty">No documents uploaded yet</div>';
 }
 
-function assignPage(pageIndex, personVal, docVal) {
-  // Update stored selections for this page
+async function assignPage(pageIndex, personVal, docVal) {
   if (!unassignedPages[pageIndex]) return;
   if (personVal !== undefined) unassignedPages[pageIndex].personVal = personVal;
   if (docVal !== undefined) unassignedPages[pageIndex].docVal = docVal;
 
   var page = unassignedPages[pageIndex];
-
-  // Both must be selected before assigning
   if (!page.personVal || !page.docVal) {
     renderPreviewPanel();
     return;
   }
 
+  // Build key
   var key;
-  // Special keys that don't follow person_doctype pattern
   if (page.docVal === 'index2') {
     key = 'index2';
   } else if (page.docVal === 'car_quotation') {
     key = 'car_quotation';
   } else if (page.docVal.indexOf('itr_') === 0) {
-    // e.g. itr_2425 → itr_app_2425 or itr_co1_2425
     key = 'itr_' + page.personVal + '_' + page.docVal.replace('itr_', '');
   } else if (page.docVal.indexOf('f16_') === 0) {
     key = 'f16_' + page.personVal + '_' + page.docVal.replace('f16_', '');
   } else {
-    key = page.personVal + page.docVal; // e.g. app_pan, co1_payslip
+    key = page.personVal + page.docVal;
   }
 
-  // Remove this page from unassignedPages
+  // Re-render this page at scale 3.5 from original PDF buffer for OCR quality
+  var finalBase64 = page.base64; // fallback to preview quality
+  var finalMime = page.mimeType;
+  if (_combinedPdfBuffer) {
+    try {
+      showToast('Preparing page at full quality...', 'info');
+      var pdf = await pdfjsLib.getDocument({ data: _combinedPdfBuffer.slice(0) }).promise;
+      // pageIndex is 0-based in unassignedPages — find original page number
+      // stored in page.name e.g. "file.pdf (page 3)"
+      var pageNumMatch = page.name.match(/\(page (\d+)\)/);
+      var pageNum = pageNumMatch ? parseInt(pageNumMatch[1]) : (pageIndex + 1);
+      if (pageNum >= 1 && pageNum <= pdf.numPages) {
+        var pdfPage = await pdf.getPage(pageNum);
+        var viewport = pdfPage.getViewport({ scale: 3.5 });
+        var canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        var ctx = canvas.getContext('2d');
+        await pdfPage.render({ canvasContext: ctx, viewport: viewport }).promise;
+        finalBase64 = canvas.toDataURL('image/png').split(',')[1];
+        finalMime = 'image/png';
+      }
+    } catch(e) {
+      console.warn('Re-render at full scale failed, using preview quality:', e.message);
+    }
+  }
+
+  // Remove from unassigned
   var assigned = unassignedPages.splice(pageIndex, 1)[0];
 
-  // Add to uploadedFiles[key]
+  // Push full-quality version to uploadedFiles
   if (!uploadedFiles[key]) uploadedFiles[key] = [];
   uploadedFiles[key].push({
     file: null,
-    base64: assigned.base64,
-    mimeType: assigned.mimeType,
+    base64: finalBase64,
+    mimeType: finalMime,
     name: assigned.name
   });
 
-  // Update upload zone and enable OCR button for the target slot
+  // Add to prefilled slots set
+  _prefilledSlots.add(key);
+
+  // Activate upload zone + OCR button if already in DOM
   updateUploadZone(key);
   enableOcrBtn(key);
   renderFileList(key);
   renderPreviewPanel();
   showToast('Page assigned to ' + key.replace(/_/g, ' '), 'success');
+}
+
+function _activatePrefilledSlots(keys) {
+  // keys: array of slot keys to check against _prefilledSlots
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    if (_prefilledSlots.has(k) && uploadedFiles[k] && uploadedFiles[k].length > 0) {
+      updateUploadZone(k);
+      enableOcrBtn(k);
+      renderFileList(k);
+    }
+  }
 }
 
 async function rotatePreviewImage(key, index, isDraft) {
@@ -3254,6 +3295,18 @@ function buildCoAppBlock(n) {
       <button class="btn btn-danger" onclick="removeCoApp(${n})" style="font-size:14px;padding:7px 14px">Remove Co-App ${n}</button>
     </div>
   `;
+  // Activate any slots pre-filled from combined PDF before this co-app block existed
+  var p = 'co' + n;
+  var coKeys = [
+    p + '_pan', p + '_payslip', p + '_bank_stmt',
+    p + '_biz_cert', p + '_kyc_pan', p + '_kyc_aadhar'
+  ];
+  var shortYrs = ['2425', '2526', '2627'];
+  for (var si = 0; si < shortYrs.length; si++) {
+    coKeys.push('itr_' + p + '_' + shortYrs[si]);
+    coKeys.push('f16_' + p + '_' + shortYrs[si]);
+  }
+  _activatePrefilledSlots(coKeys);
   container.appendChild(div);
 }
 
@@ -3417,6 +3470,17 @@ function buildItrSection(forceRebuild) {
   });
   // Also restore from persistent itrStore (OCR results survive here)
   restoreItrFieldsFromStore();
+  // Activate any ITR/F16 slots pre-filled from combined PDF
+  var itrKeys = [];
+  var itrShortYrs = ['2425', '2526', '2627'];
+  var itrPersons = ['app', 'co1', 'co2', 'co3', 'co4', 'co5'];
+  for (var ip = 0; ip < itrPersons.length; ip++) {
+    for (var iy = 0; iy < itrShortYrs.length; iy++) {
+      itrKeys.push('itr_' + itrPersons[ip] + '_' + itrShortYrs[iy]);
+      itrKeys.push('f16_' + itrPersons[ip] + '_' + itrShortYrs[iy]);
+    }
+  }
+  _activatePrefilledSlots(itrKeys);
   scheduleAutosave();
 }
 
@@ -4045,6 +4109,8 @@ var itrStore = {};
 var unassignedPages = [];
 // [{base64, mimeType, name, personVal, docVal}]
 // personVal and docVal track current dropdown selections per page
+var _combinedPdfBuffer = null; // stores ArrayBuffer of combined PDF for re-render at full scale on assign
+var _prefilledSlots = new Set(); // keys assigned from combined PDF before their upload zones existed in DOM
 
 function saveItrFieldsToStore() {
   var container = document.getElementById('itrContainer');
@@ -4463,6 +4529,8 @@ function hardClearForm(confirm_first) {
   });
   itrStore = {};
   unassignedPages = [];
+  _combinedPdfBuffer = null;
+  _prefilledSlots = new Set();
   setSubmitType('final');
   currentCaseId = _newCaseId();
   renderPreviewPanel();
