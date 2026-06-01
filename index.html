@@ -3090,9 +3090,9 @@ function showCoApp(n) {
 }
 
 function buildCoAppBlock(n) {
-  const p = `co${n}`;
-  const container = document.getElementById('coAppContainer');
-  const div = document.createElement('div');
+  var p = 'co' + n;
+  var container = document.getElementById('coAppContainer');
+  var div = document.createElement('div');
   div.className = 'coapp-block';
   div.id = `coapp_block_${n}`;
   div.innerHTML = `
