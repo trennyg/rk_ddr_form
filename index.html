@@ -2715,8 +2715,10 @@ async function runOcr(key, docType) {
         if (el) { el.value = aadharNum; el.dispatchEvent(new Event('input')); }
         console.log('Aadhar filled directly:', aadharNum, '→', fieldId);
         showToast('Aadhar: ' + aadharNum, 'success');
-        uploadFilesToDriveForDraft(key);
         if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
+        await uploadFilesToDriveForDraft(key);
+        var _aadharAppName = (document.getElementById('f_app_name') || {}).value || '';
+        if (_aadharAppName.trim()) { try { await saveDraft(_aadharAppName.trim()); } catch(e) {} }
         return;
       }
     }
