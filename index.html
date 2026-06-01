@@ -593,6 +593,29 @@
 ════════════════════════════════════════════ -->
 <div class="tab-pane" id="pane1">
 
+  <!-- COMBINED PDF SPLITTER -->
+  <div class="card" style="border-color:#3a5a8a;">
+    <div class="card-hdr" style="background:#12192a;color:#7ab4f0;">
+      📦 Combined PDF — Split &amp; Assign Pages
+    </div>
+    <div class="card-body">
+      <p class="hint" style="margin-bottom:10px;">
+        Upload one combined PDF containing all documents.
+        Each page will appear in the left panel — assign each page
+        to the correct person and document type using the dropdowns.
+      </p>
+      <div class="upload-zone" id="uz_combined_pdf">
+        <input type="file" id="fu_combined_pdf" accept=".pdf"
+          onchange="handleCombinedPdf(this.files)"
+          onclick="event.stopPropagation()">
+        <div class="uz-icon">📦</div>
+        <div class="uz-text">Tap to upload Combined PDF</div>
+        <div class="uz-hint">PDF only — pages will be split automatically</div>
+      </div>
+      <div class="file-list" id="fl_combined_pdf"></div>
+    </div>
+  </div>
+
   <!-- PAN CARD -->
   <div class="card">
     <div class="card-hdr">🪪 PAN Card (Photo / PDF)</div>
@@ -1687,6 +1710,77 @@ async function handleFileSelect(key, files) {
   }
 }
 
+async function handleCombinedPdf(files) {
+  if (!files || files.length === 0) return;
+  var file = files[0];
+  if (file.type !== 'application/pdf') {
+    showToast('Please upload a PDF file only', 'error');
+    return;
+  }
+  var uz = document.getElementById('uz_combined_pdf');
+  var fl = document.getElementById('fl_combined_pdf');
+  if (uz) {
+    var icon = uz.querySelector('.uz-icon');
+    var text = uz.querySelector('.uz-text');
+    if (icon) icon.textContent = '⏳';
+    if (text) text.textContent = 'Converting PDF...';
+  }
+  showToast('Splitting PDF pages...', 'info');
+  try {
+    var pages = await pdfToImages(file, 0); // 0 = all pages
+    unassignedPages = [];
+    for (var i = 0; i < pages.length; i++) {
+      unassignedPages.push({
+        base64: pages[i].base64,
+        mimeType: 'image/png',
+        name: file.name + ' (page ' + (i + 1) + ')',
+        personVal: '',
+        docVal: ''
+      });
+    }
+    if (uz) {
+      var icon2 = uz.querySelector('.uz-icon');
+      var text2 = uz.querySelector('.uz-text');
+      if (icon2) icon2.textContent = '✅';
+      if (text2) text2.textContent = pages.length + ' page(s) split — assign in left panel';
+      uz.classList.add('has-file');
+    }
+    if (fl) {
+      fl.innerHTML = '<div class="file-item"><span>📄</span>'
+        + '<span class="fi-name">' + file.name + ' — ' + pages.length + ' pages</span>'
+        + '<button class="fi-remove" onclick="clearCombinedPdf()">×</button></div>';
+    }
+    renderPreviewPanel();
+    showToast(pages.length + ' pages ready — assign in left panel', 'success');
+  } catch(e) {
+    showToast('PDF split failed: ' + e.message, 'error');
+    if (uz) {
+      var icon3 = uz.querySelector('.uz-icon');
+      var text3 = uz.querySelector('.uz-text');
+      if (icon3) icon3.textContent = '📦';
+      if (text3) text3.textContent = 'Tap to upload Combined PDF';
+      uz.classList.remove('has-file');
+    }
+  }
+  var inp = document.getElementById('fu_combined_pdf');
+  if (inp) inp.value = '';
+}
+
+function clearCombinedPdf() {
+  unassignedPages = [];
+  var uz = document.getElementById('uz_combined_pdf');
+  var fl = document.getElementById('fl_combined_pdf');
+  if (uz) {
+    uz.classList.remove('has-file');
+    var icon = uz.querySelector('.uz-icon');
+    var text = uz.querySelector('.uz-text');
+    if (icon) icon.textContent = '📦';
+    if (text) text.textContent = 'Tap to upload Combined PDF';
+  }
+  if (fl) fl.innerHTML = '';
+  renderPreviewPanel();
+}
+
 async function pdfToImages(file, maxPages) {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -1997,7 +2091,98 @@ function renderPreviewPanel() {
     }
   }
 
-  body.innerHTML = html || '<div class="pp-empty">No documents uploaded yet</div>';
+  // Build unassigned pages section at top
+  var unassignedHtml = '';
+  if (unassignedPages.length > 0) {
+    for (var ui = 0; ui < unassignedPages.length; ui++) {
+      var up = unassignedPages[ui];
+      var imgSrc = 'data:' + up.mimeType + ';base64,' + up.base64;
+      var personOptions = '<option value="">Person...</option>'
+        + '<option value="app"' + (up.personVal === 'app' ? ' selected' : '') + '>Applicant</option>'
+        + '<option value="co1"' + (up.personVal === 'co1' ? ' selected' : '') + '>Co-App 1</option>'
+        + '<option value="co2"' + (up.personVal === 'co2' ? ' selected' : '') + '>Co-App 2</option>'
+        + '<option value="co3"' + (up.personVal === 'co3' ? ' selected' : '') + '>Co-App 3</option>'
+        + '<option value="co4"' + (up.personVal === 'co4' ? ' selected' : '') + '>Co-App 4</option>'
+        + '<option value="co5"' + (up.personVal === 'co5' ? ' selected' : '') + '>Co-App 5</option>';
+      var docOptions = '<option value="">Document...</option>'
+        + '<option value="_pan"' + (up.docVal === '_pan' ? ' selected' : '') + '>PAN Card</option>'
+        + '<option value="_payslip"' + (up.docVal === '_payslip' ? ' selected' : '') + '>Payslip</option>'
+        + '<option value="_bank_stmt"' + (up.docVal === '_bank_stmt' ? ' selected' : '') + '>Bank Statement</option>'
+        + '<option value="_biz_cert"' + (up.docVal === '_biz_cert' ? ' selected' : '') + '>Business Certificate</option>'
+        + '<option value="_kyc_pan"' + (up.docVal === '_kyc_pan' ? ' selected' : '') + '>KYC PAN</option>'
+        + '<option value="_kyc_aadhar"' + (up.docVal === '_kyc_aadhar' ? ' selected' : '') + '>KYC Aadhar</option>'
+        + '<option value="itr_2425"' + (up.docVal === 'itr_2425' ? ' selected' : '') + '>ITR 2024-25</option>'
+        + '<option value="itr_2526"' + (up.docVal === 'itr_2526' ? ' selected' : '') + '>ITR 2025-26</option>'
+        + '<option value="itr_2627"' + (up.docVal === 'itr_2627' ? ' selected' : '') + '>ITR 2026-27</option>'
+        + '<option value="f16_2425"' + (up.docVal === 'f16_2425' ? ' selected' : '') + '>Form 16 2024-25</option>'
+        + '<option value="f16_2526"' + (up.docVal === 'f16_2526' ? ' selected' : '') + '>Form 16 2025-26</option>'
+        + '<option value="f16_2627"' + (up.docVal === 'f16_2627' ? ' selected' : '') + '>Form 16 2026-27</option>'
+        + '<option value="index2"' + (up.docVal === 'index2' ? ' selected' : '') + '>Index II</option>'
+        + '<option value="car_quotation"' + (up.docVal === 'car_quotation' ? ' selected' : '') + '>Car Quotation</option>';
+      unassignedHtml += '<div class="pp-slot">'
+        + '<div class="pp-slot-label" style="pointer-events:auto;display:flex;flex-direction:column;gap:4px;background:rgba(0,0,0,0.82);padding:6px 8px;right:8px;">'
+        + '<span style="font-size:11px;color:#e8eaf0;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;">Page ' + (ui + 1) + ' — Unassigned</span>'
+        + '<div style="display:flex;gap:4px;margin-top:2px;">'
+        + '<select style="flex:1;font-size:12px;padding:3px 4px;border-radius:4px;background:#1e2334;color:#e8eaf0;border:1px solid #2a3048;min-width:0;" onchange="assignPage(' + ui + ', this.value, undefined)">' + personOptions + '</select>'
+        + '<select style="flex:1;font-size:12px;padding:3px 4px;border-radius:4px;background:#1e2334;color:#e8eaf0;border:1px solid #2a3048;min-width:0;" onchange="assignPage(' + ui + ', undefined, this.value)">' + docOptions + '</select>'
+        + '</div></div>'
+        + '<div class="pp-img-wrap">'
+        + '<img src="' + imgSrc + '" alt="Page ' + (ui + 1) + '" loading="lazy">'
+        + '<button class="pp-remove" onclick="unassignedPages.splice(' + ui + ',1);renderPreviewPanel();" title="Remove">\xd7</button>'
+        + '</div></div>';
+    }
+  }
+
+  body.innerHTML = (unassignedHtml + html) || '<div class="pp-empty">No documents uploaded yet</div>';
+}
+
+function assignPage(pageIndex, personVal, docVal) {
+  // Update stored selections for this page
+  if (!unassignedPages[pageIndex]) return;
+  if (personVal !== undefined) unassignedPages[pageIndex].personVal = personVal;
+  if (docVal !== undefined) unassignedPages[pageIndex].docVal = docVal;
+
+  var page = unassignedPages[pageIndex];
+
+  // Both must be selected before assigning
+  if (!page.personVal || !page.docVal) {
+    renderPreviewPanel();
+    return;
+  }
+
+  var key;
+  // Special keys that don't follow person_doctype pattern
+  if (page.docVal === 'index2') {
+    key = 'index2';
+  } else if (page.docVal === 'car_quotation') {
+    key = 'car_quotation';
+  } else if (page.docVal.indexOf('itr_') === 0) {
+    // e.g. itr_2425 → itr_app_2425 or itr_co1_2425
+    key = 'itr_' + page.personVal + '_' + page.docVal.replace('itr_', '');
+  } else if (page.docVal.indexOf('f16_') === 0) {
+    key = 'f16_' + page.personVal + '_' + page.docVal.replace('f16_', '');
+  } else {
+    key = page.personVal + page.docVal; // e.g. app_pan, co1_payslip
+  }
+
+  // Remove this page from unassignedPages
+  var assigned = unassignedPages.splice(pageIndex, 1)[0];
+
+  // Add to uploadedFiles[key]
+  if (!uploadedFiles[key]) uploadedFiles[key] = [];
+  uploadedFiles[key].push({
+    file: null,
+    base64: assigned.base64,
+    mimeType: assigned.mimeType,
+    name: assigned.name
+  });
+
+  // Update upload zone and enable OCR button for the target slot
+  updateUploadZone(key);
+  enableOcrBtn(key);
+  renderFileList(key);
+  renderPreviewPanel();
+  showToast('Page assigned to ' + key.replace(/_/g, ' '), 'success');
 }
 
 async function rotatePreviewImage(key, index, isDraft) {
@@ -3855,6 +4040,10 @@ function getEndpoint() {
 // Persistent store for ITR/F16 values — survives DOM rebuilds
 var itrStore = {};
 
+var unassignedPages = [];
+// [{base64, mimeType, name, personVal, docVal}]
+// personVal and docVal track current dropdown selections per page
+
 function saveItrFieldsToStore() {
   var container = document.getElementById('itrContainer');
   if (!container || container.children.length === 0) return;
@@ -4271,6 +4460,7 @@ function hardClearForm(confirm_first) {
     if (text) text.textContent = text.dataset.orig || 'Tap to upload';
   });
   itrStore = {};
+  unassignedPages = [];
   setSubmitType('final');
   currentCaseId = _newCaseId();
   renderPreviewPanel();
