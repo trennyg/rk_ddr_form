@@ -547,6 +547,8 @@
   }
   .exec-id-btn:last-child { margin-bottom: 0; }
   .exec-id-btn:hover { background: #143d99; }
+  .exec-id-btn.guest { background: #888888; }
+  .exec-id-btn.guest:hover { background: #666666; }
 
   /* ── Office exec badge (top-right) ── */
   #exec-badge {
@@ -581,6 +583,7 @@
     <button class="exec-id-btn" onclick="pickExec('Rajshree')">Rajshree</button>
     <button class="exec-id-btn" onclick="pickExec('Tanvi')">Tanvi</button>
     <button class="exec-id-btn" onclick="pickExec('Megha')">Megha</button>
+    <button class="exec-id-btn guest" onclick="pickExec('GUEST')">Guest (Dev)</button>
   </div>
 </div>
 
@@ -4764,10 +4767,13 @@ function updateExecBadge() {
   var name = localStorage.getItem('rk_office_exec');
   var badge = document.getElementById('exec-badge');
   if (name) {
-    badge.textContent = '👤 ' + name;
+    var isGuest = name === 'GUEST';
+    badge.textContent = isGuest ? '👤 Guest (Dev)' : '👤 ' + name;
+    badge.style.background = isGuest ? 'rgba(136,136,136,0.92)' : '';
     badge.style.display = '';
   } else {
     badge.style.display = 'none';
+    badge.style.background = '';
   }
 }
 function toggleExecMenu() {
