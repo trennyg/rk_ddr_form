@@ -525,9 +525,70 @@
     touch-action: manipulation; z-index: 6;
   }
   .pp-rotate:hover { background: rgba(30,40,80,0.95); }
+
+  /* ── Office exec identity modal ── */
+  #exec-id-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.72);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  #exec-id-modal {
+    background: #fff; border-radius: 12px; padding: 36px 32px 28px;
+    max-width: 340px; width: 90%; text-align: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+  }
+  #exec-id-modal h2 { margin: 0 0 8px; font-size: 20px; color: #1a1a2e; }
+  #exec-id-modal p  { margin: 0 0 24px; font-size: 13px; color: #666; }
+  .exec-id-btn {
+    display: block; width: 100%; margin-bottom: 12px;
+    padding: 13px; font-size: 15px; font-weight: 600;
+    border: none; border-radius: 8px; cursor: pointer;
+    background: #1a4fba; color: #fff; transition: background 0.15s;
+  }
+  .exec-id-btn:last-child { margin-bottom: 0; }
+  .exec-id-btn:hover { background: #143d99; }
+
+  /* ── Office exec badge (top-right) ── */
+  #exec-badge {
+    position: fixed; top: 12px; right: 14px;
+    background: rgba(26,79,186,0.92); color: #fff;
+    font-size: 12px; font-weight: 600; padding: 5px 10px;
+    border-radius: 20px; cursor: pointer; z-index: 9000;
+    user-select: none; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  #exec-badge-menu {
+    position: fixed; top: 38px; right: 14px;
+    background: #fff; border: 1px solid #ddd; border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    z-index: 9001; min-width: 130px; display: none;
+  }
+  #exec-badge-menu button {
+    display: block; width: 100%; padding: 10px 14px;
+    background: none; border: none; cursor: pointer;
+    font-size: 13px; text-align: left; color: #333;
+  }
+  #exec-badge-menu button:hover { background: #f5f5f5; border-radius: 8px; }
 </style>
 </head>
 <body>
+
+<!-- Office exec identity modal (hidden after first pick) -->
+<div id="exec-id-overlay" style="display:none;">
+  <div id="exec-id-modal">
+    <h2>Welcome — Who are you?</h2>
+    <p>This is a one-time setup for this device.</p>
+    <button class="exec-id-btn" onclick="pickExec('Rajshree')">Rajshree</button>
+    <button class="exec-id-btn" onclick="pickExec('Tanvi')">Tanvi</button>
+    <button class="exec-id-btn" onclick="pickExec('Megha')">Megha</button>
+  </div>
+</div>
+
+<!-- Office exec badge (top-right corner) -->
+<div id="exec-badge" onclick="toggleExecMenu()" style="display:none;"></div>
+<div id="exec-badge-menu">
+  <button onclick="switchExecUser()">Switch user</button>
+</div>
 <div id="app-layout">
 
 <!-- LEFT: IMAGE PREVIEW PANEL -->
@@ -4073,7 +4134,8 @@ async function submitForm() {
         files: {},  // empty — all files already uploaded above
         isFinal: submitType === 'final',
         draftKey: currentDraftKey,
-        case_session_id: currentCaseId
+        case_session_id: currentCaseId,
+        officeExecName: localStorage.getItem('rk_office_exec') || ''
       })
     });
 
@@ -4692,7 +4754,47 @@ function closeDriveFilesModal() {
   if (modal) modal.remove();
 }
 
+// ── Office exec identity ────────────────────────────────────────────────────
+function pickExec(name) {
+  localStorage.setItem('rk_office_exec', name);
+  document.getElementById('exec-id-overlay').style.display = 'none';
+  updateExecBadge();
+}
+function updateExecBadge() {
+  var name = localStorage.getItem('rk_office_exec');
+  var badge = document.getElementById('exec-badge');
+  if (name) {
+    badge.textContent = '👤 ' + name;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+function toggleExecMenu() {
+  var menu = document.getElementById('exec-badge-menu');
+  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+}
+function switchExecUser() {
+  document.getElementById('exec-badge-menu').style.display = 'none';
+  localStorage.removeItem('rk_office_exec');
+  location.reload();
+}
+document.addEventListener('click', function(e) {
+  var badge = document.getElementById('exec-badge');
+  var menu  = document.getElementById('exec-badge-menu');
+  if (menu && !badge.contains(e.target) && !menu.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+// ────────────────────────────────────────────────────────────────────────────
+
 window.addEventListener('DOMContentLoaded', () => {
+  // Show identity modal if exec not yet identified
+  if (!localStorage.getItem('rk_office_exec')) {
+    document.getElementById('exec-id-overlay').style.display = 'flex';
+  }
+  updateExecBadge();
+
   // OCR sheet buttons wired fresh inside showOcrModal() each call
 
   // Draft list buttons — event delegation so dynamically rendered buttons work
