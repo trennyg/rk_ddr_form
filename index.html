@@ -2508,15 +2508,18 @@ Return ONLY this JSON — no markdown, no explanation:
 {"deedType":"","regNo":"","regDate":"","index2Date":"","seller":"","purchaser":"","propAddress":"","propArea":"","houseRef":"","actualPrice":"","stampDuty":"","regFee":"","readyReckoner":""}`,
   car: `Extract from car quotation/proforma invoice. Return ONLY raw JSON no markdown: {"carModel":"car company and model","carPrice":"total on-road price","dealershipName":"dealership name","dealershipAddr":"dealership address","dealershipContact":"phone number","execName":"sales executive name","execContact":"sales executive contact"}`,
   itr_doc: `Extract from Income Tax Return (ITR) document. Return ONLY raw JSON no markdown.
-Look for fields labelled Gross Total Income, Total Income, or Net Taxable Income.
-Do NOT pick any field with the word Loss in it. The value must be a positive number.
-Fields: {"ackNo":"acknowledgement number","income":"Gross Total Income or Total Income — NOT any loss figure","year":"assessment year"}`,
+STEP 1 — Find a field labelled one of: 'Gross Total Income', 'Total Income', 'Net Taxable Income'. The value must be a POSITIVE number.
+STEP 2 — Magnitude check: the income value must be between 100000 and 999999999 (between 1 lakh and 99 crore). If your value is outside this range you have the wrong field.
+STEP 3 — NEVER return the acknowledgement number as income. The ack number is typically 15 digits long. Income is never more than 10 digits.
+STEP 4 — NEVER pick any field with the word 'Loss' in it. Never pick TDS, Tax Paid, Refund, or Balance Due fields.
+Return: {"ackNo":"acknowledgement number — typically 15 digits","income":"Gross Total Income or Total Income as positive integer string — NOT the ack number","year":"assessment year e.g. 2024-25"}`,
   f16: `Extract from Form 16 Part B. Return ONLY raw JSON no markdown.
-STEP 1 — Find the row explicitly labelled '12.' or '12' followed by the words 'Total taxable income'. The value next to it is your income figure.
-STEP 2 — Verify your answer: income must be GREATER than the value in row 13 'Tax on total income'. If your picked value is LESS than row 13 value you have picked the wrong row — go back to STEP 1.
-STEP 3 — NEVER pick any row labelled Tax, TDS, Net tax, Tax payable, Surcharge, Cess, Rebate or Relief. These are all tax figures not income figures.
-STEP 4 — Certificate number is in the header of Part A or Part B.
-Return: {"certNo":"certificate number","income":"row 12 Total taxable income value as positive number"}`
+STEP 1 — Find the row explicitly labelled '12.' followed by 'Total taxable income'. The number on that row is the income figure. It is always the LARGEST number on the page apart from readyReckoner-type fields.
+STEP 2 — Neighbour verification: Find row '13.' labelled 'Tax on total income'. Your row 12 income MUST be greater than the row 13 value. Typical ratio: row 12 is 5x to 30x larger than row 13. If your picked value fails this check, you have the wrong row — return empty string for income.
+STEP 3 — NEVER return values from these rows under any circumstances: 13 (Tax on total income), 14 (Rebate), 15 (Surcharge), 16 (Cess), 17 (Tax payable), 18 (Relief), 19 (Net tax payable). These are tax figures not income figures.
+STEP 4 — Also return the row 13 value so the caller can verify your answer arithmetically.
+STEP 5 — Certificate number is in the header of Part A or Part B, labelled 'Certificate No.' or 'Cert No'.
+Return: {"certNo":"certificate number","income":"row 12 Total taxable income as positive integer string","row13":"row 13 Tax on total income as positive integer string"}`
 };
 
 const OCR_TITLES = {
@@ -3550,24 +3553,75 @@ function buildItrSection(forceRebuild) {
 
 // Helper — apply parsed ITR/F16 result to form fields
 function _applyItrParsed(parsed, docKind, prefix, shortYr) {
+  const source = parsed._source || 'ai'; // 'regex' or 'ai'
+
   if (docKind === 'itr') {
-    const inc = parsed.income || parsed.Income || parsed.INCOME || '';
+    let inc = parsed.income || parsed.Income || parsed.INCOME || '';
     const ack = parsed.ackNo  || parsed.ackno  || parsed.AckNo  || parsed.acknowledgement || '';
+    // Post-AI validation
+    let validationWarning = '';
+    if (source === 'ai' && inc) {
+      const incNum = parseInt(String(inc).replace(/[,\s]/g, ''));
+      if (isNaN(incNum) || incNum < 100000) {
+        validationWarning = '⚠️ Income value seems too low — please verify against document.';
+        inc = '';
+      } else if (incNum > 999999999) {
+        validationWarning = '⚠️ Income value seems too high — may be ack number. Please verify.';
+        inc = '';
+      } else if (String(inc).replace(/[,\s]/g,'').length > 10) {
+        validationWarning = '⚠️ Extracted value looks like an ack number, not income. Please enter manually.';
+        inc = '';
+      }
+    }
+    // Override ack with regex result if available
+    const finalAck = window._itrRegexAck || ack;
+    window._itrRegexAck = '';
     if (inc) { forceSetVal(`f_itr_${prefix}_${shortYr}`, inc); itrStore[`f_itr_${prefix}_${shortYr}`] = inc; }
-    if (ack) { forceSetVal(`f_itr_ack_${prefix}_${shortYr}`, ack); itrStore[`f_itr_ack_${prefix}_${shortYr}`] = ack; }
-    if (inc || ack) { showToast('ITR ' + shortYr + ' extracted ✅', 'success'); }
-    else { showToast('Text read but income/ack not found — check console', 'error'); }
+    if (finalAck) { forceSetVal(`f_itr_ack_${prefix}_${shortYr}`, finalAck); itrStore[`f_itr_ack_${prefix}_${shortYr}`] = finalAck; }
+    if (validationWarning) {
+      showToast(validationWarning, 'error');
+      showError(validationWarning);
+    } else if (inc || finalAck) {
+      const badge = source === 'regex' ? '🟢 Regex — high confidence' : '🟡 AI extracted — please verify';
+      showToast('ITR ' + shortYr + ' extracted (' + badge + ')', source === 'regex' ? 'success' : '');
+    } else {
+      showToast('Text read but income/ack not found — check console', 'error');
+    }
   } else {
-    const inc  = parsed.income || parsed.Income || parsed.INCOME
+    // F16
+    let inc  = parsed.income || parsed.Income || parsed.INCOME
               || parsed.totalTaxableIncome || parsed.total_taxable_income
               || parsed.taxableIncome || parsed.grossTotalIncome || parsed.grossIncome || '';
     const cert = parsed.certNo || parsed.certno || parsed.CertNo
               || parsed.certificateNo || parsed.certificate_no
               || parsed.certificateNumber || parsed.CertificateNo || parsed.cert || '';
+    const row13Raw = parsed.row13 || parsed.Row13 || '';
+
+    // Post-AI validation using row13 neighbour check
+    let validationWarning = '';
+    if (source === 'ai' && inc && row13Raw) {
+      const incNum   = parseInt(String(inc).replace(/[,\s]/g, ''));
+      const row13Num = parseInt(String(row13Raw).replace(/[,\s]/g, ''));
+      if (!isNaN(incNum) && !isNaN(row13Num) && row13Num > 0) {
+        const ratio = incNum / row13Num;
+        if (ratio < 3 || ratio > 50) {
+          validationWarning = '⚠️ F16 income vs tax ratio is unusual (ratio: ' + ratio.toFixed(1) + 'x). Please verify row 12 value against document.';
+          inc = ''; // reject — safer to force manual entry
+        }
+      }
+    }
+
     if (inc)  { forceSetVal(`f_f16_inc_${prefix}_${shortYr}`, inc);  itrStore[`f_f16_inc_${prefix}_${shortYr}`]  = inc; }
     if (cert) { forceSetVal(`f_f16_cert_${prefix}_${shortYr}`, cert); itrStore[`f_f16_cert_${prefix}_${shortYr}`] = cert; }
-    if (inc || cert) { showToast('Form 16 ' + shortYr + ' extracted ✅', 'success'); }
-    else { showToast('Text read but income/cert not found — check console', 'error'); }
+    if (validationWarning) {
+      showToast(validationWarning, 'error');
+      showError(validationWarning);
+    } else if (inc || cert) {
+      const badge = source === 'regex' ? '🟢 Regex — high confidence' : '🟡 AI extracted — please verify';
+      showToast('Form 16 ' + shortYr + ' extracted (' + badge + ')', source === 'regex' ? 'success' : '');
+    } else {
+      showToast('Text read but income/cert not found — check console', 'error');
+    }
   }
 }
 
@@ -3705,6 +3759,48 @@ async function runItrOcr(prefix, shortYr, docKind) {
       }
     }
 
+    // ── ITR regex shortcut: extract directly from raw OCR text ──
+    if (docKind === 'itr') {
+      const cleanNum = (s) => s.replace(/[,\s]/g, '');
+      const t = itrText;
+      // Try to find ack number
+      const ackRx = /acknowledgement\s+(?:number|no\.?)\s*[:\-]?\s*([0-9]{10,15})/i;
+      const ackMatch = t.match(ackRx);
+      const regexAck = ackMatch ? ackMatch[1] : '';
+      // Try Gross Total Income
+      const gtiRx  = /gross\s+total\s+income[^0-9\n]{0,120}(\d[\d,]+)/i;
+      const gtiRx2 = /gross\s+total\s+income[^\n]*\n[\s\S]{0,120}?(\d[\d,]{4,})/i;
+      // Try Total Income
+      const tiRx   = /(?<!\w)total\s+income[^0-9\n]{0,120}(\d[\d,]+)/i;
+      const tiRx2  = /(?<!\w)total\s+income[^\n]*\n[\s\S]{0,120}?(\d[\d,]{4,})/i;
+      // Try Net Taxable Income
+      const ntiRx  = /net\s+taxable\s+income[^0-9\n]{0,120}(\d[\d,]+)/i;
+
+      const incMatch = t.match(gtiRx) || t.match(gtiRx2) || t.match(tiRx) || t.match(tiRx2) || t.match(ntiRx);
+      const regexInc = incMatch ? cleanNum(incMatch[1]) : '';
+
+      // Validate: must be between 1 lakh and 99 crore, and not look like an ack number
+      const incNum = parseInt(regexInc);
+      const isValidInc = regexInc && incNum >= 100000 && incNum <= 999999999 && regexInc.length <= 10;
+
+      if (isValidInc) {
+        console.log('ITR regex hit — income:', regexInc, 'ackNo:', regexAck);
+        await uploadFilesToDriveForDraft(key);
+        _applyItrParsed(
+          { income: regexInc, ackNo: regexAck, _source: 'regex' },
+          docKind, prefix, shortYr
+        );
+        var _an0itr = (document.getElementById('f_app_name') || {}).value || '';
+        if (_an0itr.trim()) { try { await saveDraft(_an0itr.trim()); } catch(e) {} }
+        if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
+        return;
+      }
+      // Regex missed income — fall through to AI; keep regexAck for override below
+      console.log('ITR regex: income not found — falling through to AI. ackNo from regex:', regexAck);
+      // Store for post-AI override
+      window._itrRegexAck = regexAck || '';
+    }
+
     // ── F16 regex shortcut: extract directly from raw OCR text ──
     let f16RegexCert = '';
     if (docKind === 'f16') {
@@ -3715,18 +3811,20 @@ async function runItrOcr(prefix, shortYr, docKind) {
       const certMatch = t.match(certRx);
       f16RegexCert = certMatch ? certMatch[1].toUpperCase() : '';
       // Match "12. Total taxable income (9-11)" — number on same line
-      const incRx  = /12\s*[.):\-]?\s*total\s+taxable\s+income[^0-9\n]{0,80}(\d[\d,]+)/i;
+      const incRx  = /12\s*[.):\-]?\s*total\s+taxable\s+income[^0-9\n]{0,120}(\d[\d,]+)/i;
       // Fallback: "Total taxable income (9-11)" with suffix, same line
-      const incRx2 = /total\s+taxable\s+income\s*\(?9[-–]11\)?[^0-9\n]{0,60}(\d[\d,]+)/i;
+      const incRx2 = /total\s+taxable\s+income\s*\(?9[-–]11\)?[^0-9\n]{0,120}(\d[\d,]+)/i;
       // Fallback: amount on the next line (common in scanned/PDF OCR output)
-      const incRx3 = /12\s*[.):\-]?\s*total\s+taxable\s+income[^\n]*\n[\s\S]{0,40}?(\d[\d,]{3,})/i;
-      const incMatch = t.match(incRx) || t.match(incRx2) || t.match(incRx3);
+      const incRx3 = /12\s*[.):\-]?\s*total\s+taxable\s+income[^\n]*\n[\s\S]{0,120}?(\d[\d,]{3,})/i;
+      // Additional pattern: row number on its own line, label next line, value after
+      const incRx4 = /\b12\b[^\n]*\n[\s\S]{0,60}?total\s+taxable\s+income[\s\S]{0,120}?(\d[\d,]{4,})/i;
+      const incMatch = t.match(incRx) || t.match(incRx2) || t.match(incRx3) || t.match(incRx4);
       const regexInc = incMatch ? cleanNum(incMatch[1]) : '';
       if (regexInc) {
         // Both found by regex — no need to call AI
         console.log('F16 regex hit — income:', regexInc, 'certNo:', f16RegexCert);
         await uploadFilesToDriveForDraft(key);
-        _applyItrParsed({ income: regexInc, certNo: f16RegexCert }, docKind, prefix, shortYr);
+        _applyItrParsed({ income: regexInc, certNo: f16RegexCert, _source: 'regex' }, docKind, prefix, shortYr);
         var _an0 = (document.getElementById('f_app_name') || {}).value || '';
         if (_an0.trim()) { try { await saveDraft(_an0.trim()); } catch(e) {} }
         if (btn) { btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = '<span>✨ Extract Again</span>'; }
@@ -3741,7 +3839,9 @@ async function runItrOcr(prefix, shortYr, docKind) {
     let raw;
     try {
       console.log('Using OpenAI for structuring');
-      raw = await structureWithOpenAI(itrText, prompt);
+      // Send first page image alongside text for both ITR and F16 — improves accuracy significantly
+      const itrB64ForVision = (files && files.length > 0) ? files[0].base64 : null;
+      raw = await structureWithOpenAI(itrText, prompt, itrB64ForVision);
     } catch(oaErr) {
       console.log('OpenAI failed, falling back to Gemini');
       btn && (btn.innerHTML = '<span class="spinner"></span><span> Trying Gemini fallback...</span>');
