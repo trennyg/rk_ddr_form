@@ -3557,18 +3557,18 @@ function _applyItrParsed(parsed, docKind, prefix, shortYr) {
 
   if (docKind === 'itr') {
     let inc = parsed.income || parsed.Income || parsed.INCOME || '';
-    const ack = parsed.ackNo  || parsed.ackno  || parsed.AckNo  || parsed.acknowledgement || '';
-    // Post-AI validation
+    const ack = parsed.ackNo || parsed.ackno || parsed.AckNo || parsed.acknowledgement || '';
+    // Post-AI magnitude + ack-number guard
     let validationWarning = '';
     if (source === 'ai' && inc) {
       const incNum = parseInt(String(inc).replace(/[,\s]/g, ''));
       if (isNaN(incNum) || incNum < 100000) {
-        validationWarning = '⚠️ Income value seems too low — please verify against document.';
+        validationWarning = '⚠️ ITR income value seems too low — please enter manually.';
         inc = '';
       } else if (incNum > 999999999) {
-        validationWarning = '⚠️ Income value seems too high — may be ack number. Please verify.';
+        validationWarning = '⚠️ ITR income value seems too high — may be ack number. Please enter manually.';
         inc = '';
-      } else if (String(inc).replace(/[,\s]/g,'').length > 10) {
+      } else if (String(inc).replace(/[,\s]/g, '').length > 10) {
         validationWarning = '⚠️ Extracted value looks like an ack number, not income. Please enter manually.';
         inc = '';
       }
@@ -3576,17 +3576,18 @@ function _applyItrParsed(parsed, docKind, prefix, shortYr) {
     // Override ack with regex result if available
     const finalAck = window._itrRegexAck || ack;
     window._itrRegexAck = '';
-    if (inc) { forceSetVal(`f_itr_${prefix}_${shortYr}`, inc); itrStore[`f_itr_${prefix}_${shortYr}`] = inc; }
+    if (inc)      { forceSetVal(`f_itr_${prefix}_${shortYr}`, inc);      itrStore[`f_itr_${prefix}_${shortYr}`]     = inc; }
     if (finalAck) { forceSetVal(`f_itr_ack_${prefix}_${shortYr}`, finalAck); itrStore[`f_itr_ack_${prefix}_${shortYr}`] = finalAck; }
     if (validationWarning) {
-      showToast(validationWarning, 'error');
+      showToast('🔴 ' + validationWarning, 'error');
       showError(validationWarning);
     } else if (inc || finalAck) {
-      const badge = source === 'regex' ? '🟢 Regex — high confidence' : '🟡 AI extracted — please verify';
-      showToast('ITR ' + shortYr + ' extracted (' + badge + ')', source === 'regex' ? 'success' : '');
+      const badge = source === 'regex' ? '🟢 Regex match' : '🟡 AI extracted — please verify';
+      showToast('ITR ' + shortYr + ' — ' + badge, source === 'regex' ? 'success' : '');
     } else {
       showToast('Text read but income/ack not found — check console', 'error');
     }
+
   } else {
     // F16
     let inc  = parsed.income || parsed.Income || parsed.INCOME
@@ -3596,8 +3597,7 @@ function _applyItrParsed(parsed, docKind, prefix, shortYr) {
               || parsed.certificateNo || parsed.certificate_no
               || parsed.certificateNumber || parsed.CertificateNo || parsed.cert || '';
     const row13Raw = parsed.row13 || parsed.Row13 || '';
-
-    // Post-AI validation using row13 neighbour check
+    // Post-AI row13 ratio validation
     let validationWarning = '';
     if (source === 'ai' && inc && row13Raw) {
       const incNum   = parseInt(String(inc).replace(/[,\s]/g, ''));
@@ -3605,20 +3605,19 @@ function _applyItrParsed(parsed, docKind, prefix, shortYr) {
       if (!isNaN(incNum) && !isNaN(row13Num) && row13Num > 0) {
         const ratio = incNum / row13Num;
         if (ratio < 3 || ratio > 50) {
-          validationWarning = '⚠️ F16 income vs tax ratio is unusual (ratio: ' + ratio.toFixed(1) + 'x). Please verify row 12 value against document.';
-          inc = ''; // reject — safer to force manual entry
+          validationWarning = '⚠️ F16 income vs tax ratio unusual (' + ratio.toFixed(1) + 'x expected 3x–50x). Please verify row 12 value manually.';
+          inc = '';
         }
       }
     }
-
     if (inc)  { forceSetVal(`f_f16_inc_${prefix}_${shortYr}`, inc);  itrStore[`f_f16_inc_${prefix}_${shortYr}`]  = inc; }
     if (cert) { forceSetVal(`f_f16_cert_${prefix}_${shortYr}`, cert); itrStore[`f_f16_cert_${prefix}_${shortYr}`] = cert; }
     if (validationWarning) {
-      showToast(validationWarning, 'error');
+      showToast('🔴 ' + validationWarning, 'error');
       showError(validationWarning);
     } else if (inc || cert) {
-      const badge = source === 'regex' ? '🟢 Regex — high confidence' : '🟡 AI extracted — please verify';
-      showToast('Form 16 ' + shortYr + ' extracted (' + badge + ')', source === 'regex' ? 'success' : '');
+      const badge = source === 'regex' ? '🟢 Regex match' : '🟡 AI extracted — please verify';
+      showToast('Form 16 ' + shortYr + ' — ' + badge, source === 'regex' ? 'success' : '');
     } else {
       showToast('Text read but income/cert not found — check console', 'error');
     }
