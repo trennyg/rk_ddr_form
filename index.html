@@ -625,8 +625,9 @@
   <button class="tab-btn" onclick="switchTab(4)" id="tab4"><span class="tab-num">5</span> ITR / F16</button>
   <button class="tab-btn" onclick="switchTab(5)" id="tab5"><span class="tab-num">6</span> Property</button>
   <button class="tab-btn" onclick="switchTab(6)" id="tab6"><span class="tab-num">7</span> Car Loan</button>
-  <button class="tab-btn" onclick="switchTab(7)" id="tab7"><span class="tab-num">8</span> References</button>
-  <button class="tab-btn" onclick="switchTab(8)" id="tab8"><span class="tab-num">9</span> Submit</button>
+  <button class="tab-btn" onclick="switchTab(7)" id="tab7"><span class="tab-num">8</span> Education</button>
+  <button class="tab-btn" onclick="switchTab(8)" id="tab8"><span class="tab-num">9</span> References</button>
+  <button class="tab-btn" onclick="switchTab(9)" id="tab9"><span class="tab-num">10</span> Submit</button>
 </div>
 
 <!-- ════════════════════════════════════════════
@@ -1303,14 +1304,79 @@
 
   <div class="nav-btns">
     <button class="btn btn-secondary" type="button" onclick="switchTab(5)">← Property</button>
-    <button class="btn btn-primary" type="button" onclick="switchTab(7)">Next → References</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(7)">Next → Education</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
-     TAB 7 — REFERENCES
+     TAB 7 — EDUCATION
 ════════════════════════════════════════════ -->
 <div class="tab-pane" id="pane7">
+  <div class="card">
+    <div class="card-hdr">🎓 Education Loan Details</div>
+    <div class="card-body">
+      <p class="hint" style="margin-bottom:8px">Only fill this section if the loan product is an Education Loan.</p>
+      <div class="field">
+        <label>College Name</label>
+        <input type="text" id="f_edu_college" placeholder="Name of college / institution">
+      </div>
+      <div class="field">
+        <label>Collateral Property Address (if applicable)</label>
+        <textarea id="f_edu_collateral_addr" rows="2" placeholder="Property address — only if a property is pledged as collateral (typically loans above ₹10 lakh)"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">📎 Documents (for Annexure)</div>
+    <div class="card-body">
+      <div class="upload-zone" id="uz_edu_fee_receipt">
+        <input type="file" id="fu_edu_fee_receipt" accept="image/*,.pdf" multiple onchange="handleFileSelect('edu_fee_receipt', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📋</div>
+        <div class="uz-text">Upload Fee Receipt(s)</div>
+        <div class="uz-hint">JPG, PNG or PDF</div>
+      </div>
+      <div class="file-list" id="fl_edu_fee_receipt"></div>
+      <div class="upload-zone" id="uz_edu_ssc">
+        <input type="file" id="fu_edu_ssc" accept="image/*,.pdf" multiple onchange="handleFileSelect('edu_ssc', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📋</div>
+        <div class="uz-text">Upload SSC Mark Sheet</div>
+        <div class="uz-hint">JPG, PNG or PDF</div>
+      </div>
+      <div class="file-list" id="fl_edu_ssc"></div>
+      <div class="upload-zone" id="uz_edu_hsc">
+        <input type="file" id="fu_edu_hsc" accept="image/*,.pdf" multiple onchange="handleFileSelect('edu_hsc', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📋</div>
+        <div class="uz-text">Upload HSC Mark Sheet</div>
+        <div class="uz-hint">JPG, PNG or PDF</div>
+      </div>
+      <div class="file-list" id="fl_edu_hsc"></div>
+      <div class="upload-zone" id="uz_edu_grad">
+        <input type="file" id="fu_edu_grad" accept="image/*,.pdf" multiple onchange="handleFileSelect('edu_grad', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📋</div>
+        <div class="uz-text">Upload Graduation Certificate</div>
+        <div class="uz-hint">JPG, PNG or PDF</div>
+      </div>
+      <div class="file-list" id="fl_edu_grad"></div>
+      <div class="upload-zone" id="uz_edu_admission">
+        <input type="file" id="fu_edu_admission" accept="image/*,.pdf" multiple onchange="handleFileSelect('edu_admission', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📋</div>
+        <div class="uz-text">Upload Admission Letter</div>
+        <div class="uz-hint">JPG, PNG or PDF</div>
+      </div>
+      <div class="file-list" id="fl_edu_admission"></div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-secondary" type="button" onclick="switchTab(6)">← Car Loan</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(8)">Next → References</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 8 — REFERENCES
+════════════════════════════════════════════ -->
+<div class="tab-pane" id="pane8">
   <div class="card">
     <div class="card-hdr">📞 Reference 1</div>
     <div class="card-body">
@@ -1350,15 +1416,15 @@
     </div>
   </div>
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(6)">← Car Loan</button>
-    <button class="btn btn-primary" type="button" onclick="switchTab(8)">Next → Submit</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(7)">← Education</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(9)">Next → Submit</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
-     TAB 8 — SUBMIT
+     TAB 9 — SUBMIT
 ════════════════════════════════════════════ -->
-<div class="tab-pane" id="pane8">
+<div class="tab-pane" id="pane9">
 
   <!-- SAVED DRAFTS — load any past applicant to edit -->
   <div class="submit-card">
@@ -1413,7 +1479,7 @@
   </div>
 
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(7)">← References</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(8)">← References</button>
     <span></span>
   </div>
 </div>
@@ -2066,6 +2132,7 @@ const SLOT_ORDER = [
   'itr_co4_2425','itr_co4_2526','itr_co4_2627','f16_co4_2425','f16_co4_2526','f16_co4_2627',
   'itr_co5_2425','itr_co5_2526','itr_co5_2627','f16_co5_2425','f16_co5_2526','f16_co5_2627',
   'index2','car_quotation',
+  'edu_fee_receipt','edu_ssc','edu_hsc','edu_grad','edu_admission',
 ];
 
 function getSlotLabel(key) {
@@ -2076,8 +2143,13 @@ function getSlotLabel(key) {
     app_biz_cert:   'Applicant — Business Certificate',
     app_kyc_pan:    'Applicant — KYC PAN',
     app_kyc_aadhar: 'Applicant — KYC Aadhar',
-    index2:         'Index II',
-    car_quotation:  'Car Quotation',
+    index2:          'Index II',
+    car_quotation:   'Car Quotation',
+    edu_fee_receipt: 'Education — Fee Receipt',
+    edu_ssc:         'Education — SSC Mark Sheet',
+    edu_hsc:         'Education — HSC Mark Sheet',
+    edu_grad:        'Education — Graduation Certificate',
+    edu_admission:   'Education — Admission Letter',
   };
   if (LABELS[key]) return LABELS[key];
   var coSlot = key.match(/^(co\d)_(pan|payslip|bank_stmt|biz_cert|kyc_pan|kyc_aadhar)$/);
@@ -4117,6 +4189,13 @@ function buildRow() {
   row[310] = g('f_dealership_name');
   row[311] = g('f_dealership_addr');
   row[312] = g('f_dealership_contact');
+  row[313] = '__FILE__edu_fee_receipt';
+  row[314] = '__FILE__edu_ssc';
+  row[315] = '__FILE__edu_hsc';
+  row[316] = '__FILE__edu_grad';
+  row[317] = '__FILE__edu_admission';
+  row[318] = g('f_edu_college');
+  row[319] = g('f_edu_collateral_addr');
 
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
