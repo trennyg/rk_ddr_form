@@ -618,22 +618,53 @@
 
 <!-- TAB BAR -->
 <div class="tab-bar" id="tabBar">
-  <button class="tab-btn active" onclick="switchTab(0)" id="tab0"><span class="tab-num">1</span> Bank</button>
-  <button class="tab-btn" onclick="switchTab(1)" id="tab1"><span class="tab-num">2</span> Applicant</button>
-  <button class="tab-btn" onclick="switchTab(2)" id="tab2"><span class="tab-num">3</span> Co-Apps</button>
-  <button class="tab-btn" onclick="switchTab(3)" id="tab3"><span class="tab-num">4</span> Field Visit</button>
-  <button class="tab-btn" onclick="switchTab(4)" id="tab4"><span class="tab-num">5</span> ITR / F16</button>
-  <button class="tab-btn" onclick="switchTab(5)" id="tab5"><span class="tab-num">6</span> Property</button>
-  <button class="tab-btn" onclick="switchTab(6)" id="tab6"><span class="tab-num">7</span> Car Loan</button>
-  <button class="tab-btn" onclick="switchTab(7)" id="tab7"><span class="tab-num">8</span> Education</button>
-  <button class="tab-btn" onclick="switchTab(8)" id="tab8"><span class="tab-num">9</span> References</button>
-  <button class="tab-btn" onclick="switchTab(9)" id="tab9"><span class="tab-num">10</span> Submit</button>
+  <button class="tab-btn" onclick="switchTab(1)" id="tab1"><span class="tab-num">2</span> Bank</button>
+  <button class="tab-btn" onclick="switchTab(2)" id="tab2"><span class="tab-num">3</span> Applicant</button>
+  <button class="tab-btn" onclick="switchTab(3)" id="tab3"><span class="tab-num">4</span> Co-Apps</button>
+  <button class="tab-btn" onclick="switchTab(4)" id="tab4"><span class="tab-num">5</span> Field Visit</button>
+  <button class="tab-btn" onclick="switchTab(5)" id="tab5"><span class="tab-num">6</span> ITR / F16</button>
+  <button class="tab-btn" onclick="switchTab(6)" id="tab6"><span class="tab-num">7</span> Property</button>
+  <button class="tab-btn" onclick="switchTab(7)" id="tab7"><span class="tab-num">8</span> Car Loan</button>
+  <button class="tab-btn" onclick="switchTab(8)" id="tab8"><span class="tab-num">9</span> Education</button>
+  <button class="tab-btn" onclick="switchTab(9)" id="tab9"><span class="tab-num">10</span> References</button>
+  <button class="tab-btn" onclick="switchTab(10)" id="tab10"><span class="tab-num">11</span> Submit</button>
+</div>
+<div id="form-mode-badge"
+     onclick="switchTab(0)"
+     style="display:none;cursor:pointer;padding:2px 10px;border-radius:12px;
+            background:var(--accent);color:#000;font-size:13px;font-weight:600;
+            margin:4px 0 4px 8px;">
+</div>
+
+<!-- ════ TAB 0 — FORM TYPE SELECTOR ════ -->
+<div class="tab-pane active" id="pane0">
+  <div class="card">
+    <div class="card-hdr">Select Verification Type</div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:12px;padding:20px">
+      <button class="btn btn-primary" style="font-size:16px;padding:14px"
+        onclick="applyFormMode('ddr'); switchTab(1)">
+        📋 DDR — Due Diligence Report
+      </button>
+      <button class="btn btn-secondary" style="font-size:16px;padding:14px"
+        onclick="applyFormMode('bsa'); switchTab(1)">
+        👤 BSA — Individual Licence Verification
+      </button>
+      <button class="btn btn-secondary" style="font-size:16px;padding:14px"
+        onclick="applyFormMode('dsa'); switchTab(1)">
+        🏢 DSA — Company Licence Verification
+      </button>
+      <button class="btn btn-secondary" style="font-size:16px;padding:14px"
+        onclick="applyFormMode('partial'); switchTab(1)">
+        🔍 Partial — Partial Verification
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- ════════════════════════════════════════════
-     TAB 0 — BANK INFO
+     TAB 1 — BANK INFO
 ════════════════════════════════════════════ -->
-<div class="tab-pane active" id="pane0">
+<div class="tab-pane" id="pane1">
   <div class="card">
     <div class="card-hdr">🏦 Bank & Loan Details</div>
     <div class="card-body">
@@ -649,14 +680,14 @@
   </div>
   <div class="nav-btns">
     <span></span>
-    <button class="btn btn-primary" type="button" onclick="switchTab(1)">Next → Applicant</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(2)">Next → Applicant</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
      TAB 1 — APPLICANT
 ════════════════════════════════════════════ -->
-<div class="tab-pane" id="pane1">
+<div class="tab-pane" id="pane2">
 
   <!-- COMBINED PDF SPLITTER -->
   <div class="card" style="border-color:#3a5a8a;">
@@ -969,29 +1000,29 @@
   </div>
 
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(0)">← Bank</button>
-    <button class="btn btn-primary" type="button" onclick="switchTab(2)">Next → Co-Apps</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(1)">← Bank</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(3)">Next → Co-Apps</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
      TAB 2 — CO-APPLICANTS
 ════════════════════════════════════════════ -->
-<div class="tab-pane" id="pane2">
+<div class="tab-pane" id="pane3">
   <div class="coapp-strip" id="coAppStrip">
     <button class="coapp-tab add-btn" onclick="addCoApp()">+ Add Co-Applicant</button>
   </div>
   <div id="coAppContainer"></div>
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(1)">← Applicant</button>
-    <button class="btn btn-primary" type="button" onclick="switchTab(3)">Next → Field Visit</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(2)">← Applicant</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(4)">Next → Field Visit</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
      TAB 3 — FIELD VISIT
 ════════════════════════════════════════════ -->
-<div class="tab-pane" id="pane3">
+<div class="tab-pane" id="pane4">
   <div class="card">
     <div class="card-hdr">👤 Visit Information</div>
     <div class="card-body">
@@ -1078,26 +1109,26 @@
   </div>
 
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(2)">← Co-Apps</button>
-    <button class="btn btn-primary" type="button" onclick="buildCoResRemarks(); switchTab(4)">Next → ITR / F16</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(3)">← Co-Apps</button>
+    <button class="btn btn-primary" type="button" onclick="buildCoResRemarks(); switchTab(5)">Next → ITR / F16</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
      TAB 4 — ITR / FORM 16
 ════════════════════════════════════════════ -->
-<div class="tab-pane" id="pane4">
+<div class="tab-pane" id="pane5">
   <div id="itrContainer"></div>
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(3)">← Field Visit</button>
-    <button class="btn btn-primary" type="button" onclick="switchTab(5)">Next → Property</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(4)">← Field Visit</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(6)">Next → Property</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
      TAB 5 — PROPERTY / INDEX II
 ════════════════════════════════════════════ -->
-<div class="tab-pane" id="pane5">
+<div class="tab-pane" id="pane6">
 
   <!-- INDEX II UPLOAD — TOP, fills everything below -->
   <div class="card" style="border-color:#3a5a8a;">
@@ -1239,15 +1270,15 @@
   </div>
 
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(4)">← ITR / F16</button>
-    <button class="btn btn-primary" type="button" onclick="switchTab(6)">Next → Car Loan</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(5)">← ITR / F16</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(7)">Next → Car Loan</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
      TAB 6 — CAR LOAN
 ════════════════════════════════════════════ -->
-<div class="tab-pane" id="pane6">
+<div class="tab-pane" id="pane7">
   <div class="card">
     <div class="card-hdr">🚗 Car Loan / Vehicle Details</div>
     <div class="card-body">
@@ -1303,15 +1334,15 @@
   </div>
 
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(5)">← Property</button>
-    <button class="btn btn-primary" type="button" onclick="switchTab(7)">Next → Education</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(6)">← Property</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(8)">Next → Education</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
      TAB 7 — EDUCATION
 ════════════════════════════════════════════ -->
-<div class="tab-pane" id="pane7">
+<div class="tab-pane" id="pane8">
   <div class="card">
     <div class="card-hdr">🎓 Education Loan Details</div>
     <div class="card-body">
@@ -1378,15 +1409,15 @@
   </div>
 
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(6)">← Car Loan</button>
-    <button class="btn btn-primary" type="button" onclick="switchTab(8)">Next → References</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(7)">← Car Loan</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(9)">Next → References</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
      TAB 8 — REFERENCES
 ════════════════════════════════════════════ -->
-<div class="tab-pane" id="pane8">
+<div class="tab-pane" id="pane9">
   <div class="card">
     <div class="card-hdr">📞 Reference 1</div>
     <div class="card-body">
@@ -1426,15 +1457,15 @@
     </div>
   </div>
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(7)">← Education</button>
-    <button class="btn btn-primary" type="button" onclick="switchTab(9)">Next → Submit</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(8)">← Education</button>
+    <button class="btn btn-primary" type="button" onclick="switchTab(10)">Next → Submit</button>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
      TAB 9 — SUBMIT
 ════════════════════════════════════════════ -->
-<div class="tab-pane" id="pane9">
+<div class="tab-pane" id="pane10">
 
   <!-- SAVED DRAFTS — load any past applicant to edit -->
   <div class="submit-card">
@@ -1489,7 +1520,7 @@
   </div>
 
   <div class="nav-btns">
-    <button class="btn btn-secondary" type="button" onclick="switchTab(8)">← References</button>
+    <button class="btn btn-secondary" type="button" onclick="switchTab(9)">← References</button>
     <span></span>
   </div>
 </div>
@@ -1551,6 +1582,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 // STATE
 // ══════════════════════════════════════════════════════════
 let currentTab = 0;
+let currentFormMode = 'ddr';   // 'ddr' | 'bsa' | 'dsa' | 'partial'
 let uploadedFiles = {};   // key -> [{file, base64, mimeType, name}]
 let currentDraftKey = null;
 let _draftsCache = [];
@@ -1782,6 +1814,12 @@ function g(id) {
 
 
 function switchTab(n) {
+  var HIDDEN_BSA_DSA = new Set([3, 6, 7, 8]);
+  if ((currentFormMode === 'bsa' || currentFormMode === 'dsa') && HIDDEN_BSA_DSA.has(n)) {
+    var dir = (typeof currentTab !== 'undefined' && n < currentTab) ? -1 : 1;
+    switchTab(n + dir);
+    return;
+  }
   document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
   document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
   var pane = document.getElementById('pane' + n);
@@ -1795,8 +1833,8 @@ function switchTab(n) {
     }, 50);
   }
   currentTab = n;
-  if (n === 4) buildItrSection();
-  if (n === 8) buildUploadSummary();
+  if (n === 5) buildItrSection();
+  if (n === 9) buildUploadSummary();
   window.scrollTo(0, 0);
 }
 
@@ -1806,6 +1844,33 @@ function toggleEduCollateral(val) {
   var show = (val === 'different');
   wrap.style.display = show ? '' : 'none';
   if (!show) { var a = document.getElementById('f_edu_collateral_addr'); if (a) a.value = ''; }
+}
+
+function applyFormMode(mode) {
+  currentFormMode = mode;
+  var hiddenForBSADSA = [3, 6, 7, 8];
+  hiddenForBSADSA.forEach(function(n) {
+    var btn = document.getElementById('tab' + n);
+    if (btn) btn.style.display = (mode === 'bsa' || mode === 'dsa') ? 'none' : '';
+  });
+  // Bank Info loan field: hide + auto-fill for BSA/DSA, clear + restore for DDR/Partial
+  var loanField = document.getElementById('f_loan');
+  if (loanField) {
+    if (mode === 'bsa' || mode === 'dsa') {
+      loanField.value = mode === 'bsa' ? 'BSA VERIFICATION' : 'DSA VERIFICATION';
+      loanField.setAttribute('readonly', '');
+      loanField.style.color = '#888';
+    } else {
+      loanField.removeAttribute('readonly');
+      loanField.style.color = '';
+      if (loanField.value === 'BSA VERIFICATION' || loanField.value === 'DSA VERIFICATION') loanField.value = '';
+    }
+  }
+  // Update mode badge
+  var badge = document.getElementById('form-mode-badge');
+  var labels = { ddr: 'DDR', bsa: 'BSA', dsa: 'DSA', partial: 'Partial' };
+  if (badge) badge.textContent = 'Mode: ' + (labels[mode] || mode.toUpperCase()) + ' ✎';
+  if (badge) badge.style.display = mode ? 'inline-block' : 'none';
 }
 
 // ══════════════════════════════════════════════════════════
@@ -4335,7 +4400,8 @@ async function submitForm() {
         isFinal: submitType === 'final',
         draftKey: currentDraftKey,
         case_session_id: currentCaseId,
-        officeExecName: localStorage.getItem('rk_office_exec') || ''
+        officeExecName: localStorage.getItem('rk_office_exec') || '',
+        formMode: currentFormMode
       })
     });
 
@@ -4520,6 +4586,7 @@ function buildDraftMeta(draftName) {
     appName: appName.trim(), bank: bank.trim(),
     savedAt: new Date().toISOString(),
     caseSessionId: currentCaseId,
+    formMode: currentFormMode,
     vals: collectFormValues(),
     driveFiles: Object.assign({}, _draftDriveFiles)  // Drive URLs only (no base64)
   };
@@ -4745,8 +4812,9 @@ async function openDraft(key) {
   buildItrSection();
   restoreFormValues(meta);
   toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
+  applyFormMode(meta.formMode || 'ddr');
   showToast('Loaded: ' + (meta.appName || meta.name), 'success');
-  switchTab(0);
+  switchTab(1);
 }
 
 // ── AUTOSAVE ──────────────────────────────────────────────
@@ -4797,6 +4865,8 @@ function hardClearForm(confirm_first) {
   setSubmitType('final');
   currentCaseId = _newCaseId();
   renderPreviewPanel();
+  applyFormMode('ddr');
+  switchTab(0);
   if (confirm_first) showToast('Form cleared', 'success');
 }
 
