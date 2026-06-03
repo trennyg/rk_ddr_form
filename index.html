@@ -1321,8 +1321,18 @@
         <input type="text" id="f_edu_college" placeholder="Name of college / institution">
       </div>
       <div class="field">
-        <label>Collateral Property Address (if applicable)</label>
-        <textarea id="f_edu_collateral_addr" rows="2" placeholder="Property address — only if a property is pledged as collateral (typically loans above ₹10 lakh)"></textarea>
+        <label>Property kept as collateral?</label>
+        <select id="f_edu_collateral_status" onchange="toggleEduCollateral(this.value)">
+          <option value="no" selected>No</option>
+          <option value="same">Yes — same as current residence</option>
+          <option value="different">Yes — a different property</option>
+        </select>
+      </div>
+      <div id="edu_collateral_addr_wrap" style="display:none">
+        <div class="field">
+          <label>Collateral Property Address (if applicable)</label>
+          <textarea id="f_edu_collateral_addr" rows="2" placeholder="Property address — only if a property is pledged as collateral (typically loans above ₹10 lakh)"></textarea>
+        </div>
       </div>
     </div>
   </div>
@@ -1788,6 +1798,14 @@ function switchTab(n) {
   if (n === 4) buildItrSection();
   if (n === 8) buildUploadSummary();
   window.scrollTo(0, 0);
+}
+
+function toggleEduCollateral(val) {
+  var wrap = document.getElementById('edu_collateral_addr_wrap');
+  if (!wrap) return;
+  var show = (val === 'different');
+  wrap.style.display = show ? '' : 'none';
+  if (!show) { var a = document.getElementById('f_edu_collateral_addr'); if (a) a.value = ''; }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -4196,6 +4214,7 @@ function buildRow() {
   row[317] = '__FILE__edu_admission';
   row[318] = g('f_edu_college');
   row[319] = g('f_edu_collateral_addr');
+  row[320] = g('f_edu_collateral_status');
 
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
@@ -4725,6 +4744,7 @@ async function openDraft(key) {
   // so all field IDs (esp. ITR fields) exist in DOM
   buildItrSection();
   restoreFormValues(meta);
+  toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
   showToast('Loaded: ' + (meta.appName || meta.name), 'success');
   switchTab(0);
 }
@@ -5008,6 +5028,8 @@ window.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('input',  scheduleAutosave);
   // Render drafts list on first load
   renderDraftList();
+  // Sync education collateral toggle to initial select value
+  toggleEduCollateral(document.getElementById('f_edu_collateral_status').value);
 });
 </script>
 </body>
