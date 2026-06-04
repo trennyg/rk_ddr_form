@@ -4542,6 +4542,13 @@ async function submitForm() {
     showStatus('✅ ' + (result.message || 'Form submitted successfully!'), 'success');
     showToast('Submitted!', 'success');
     setSubmitType('final');
+
+    // Sync Drive URLs back into _draftDriveFiles from what was just uploaded,
+    // then save draft so reload shows the photos
+    const appNameAfterSubmit = (document.getElementById('f_app_name') || {}).value || '';
+    if (appNameAfterSubmit.trim()) {
+      try { await saveDraft(appNameAfterSubmit.trim()); } catch(e) {}
+    }
   } catch(e) {
     showStatus('❌ Submission failed: ' + e.message, 'error');
     showToast('Submission failed', 'error');
