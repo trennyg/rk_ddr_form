@@ -926,6 +926,19 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-hdr">📸 Office / Business Visit Photos</div>
+    <div class="card-body">
+      <div class="upload-zone" id="uz_app_office_photos">
+        <input type="file" id="fu_app_office_photos" accept="image/*" multiple onchange="handleFileSelect('app_office_photos', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📸</div>
+        <div class="uz-text">Upload Office / Business Visit Photos</div>
+        <div class="uz-hint">Photos taken at the office / business premises</div>
+      </div>
+      <div class="file-list" id="fl_app_office_photos"></div>
+    </div>
+  </div>
+
   <!-- BANK STATEMENT -->
   <div class="card">
     <div class="card-hdr">🏛 Bank Statement</div>
@@ -1092,6 +1105,16 @@
       <div class="field">
         <label>Field Visit Notes & Observations</label>
         <textarea id="f_field_notes" placeholder="Nameplate visible, condition of residence, access, observations..." rows="3"></textarea>
+      </div>
+      <div class="field">
+        <label>Residence Visit Photos</label>
+        <div class="upload-zone" id="uz_app_res_photos">
+          <input type="file" id="fu_app_res_photos" accept="image/*" multiple onchange="handleFileSelect('app_res_photos', this.files)" onclick="event.stopPropagation()">
+          <div class="uz-icon">📸</div>
+          <div class="uz-text">Upload Residence Visit Photos</div>
+          <div class="uz-hint">Photos taken at the residence</div>
+        </div>
+        <div class="file-list" id="fl_app_res_photos"></div>
       </div>
     </div>
   </div>
@@ -1269,6 +1292,19 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-hdr">📸 Property / Asset Visit Photos</div>
+    <div class="card-body">
+      <div class="upload-zone" id="uz_property_photos">
+        <input type="file" id="fu_property_photos" accept="image/*" multiple onchange="handleFileSelect('property_photos', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📸</div>
+        <div class="uz-text">Upload Property / Asset Visit Photos</div>
+        <div class="uz-hint">Photos taken at the property site</div>
+      </div>
+      <div class="file-list" id="fl_property_photos"></div>
+    </div>
+  </div>
+
   <div class="nav-btns">
     <button class="btn btn-secondary" type="button" onclick="switchTab(5)">← ITR / F16</button>
     <button class="btn btn-primary" type="button" onclick="switchTab(7)">Next → Car Loan</button>
@@ -1333,6 +1369,19 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-hdr">📸 Car / Dealership Visit Photos</div>
+    <div class="card-body">
+      <div class="upload-zone" id="uz_car_photos">
+        <input type="file" id="fu_car_photos" accept="image/*" multiple onchange="handleFileSelect('car_photos', this.files)" onclick="event.stopPropagation()">
+        <div class="uz-icon">📸</div>
+        <div class="uz-text">Upload Car / Dealership Visit Photos</div>
+        <div class="uz-hint">Photos taken at the dealership</div>
+      </div>
+      <div class="file-list" id="fl_car_photos"></div>
+    </div>
+  </div>
+
   <div class="nav-btns">
     <button class="btn btn-secondary" type="button" onclick="switchTab(6)">← Property</button>
     <button class="btn btn-primary" type="button" onclick="switchTab(8)">Next → Education</button>
@@ -1363,6 +1412,16 @@
         <div class="field">
           <label>Collateral Property Address (if applicable)</label>
           <textarea id="f_edu_collateral_addr" rows="2" placeholder="Property address — only if a property is pledged as collateral (typically loans above ₹10 lakh)"></textarea>
+        </div>
+        <div class="field">
+          <label>Collateral Property Visit Photos</label>
+          <div class="upload-zone" id="uz_edu_collateral_photos">
+            <input type="file" id="fu_edu_collateral_photos" accept="image/*" multiple onchange="handleFileSelect('edu_collateral_photos', this.files)" onclick="event.stopPropagation()">
+            <div class="uz-icon">📸</div>
+            <div class="uz-text">Upload Collateral Property Visit Photos</div>
+            <div class="uz-hint">Photos taken at the collateral property</div>
+          </div>
+          <div class="file-list" id="fl_edu_collateral_photos"></div>
         </div>
       </div>
     </div>
@@ -1843,7 +1902,10 @@ function toggleEduCollateral(val) {
   if (!wrap) return;
   var show = (val === 'different');
   wrap.style.display = show ? '' : 'none';
-  if (!show) { var a = document.getElementById('f_edu_collateral_addr'); if (a) a.value = ''; }
+  if (!show) {
+    var a = document.getElementById('f_edu_collateral_addr'); if (a) a.value = '';
+    if (uploadedFiles['edu_collateral_photos']) { delete uploadedFiles['edu_collateral_photos']; renderFileList('edu_collateral_photos'); updateUploadZone('edu_collateral_photos'); }
+  }
 }
 
 function applyFormMode(mode) {
@@ -2216,6 +2278,10 @@ const SLOT_ORDER = [
   'itr_co5_2425','itr_co5_2526','itr_co5_2627','f16_co5_2425','f16_co5_2526','f16_co5_2627',
   'index2','car_quotation',
   'edu_fee_receipt','edu_ssc','edu_hsc','edu_grad','edu_admission',
+  'app_res_photos','app_office_photos','property_photos','car_photos','edu_collateral_photos',
+  'co1_res_photos','co1_office_photos','co2_res_photos','co2_office_photos',
+  'co3_res_photos','co3_office_photos','co4_res_photos','co4_office_photos',
+  'co5_res_photos','co5_office_photos',
 ];
 
 function getSlotLabel(key) {
@@ -2233,8 +2299,18 @@ function getSlotLabel(key) {
     edu_hsc:         'Education — HSC Mark Sheet',
     edu_grad:        'Education — Graduation Certificate',
     edu_admission:   'Education — Admission Letter',
+    app_res_photos:        'Applicant — Residence Visit Photo',
+    app_office_photos:     'Applicant — Office Visit Photo',
+    property_photos:       'Property / Asset — Visit Photo',
+    car_photos:            'Car Dealership — Visit Photo',
+    edu_collateral_photos: 'Collateral Property — Visit Photo',
   };
   if (LABELS[key]) return LABELS[key];
+  var coVisit = key.match(/^(co\d)_(res|office)_photos$/);
+  if (coVisit) {
+    var vn = coVisit[1].replace('co','');
+    return 'Co-App ' + vn + ' — ' + (coVisit[2] === 'res' ? 'Residence' : 'Office') + ' Visit Photo';
+  }
   var coSlot = key.match(/^(co\d)_(pan|payslip|bank_stmt|biz_cert|kyc_pan|kyc_aadhar)$/);
   if (coSlot) {
     var num = coSlot[1].replace('co','');
@@ -3370,6 +3446,16 @@ function buildCoAppBlock(n) {
           <label>Current Address Verification Remarks</label>
           <textarea id="f_${p}_res_remarks" rows="2" placeholder="e.g. Residence verified at the stated address. Nameplate confirmed. Verification found satisfactory."></textarea>
         </div>
+        <div class="field" id="${p}_res_photos_wrap" style="display:none;margin-top:8px">
+          <label>Residence Visit Photos</label>
+          <div class="upload-zone" id="uz_${p}_res_photos">
+            <input type="file" id="fu_${p}_res_photos" accept="image/*" multiple onchange="handleFileSelect('${p}_res_photos', this.files)" onclick="event.stopPropagation()">
+            <div class="uz-icon">📸</div>
+            <div class="uz-text">Upload Residence Visit Photos</div>
+            <div class="uz-hint">Only if co-applicant resides at a different address</div>
+          </div>
+          <div class="file-list" id="fl_${p}_res_photos"></div>
+        </div>
       </div>
     </div>
     <!-- EMPLOYMENT -->
@@ -3463,6 +3549,18 @@ function buildCoAppBlock(n) {
         </div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-hdr">📸 Co-App ${n} — Office / Business Visit Photos</div>
+      <div class="card-body">
+        <div class="upload-zone" id="uz_${p}_office_photos">
+          <input type="file" id="fu_${p}_office_photos" accept="image/*" multiple onchange="handleFileSelect('${p}_office_photos', this.files)" onclick="event.stopPropagation()">
+          <div class="uz-icon">📸</div>
+          <div class="uz-text">Upload Office / Business Visit Photos</div>
+          <div class="uz-hint">Photos taken at the office / business premises</div>
+        </div>
+        <div class="file-list" id="fl_${p}_office_photos"></div>
+      </div>
+    </div>
     <!-- BANK STMT -->
     <div class="card">
       <div class="card-hdr">🏛 Co-App ${n} — Bank Statement</div>
@@ -3544,17 +3642,20 @@ function handleCoResidenceChange(n) {
   var sel = document.getElementById('f_' + p + '_residence');
   var addrField = document.getElementById('f_' + p + '_address');
   if (!sel || !addrField) return;
+  var photoWrap = document.getElementById(p + '_res_photos_wrap');
   if (sel.value === 'Same as Applicant') {
     var appAddr = document.getElementById('f_current_addr');
     addrField.value = appAddr ? appAddr.value : '';
     addrField.style.opacity = '0.6';
     addrField.readOnly = true;
+    if (photoWrap) photoWrap.style.display = 'none';
+    if (uploadedFiles[p + '_res_photos']) { delete uploadedFiles[p + '_res_photos']; renderFileList(p + '_res_photos'); }
   } else {
     addrField.style.opacity = '1';
     addrField.readOnly = false;
-    if (addrField.value === (document.getElementById('f_current_addr') || {}).value) {
-      addrField.value = '';
-    }
+    if (addrField.value === (document.getElementById('f_current_addr') || {}).value) { addrField.value = ''; }
+    if (photoWrap) photoWrap.style.display = (sel.value === 'Different') ? '' : 'none';
+    if (sel.value !== 'Different' && uploadedFiles[p + '_res_photos']) { delete uploadedFiles[p + '_res_photos']; renderFileList(p + '_res_photos'); }
   }
 }
 
@@ -4280,6 +4381,17 @@ function buildRow() {
   row[318] = g('f_edu_college');
   row[319] = g('f_edu_collateral_addr');
   row[320] = g('f_edu_collateral_status');
+
+  // ── Field visit photos (cols 321-335) ──
+  row[321] = '__FILE__app_res_photos';
+  row[322] = '__FILE__app_office_photos';
+  row[323] = '__FILE__property_photos';
+  row[324] = '__FILE__car_photos';
+  row[325] = '__FILE__edu_collateral_photos';
+  for (let ci = 1; ci <= 5; ci++) {
+    row[325 + ci] = `__FILE__co${ci}_res_photos`;     // 326-330
+    row[330 + ci] = `__FILE__co${ci}_office_photos`;  // 331-335
+  }
 
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
