@@ -1659,6 +1659,16 @@ let numCoApps = 0;
 let _draftDriveFiles = {}; // key -> [{driveUrl, name, mimeType}] — Drive URLs only, no base64
 let _discardedDriveKeys = new Set(); // keys where user chose to discard the Drive file
 
+// Pure-upload slots: no OCR, no Extract button — upload to Drive immediately on file select
+// so photos persist in the draft across devices. OCR slots handle their own upload timing.
+const PURE_UPLOAD_SLOTS = new Set([
+  'app_res_photos','app_office_photos','property_photos','car_photos','edu_collateral_photos',
+  'co1_res_photos','co1_office_photos','co2_res_photos','co2_office_photos',
+  'co3_res_photos','co3_office_photos','co4_res_photos','co4_office_photos',
+  'co5_res_photos','co5_office_photos',
+  'edu_fee_receipt','edu_ssc','edu_hsc','edu_grad','edu_admission',
+]);
+
 // Gemini — model discovery cached; calls proxied through VPS server
 let _workingModel = null;
 
@@ -1982,6 +1992,10 @@ async function handleFileSelect(key, files) {
   if (_draftDriveFiles[key] && _draftDriveFiles[key].length > 0) {
     _discardedDriveKeys.add(key);
     renderFileList(key); // re-render to hide Drive file now new one is present
+  }
+
+  if (PURE_UPLOAD_SLOTS.has(key)) {
+    uploadFilesToDriveForDraft(key);  // intentionally not awaited — runs in background
   }
 }
 
