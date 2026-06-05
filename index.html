@@ -657,6 +657,10 @@
         onclick="applyFormMode('partial'); switchTab(1)">
         🔍 Partial — Partial Verification
       </button>
+      <button class="btn btn-secondary" style="font-size:16px;padding:14px"
+        onclick="applyFormMode('invoice'); switchTab('invoice')">
+        🧾 Tax Invoice — Generate Invoice Only
+      </button>
     </div>
   </div>
 </div>
@@ -1742,6 +1746,292 @@
 </div>
 
 <!-- ════════════════════════════════════════════
+     TAX INVOICE PANE
+════════════════════════════════════════════ -->
+<div class="tab-pane" id="pane_invoice">
+
+  <div class="card">
+    <div class="card-hdr">🧾 Tax Invoice</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Invoice Reference (auto)</label>
+        <input type="text" id="ti_invoice_ref" readonly
+          style="font-family:'DM Mono',monospace;opacity:0.7"
+          placeholder="Loading...">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Invoice Date</label>
+          <input type="date" id="ti_date">
+        </div>
+        <div class="field">
+          <label>Invoice Type</label>
+          <select id="ti_type" onchange="handleTaxInvoiceTypeChange(this.value)">
+            <option value="">Select Type</option>
+            <option value="recovery">Recovery Commission</option>
+            <option value="parking">Parking &amp; Security Charges</option>
+            <option value="possession">Physical Possession Charges</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">🏦 Client Bank Details</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Client Bank</label>
+        <select id="ti_bank" onchange="handleTaxInvoiceBankChange(this.value)">
+          <option value="">Select Bank</option>
+          <option value="BOI_MAHIM">Bank of India</option>
+          <option value="SBI">State Bank of India</option>
+        </select>
+      </div>
+      <div id="ti_boi_account_wrap" style="display:none">
+        <div class="field">
+          <label>Receiving Account (BOI)</label>
+          <select id="ti_boi_account">
+            <option value="BOI_MAHIM">Bank of India, Mahim (W) — A/C 003020110000859</option>
+            <option value="BOI_DADAR">Bank of India, Dadar (W) — A/C 001520100005524</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Addressee Title</label>
+        <select id="ti_addressee_title">
+          <option value="The Branch Manager,">The Branch Manager,</option>
+          <option value="The Asst. General Manager,">The Asst. General Manager,</option>
+          <option value="The Chief Manager,">The Chief Manager,</option>
+          <option value="other">Other (type below)</option>
+        </select>
+        <input type="text" id="ti_addressee_title_other" placeholder="Type addressee title"
+          style="margin-top:8px;display:none">
+      </div>
+      <div class="field">
+        <label>Bank Branch Name &amp; Address</label>
+        <textarea id="ti_branch_address" rows="3"
+          placeholder="e.g. State Bank of India, (RACPC-17897)&#10;1st floor, UTI Bldg, Plot No.12, Rd. No.11, MIDC,&#10;Andheri (E), Mumbai – 400 093"></textarea>
+      </div>
+      <div class="field" id="ti_bank_gst_wrap">
+        <label>Bank's GST Number</label>
+        <input type="text" id="ti_bank_gst" placeholder="e.g. 27AAACS8577K2ZO"
+          style="font-family:'DM Mono',monospace">
+      </div>
+      <div class="field">
+        <label>Vendor Code (auto-filled)</label>
+        <input type="text" id="ti_vendor_code" readonly
+          style="font-family:'DM Mono',monospace;opacity:0.7">
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="ti_recovery_section" style="display:none">
+    <div class="card-hdr">💰 Recovery Details</div>
+    <div class="card-body">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        Add one row per borrower. Commission is auto-calculated as Amount × Rate%.
+      </div>
+      <div id="ti_recovery_rows"></div>
+      <button type="button" onclick="addRecoveryRow()"
+        class="btn btn-secondary" style="font-size:14px;padding:7px 14px;margin-top:8px">
+        + Add Borrower Row
+      </button>
+    </div>
+  </div>
+
+  <div class="card" id="ti_parking_section" style="display:none">
+    <div class="card-hdr">🚗 Parking &amp; Security Details</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Vehicle Number</label>
+          <input type="text" id="ti_veh_no" placeholder="e.g. MH 03 CH 3170"
+            style="font-family:'DM Mono',monospace">
+        </div>
+        <div class="field">
+          <label>Borrower Name</label>
+          <input type="text" id="ti_park_borrower" placeholder="Full name">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Account Number</label>
+          <input type="text" id="ti_park_acct_no" placeholder="Account number"
+            style="font-family:'DM Mono',monospace">
+        </div>
+        <div class="field">
+          <label>Seizure Date</label>
+          <input type="date" id="ti_seizure_date">
+        </div>
+      </div>
+      <div class="field">
+        <label>Parked At (Location &amp; Address)</label>
+        <textarea id="ti_park_location" rows="2"
+          placeholder="e.g. Chinmay Ent, Below Kurla Bridge, Eastern Highway"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Contact Person</label>
+          <input type="text" id="ti_park_contact_person" placeholder="Name &amp; number">
+        </div>
+        <div class="field">
+          <label>Previous Bill Reference (optional)</label>
+          <input type="text" id="ti_park_prev_bill_ref" placeholder="e.g. RK/25-26/2564">
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin:10px 0 6px">
+        Date ranges — each row: Particulars, Date From, Date To (auto-calculates days), Rate/Day, Amount.
+      </div>
+      <div id="ti_parking_rows"></div>
+      <button type="button" onclick="addParkingRow()"
+        class="btn btn-secondary" style="font-size:14px;padding:7px 14px;margin-top:8px">
+        + Add Date Range Row
+      </button>
+    </div>
+  </div>
+
+  <div class="card" id="ti_possession_section" style="display:none">
+    <div class="card-hdr">🏠 Physical Possession Details</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Account Number</label>
+          <input type="text" id="ti_poss_acct_no" placeholder="Account number"
+            style="font-family:'DM Mono',monospace">
+        </div>
+        <div class="field">
+          <label>Borrower Name</label>
+          <input type="text" id="ti_poss_borrower" placeholder="Full name — shown in BOLD on invoice">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Possession Date</label>
+          <input type="date" id="ti_poss_date">
+        </div>
+        <div class="field">
+          <label>Bank's GST Number</label>
+          <input type="text" id="ti_poss_bank_gst" placeholder="e.g. 27AAACB0472C1Z9"
+            style="font-family:'DM Mono',monospace">
+        </div>
+      </div>
+      <div class="field">
+        <label>Property Address (where possession taken)</label>
+        <textarea id="ti_poss_property_addr" rows="2"
+          placeholder="Full property address as per bank's schedule"></textarea>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin:10px 0 6px">
+        Itemised charges — enter 0 for items not applicable:
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Main Possession Charge (₹)</label>
+          <input type="number" id="ti_poss_main" placeholder="e.g. 40000"
+            oninput="updateTaxInvoiceGST()">
+        </div>
+        <div class="field">
+          <label>Photo / Postage (₹)</label>
+          <input type="number" id="ti_poss_photo" placeholder="e.g. 2800"
+            oninput="updateTaxInvoiceGST()">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Lock &amp; DCP (₹)</label>
+          <input type="number" id="ti_poss_lock" placeholder="e.g. 13288"
+            oninput="updateTaxInvoiceGST()">
+        </div>
+        <div class="field">
+          <label>Police Station Notice (₹)</label>
+          <input type="number" id="ti_poss_police_notice" placeholder="e.g. 12850"
+            oninput="updateTaxInvoiceGST()">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Police Protection Fee (₹)</label>
+          <input type="number" id="ti_poss_police_prot" placeholder="0"
+            oninput="updateTaxInvoiceGST()">
+        </div>
+        <div class="field">
+          <label>Other Miscellaneous (₹)</label>
+          <input type="number" id="ti_poss_misc" placeholder="0"
+            oninput="updateTaxInvoiceGST()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="ti_gst_card" style="display:none">
+    <div class="card-hdr">🧮 GST &amp; Total</div>
+    <div class="card-body">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <button type="button" id="ti_gst_toggle"
+          style="border:none;border-radius:20px;padding:6px 16px;cursor:pointer;
+                 font-size:13px;font-weight:600;background:var(--surface2);
+                 color:var(--text);transition:background 0.2s,color 0.2s;"
+          onclick="toggleTaxInvoiceGst()">GST: OFF</button>
+        <span id="ti_gst_off_label" style="font-size:13px;color:var(--muted);">
+          GST not applicable
+        </span>
+      </div>
+      <div id="ti_gst_fields" style="display:none">
+        <div class="field-row">
+          <div class="field">
+            <label>SGST %</label>
+            <input type="number" id="ti_sgst_pct" value="9"
+              oninput="updateTaxInvoiceGST()">
+          </div>
+          <div class="field">
+            <label>CGST %</label>
+            <input type="number" id="ti_cgst_pct" value="9"
+              oninput="updateTaxInvoiceGST()">
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px;overflow-x:auto;">
+        <table id="ti_preview_table"
+          style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:#000;color:#fff;">
+              <th style="padding:7px 10px;text-align:left;">Description</th>
+              <th style="padding:7px 10px;text-align:right;white-space:nowrap;">Amount (₹)</th>
+              <th style="padding:7px 10px;text-align:right;white-space:nowrap;">Total (₹)</th>
+            </tr>
+          </thead>
+          <tbody id="ti_preview_body"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;font-size:13px;color:var(--muted);">
+        Note: GST as applicable is payable by the service receiver
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="ti_submit_card" style="display:none">
+    <div class="card-hdr">🚀 Generate Invoice</div>
+    <div class="card-body">
+      <div class="progress-bar"><div class="progress-fill" id="ti_progress"></div></div>
+      <div class="status-msg" id="ti_status_msg"></div>
+      <button class="btn btn-primary" id="ti_submit_btn"
+        onclick="submitTaxInvoice()"
+        style="width:100%;padding:14px;font-size:17px;margin-top:12px">
+        🧾 Generate &amp; Send Invoice
+      </button>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-secondary" type="button"
+      onclick="applyFormMode('ddr'); switchTab(0)">
+      ← Back to Form Selector
+    </button>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════
      OCR BOTTOM SHEET (replaces modal — iOS safe)
 ════════════════════════════════════════════ -->
 <!-- OCR SHEET — fixed container, scrollable body, buttons outside scroll -->
@@ -2040,6 +2330,16 @@ function g(id) {
 
 
 function switchTab(n) {
+  if (n === 'invoice') {
+    document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    var invoicePane = document.getElementById('pane_invoice');
+    if (invoicePane) invoicePane.classList.add('active');
+    currentTab = 'invoice';
+    fetchTaxInvoiceRef();
+    window.scrollTo(0, 0);
+    return;
+  }
   var HIDDEN_BSA_DSA = new Set([3, 6, 7, 8]);
   if ((currentFormMode === 'bsa' || currentFormMode === 'dsa') && HIDDEN_BSA_DSA.has(n)) {
     var dir = (typeof currentTab !== 'undefined' && n < currentTab) ? -1 : 1;
@@ -2076,7 +2376,20 @@ function toggleEduCollateral(val) {
 }
 
 function applyFormMode(mode) {
+  if (mode === 'invoice') {
+    currentFormMode = 'invoice';
+    var tabBar = document.getElementById('tabBar');
+    if (tabBar) tabBar.style.display = 'none';
+    var badge = document.getElementById('form-mode-badge');
+    if (badge) {
+      badge.textContent = 'Mode: TAX INVOICE ✎';
+      badge.style.display = 'inline-block';
+    }
+    return;
+  }
   currentFormMode = mode;
+  var tabBar2 = document.getElementById('tabBar');
+  if (tabBar2) tabBar2.style.display = '';
   var hiddenForBSADSA = [3, 6, 7, 8];
   hiddenForBSADSA.forEach(function(n) {
     var btn = document.getElementById('tab' + n);
@@ -5509,6 +5822,410 @@ document.addEventListener('click', function(e) {
 });
 // ────────────────────────────────────────────────────────────────────────────
 
+// ══════════════════════════════════════════════════════════
+// TAX INVOICE MODE
+// ══════════════════════════════════════════════════════════
+
+const TAX_INVOICE_BANK_CONFIGS = {
+  BOI_MAHIM: {
+    vendorCode: 'RKAS086503',
+    accNo:      '003020110000859',
+    bankName:   'Bank of India, Mahim (W) Br.',
+    ifsc:       'BKID0000030',
+  },
+  BOI_DADAR: {
+    vendorCode: 'RKAS086503',
+    accNo:      '001520100005524',
+    bankName:   'Bank of India, Dadar (W) Br.',
+    ifsc:       'BKID0000015',
+  },
+  SBI: {
+    vendorCode: 'RKAS7408525',
+    accNo:      '32299832860',
+    bankName:   'State Bank of India, Kurla (W)',
+    ifsc:       'SBIN0001886',
+  },
+};
+
+async function fetchTaxInvoiceRef() {
+  var refEl = document.getElementById('ti_invoice_ref');
+  if (!refEl) return;
+  refEl.value = 'Fetching...';
+  try {
+    var res = await fetch(getEndpoint() + '/api/tax-invoice/ref');
+    var data = await res.json();
+    refEl.value = data.ref || 'Error';
+  } catch(e) {
+    refEl.value = 'Could not fetch ref';
+  }
+}
+
+function handleTaxInvoiceBankChange(bankKey) {
+  var boiWrap = document.getElementById('ti_boi_account_wrap');
+  if (boiWrap) boiWrap.style.display = (bankKey === 'BOI_MAHIM') ? '' : 'none';
+  var configKey = bankKey;
+  if (bankKey === 'BOI_MAHIM') {
+    var boiSel = document.getElementById('ti_boi_account');
+    configKey = boiSel ? boiSel.value : 'BOI_MAHIM';
+  }
+  var cfg = TAX_INVOICE_BANK_CONFIGS[configKey];
+  if (!cfg) return;
+  var vcEl = document.getElementById('ti_vendor_code');
+  if (vcEl) vcEl.value = cfg.vendorCode;
+}
+
+function handleTaxInvoiceTypeChange(type) {
+  ['ti_recovery_section', 'ti_parking_section', 'ti_possession_section'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  var map = { recovery: 'ti_recovery_section', parking: 'ti_parking_section', possession: 'ti_possession_section' };
+  if (map[type]) {
+    var el = document.getElementById(map[type]);
+    if (el) el.style.display = '';
+  }
+  var gstCard = document.getElementById('ti_gst_card');
+  var submitCard = document.getElementById('ti_submit_card');
+  if (gstCard) gstCard.style.display = type ? '' : 'none';
+  if (submitCard) submitCard.style.display = type ? '' : 'none';
+  updateTaxInvoiceGST();
+}
+
+function toggleTaxInvoiceGst() {
+  var hiddenEl = document.getElementById('ti_gst_toggle');
+  var fieldsDiv = document.getElementById('ti_gst_fields');
+  var offLabel  = document.getElementById('ti_gst_off_label');
+  var isOn = hiddenEl.dataset.on !== 'true';
+  hiddenEl.dataset.on = isOn ? 'true' : 'false';
+  fieldsDiv.style.display = isOn ? '' : 'none';
+  if (offLabel) offLabel.style.display = isOn ? 'none' : '';
+  hiddenEl.style.background = isOn ? 'var(--accent)' : 'var(--surface2)';
+  hiddenEl.style.color      = isOn ? '#000' : 'var(--text)';
+  hiddenEl.textContent = isOn ? 'GST: ON' : 'GST: OFF';
+  updateTaxInvoiceGST();
+}
+
+function getTaxInvoiceSubtotal() {
+  var type = (document.getElementById('ti_type') || {}).value || '';
+  var subtotal = 0;
+  if (type === 'recovery') {
+    document.querySelectorAll('.ti-recovery-row').forEach(function(row) {
+      var amtEl  = row.querySelector('.ti-rec-amt');
+      var rateEl = row.querySelector('.ti-rec-rate');
+      var amt  = parseFloat((amtEl  && amtEl.value)  || 0) || 0;
+      var rate = parseFloat((rateEl && rateEl.value) || 0) || 0;
+      subtotal += Math.round(amt * rate / 100);
+    });
+  } else if (type === 'parking') {
+    document.querySelectorAll('.ti-parking-row').forEach(function(row) {
+      var fromEl  = row.querySelector('.ti-park-from');
+      var toEl    = row.querySelector('.ti-park-to');
+      var rateEl  = row.querySelector('.ti-park-rate');
+      var from = fromEl && fromEl.value ? new Date(fromEl.value) : null;
+      var to   = toEl   && toEl.value   ? new Date(toEl.value)   : null;
+      var rate = parseFloat((rateEl && rateEl.value) || 0) || 0;
+      if (from && to && rate) {
+        var days = Math.max(1, Math.round((to - from) / (1000*60*60*24)) + 1);
+        subtotal += days * rate;
+      }
+    });
+  } else if (type === 'possession') {
+    ['ti_poss_main','ti_poss_photo','ti_poss_lock',
+     'ti_poss_police_notice','ti_poss_police_prot','ti_poss_misc'].forEach(function(id) {
+      subtotal += parseFloat((document.getElementById(id) || {}).value || 0) || 0;
+    });
+  }
+  return subtotal;
+}
+
+function updateTaxInvoiceGST() {
+  var gstBtn  = document.getElementById('ti_gst_toggle');
+  var isOn    = gstBtn && gstBtn.dataset.on === 'true';
+  var sgstPct = parseFloat((document.getElementById('ti_sgst_pct') || {}).value || 9) || 0;
+  var cgstPct = parseFloat((document.getElementById('ti_cgst_pct') || {}).value || 9) || 0;
+  var subtotal = getTaxInvoiceSubtotal();
+  var sgstAmt  = isOn ? Math.round(subtotal * sgstPct / 100) : 0;
+  var cgstAmt  = isOn ? Math.round(subtotal * cgstPct / 100) : 0;
+  var total    = subtotal + sgstAmt + cgstAmt;
+
+  function fmt(n) { return n > 0 ? '₹ ' + Math.round(n).toLocaleString('en-IN') : '—'; }
+
+  var type = (document.getElementById('ti_type') || {}).value || '';
+  var tbody = document.getElementById('ti_preview_body');
+  if (!tbody) return;
+
+  var rows = '';
+
+  if (type === 'recovery') {
+    document.querySelectorAll('.ti-recovery-row').forEach(function(row) {
+      var nameEl = row.querySelector('.ti-rec-name');
+      var amtEl  = row.querySelector('.ti-rec-amt');
+      var rateEl = row.querySelector('.ti-rec-rate');
+      var name = (nameEl && nameEl.value) || 'Borrower';
+      var amt  = parseFloat((amtEl  && amtEl.value)  || 0) || 0;
+      var rate = parseFloat((rateEl && rateEl.value) || 0) || 0;
+      var comm = Math.round(amt * rate / 100);
+      if (amt && rate) rows += '<tr><td style="padding:6px 10px;font-size:12px">' + name
+        + ' — Recovery ₹' + amt.toLocaleString('en-IN') + ' @ ' + rate + '%</td>'
+        + '<td style="padding:6px 10px;text-align:right;font-size:12px">' + fmt(comm) + '</td>'
+        + '<td></td></tr>';
+    });
+  } else if (type === 'parking') {
+    document.querySelectorAll('.ti-parking-row').forEach(function(row) {
+      var particularsEl = row.querySelector('.ti-park-particulars');
+      var fromEl = row.querySelector('.ti-park-from');
+      var toEl   = row.querySelector('.ti-park-to');
+      var rateEl = row.querySelector('.ti-park-rate');
+      var particulars = (particularsEl && particularsEl.value) || 'Parking & Security';
+      var from = fromEl && fromEl.value ? new Date(fromEl.value) : null;
+      var to   = toEl   && toEl.value   ? new Date(toEl.value)   : null;
+      var rate = parseFloat((rateEl && rateEl.value) || 0) || 0;
+      if (from && to && rate) {
+        var days = Math.max(1, Math.round((to - from) / (1000*60*60*24)) + 1);
+        var amt  = days * rate;
+        rows += '<tr><td style="padding:6px 10px;font-size:12px">' + particulars
+          + ' (' + days + ' days @ ₹' + rate + '/day)</td>'
+          + '<td style="padding:6px 10px;text-align:right;font-size:12px">' + fmt(amt) + '</td>'
+          + '<td></td></tr>';
+      }
+    });
+  } else if (type === 'possession') {
+    var possItems = [
+      ['ti_poss_main',         'Possession Charges'],
+      ['ti_poss_photo',        'Photo / Postage'],
+      ['ti_poss_lock',         'Lock & DCP'],
+      ['ti_poss_police_notice','Police Station Notice Serving'],
+      ['ti_poss_police_prot',  'Police Protection Fee'],
+      ['ti_poss_misc',         'Other Miscellaneous (From Pocket)'],
+    ];
+    possItems.forEach(function(item) {
+      var val = parseFloat((document.getElementById(item[0]) || {}).value || 0) || 0;
+      if (val > 0) rows += '<tr><td style="padding:6px 10px;font-size:12px">' + item[1] + '</td>'
+        + '<td style="padding:6px 10px;text-align:right;font-size:12px">' + fmt(val) + '</td>'
+        + '<td></td></tr>';
+    });
+  }
+
+  if (subtotal > 0) rows += '<tr style="background:var(--surface2)"><td style="padding:6px 10px;font-size:12px;font-weight:700">Sub Total</td>'
+    + '<td></td><td style="padding:6px 10px;text-align:right;font-size:12px;font-weight:700">' + fmt(subtotal) + '</td></tr>';
+  if (isOn && sgstAmt > 0) rows += '<tr><td style="padding:6px 10px;font-size:12px">SGST @ ' + sgstPct + '%</td>'
+    + '<td></td><td style="padding:6px 10px;text-align:right;font-size:12px">' + fmt(sgstAmt) + '</td></tr>';
+  if (isOn && cgstAmt > 0) rows += '<tr><td style="padding:6px 10px;font-size:12px">CGST @ ' + cgstPct + '%</td>'
+    + '<td></td><td style="padding:6px 10px;text-align:right;font-size:12px">' + fmt(cgstAmt) + '</td></tr>';
+  if (total > 0) rows += '<tr style="background:#1a1a0a"><td style="padding:7px 10px;font-size:12px;font-weight:700;color:var(--accent)">Grand Total</td>'
+    + '<td></td><td style="padding:7px 10px;text-align:right;font-size:12px;font-weight:700;color:var(--accent)">' + fmt(total) + '</td></tr>';
+
+  tbody.innerHTML = rows || '<tr><td colspan="3" style="padding:10px;color:var(--muted);text-align:center;font-size:13px">Fill in line items above to see preview</td></tr>';
+}
+
+// ── Recovery rows ──────────────────────────────────────────
+var _recoveryRowCount = 0;
+function addRecoveryRow() {
+  _recoveryRowCount++;
+  var n = _recoveryRowCount;
+  var container = document.getElementById('ti_recovery_rows');
+  var div = document.createElement('div');
+  div.className = 'ti-recovery-row';
+  div.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;';
+  div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    + '<span style="font-size:13px;font-weight:600;color:var(--accent)">Borrower ' + n + '</span>'
+    + '<button type="button" onclick="this.closest(\'.ti-recovery-row\').remove();updateTaxInvoiceGST();" '
+    + 'style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:20px;line-height:1;">\xd7</button>'
+    + '</div>'
+    + '<div class="field-row" style="margin-bottom:8px;">'
+    + '<div class="field"><label>Borrower Name</label>'
+    + '<input type="text" class="ti-rec-name" placeholder="Full name" oninput="updateTaxInvoiceGST()"></div>'
+    + '<div class="field"><label>A/C Number</label>'
+    + '<input type="text" class="ti-rec-acct" placeholder="Account number" style="font-family:\'DM Mono\',monospace"></div>'
+    + '</div>'
+    + '<div class="field-row">'
+    + '<div class="field"><label>Recovery Date</label>'
+    + '<input type="date" class="ti-rec-date" oninput="updateTaxInvoiceGST()"></div>'
+    + '<div class="field"><label>Amount Recovered (₹)</label>'
+    + '<input type="number" class="ti-rec-amt" placeholder="e.g. 39000" oninput="updateTaxInvoiceGST()"></div>'
+    + '<div class="field"><label>Commission Rate %</label>'
+    + '<input type="number" class="ti-rec-rate" placeholder="e.g. 10" oninput="updateTaxInvoiceGST()"></div>'
+    + '</div>';
+  container.appendChild(div);
+}
+
+// ── Parking rows ───────────────────────────────────────────
+var _parkingRowCount = 0;
+function addParkingRow() {
+  _parkingRowCount++;
+  var n = _parkingRowCount;
+  var container = document.getElementById('ti_parking_rows');
+  var div = document.createElement('div');
+  div.className = 'ti-parking-row';
+  div.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;';
+  div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    + '<span style="font-size:13px;font-weight:600;color:var(--accent)">Period ' + n + '</span>'
+    + '<button type="button" onclick="this.closest(\'.ti-parking-row\').remove();updateTaxInvoiceGST();" '
+    + 'style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:20px;line-height:1;">\xd7</button>'
+    + '</div>'
+    + '<div class="field" style="margin-bottom:8px;">'
+    + '<label>Particulars</label>'
+    + '<input type="text" class="ti-park-particulars" '
+    + 'placeholder="e.g. Parking &amp; Security Charges of HGV/LCV" oninput="updateTaxInvoiceGST()"></div>'
+    + '<div class="field-row">'
+    + '<div class="field"><label>Date From</label>'
+    + '<input type="date" class="ti-park-from" oninput="updateTaxInvoiceGST()"></div>'
+    + '<div class="field"><label>Date To</label>'
+    + '<input type="date" class="ti-park-to" oninput="updateTaxInvoiceGST()"></div>'
+    + '<div class="field"><label>Rate / Day (₹)</label>'
+    + '<input type="number" class="ti-park-rate" placeholder="e.g. 90" oninput="updateTaxInvoiceGST()"></div>'
+    + '</div>';
+  container.appendChild(div);
+}
+
+// ── Collect all tax invoice form data ─────────────────────
+function collectTaxInvoiceData() {
+  var g = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  var type = g('ti_type');
+  var bankKey = g('ti_bank');
+  var configKey = bankKey;
+  if (bankKey === 'BOI_MAHIM') {
+    var boiAccSel = document.getElementById('ti_boi_account');
+    configKey = boiAccSel ? boiAccSel.value : 'BOI_MAHIM';
+  }
+  var cfg = TAX_INVOICE_BANK_CONFIGS[configKey] || {};
+  var gstBtn = document.getElementById('ti_gst_toggle');
+  var gstEnabled = gstBtn && gstBtn.dataset.on === 'true';
+  var sgstPct = parseFloat(g('ti_sgst_pct') || '9') || 0;
+  var cgstPct = parseFloat(g('ti_cgst_pct') || '9') || 0;
+  var subtotal = getTaxInvoiceSubtotal();
+  var sgstAmt  = gstEnabled ? Math.round(subtotal * sgstPct / 100) : 0;
+  var cgstAmt  = gstEnabled ? Math.round(subtotal * cgstPct / 100) : 0;
+  var grandTotal = subtotal + sgstAmt + cgstAmt;
+  var addresseeTitle = g('ti_addressee_title');
+  if (addresseeTitle === 'other') addresseeTitle = g('ti_addressee_title_other');
+
+  var lineItems = [];
+  if (type === 'recovery') {
+    document.querySelectorAll('.ti-recovery-row').forEach(function(row) {
+      lineItems.push({
+        borrowerName: (row.querySelector('.ti-rec-name') || {}).value || '',
+        acctNo:       (row.querySelector('.ti-rec-acct') || {}).value || '',
+        recoveryDate: (row.querySelector('.ti-rec-date') || {}).value || '',
+        amtRecovered: parseFloat((row.querySelector('.ti-rec-amt') || {}).value || 0) || 0,
+        rate:         parseFloat((row.querySelector('.ti-rec-rate') || {}).value || 0) || 0,
+      });
+    });
+  } else if (type === 'parking') {
+    document.querySelectorAll('.ti-parking-row').forEach(function(row) {
+      var from = (row.querySelector('.ti-park-from') || {}).value || '';
+      var to   = (row.querySelector('.ti-park-to')   || {}).value || '';
+      var rate = parseFloat((row.querySelector('.ti-park-rate') || {}).value || 0) || 0;
+      var days = (from && to) ? Math.max(1, Math.round((new Date(to) - new Date(from)) / (1000*60*60*24)) + 1) : 0;
+      lineItems.push({
+        particulars: (row.querySelector('.ti-park-particulars') || {}).value || '',
+        dateFrom: from, dateTo: to, totalDays: days,
+        ratePerDay: rate, amount: days * rate,
+      });
+    });
+  } else if (type === 'possession') {
+    var possFields = [
+      ['ti_poss_main',         'Possession Charges'],
+      ['ti_poss_photo',        'Photo / Postage'],
+      ['ti_poss_lock',         'Lock & DCP'],
+      ['ti_poss_police_notice','Local Police Station Notice Serving'],
+      ['ti_poss_police_prot',  'Police Protection Fee'],
+      ['ti_poss_misc',         'Other Miscellaneous Charge From Pocket'],
+    ];
+    possFields.forEach(function(item) {
+      var val = parseFloat((document.getElementById(item[0]) || {}).value || 0) || 0;
+      if (val > 0) lineItems.push({ label: item[1], amount: val });
+    });
+  }
+
+  return {
+    invoiceRef:      g('ti_invoice_ref'),
+    invoiceDate:     g('ti_date'),
+    invoiceType:     type,
+    bankConfigKey:   configKey,
+    bankKey:         bankKey,
+    addresseeTitle:  addresseeTitle,
+    branchAddress:   g('ti_branch_address'),
+    bankGst:         g('ti_bank_gst') || g('ti_poss_bank_gst'),
+    vendorCode:      cfg.vendorCode || '',
+    rkAccNo:         cfg.accNo      || '',
+    rkBankName:      cfg.bankName   || '',
+    rkIfsc:          cfg.ifsc       || '',
+    vehNo:           g('ti_veh_no'),
+    parkBorrower:    g('ti_park_borrower'),
+    parkAcctNo:      g('ti_park_acct_no'),
+    seizureDate:     g('ti_seizure_date'),
+    parkLocation:    g('ti_park_location'),
+    parkContactPerson: g('ti_park_contact_person'),
+    parkPrevBillRef: g('ti_park_prev_bill_ref'),
+    possAcctNo:      g('ti_poss_acct_no'),
+    possBorrower:    g('ti_poss_borrower'),
+    possDate:        g('ti_poss_date'),
+    possPropertyAddr: g('ti_poss_property_addr'),
+    lineItems:    lineItems,
+    gstEnabled:   gstEnabled,
+    sgstPct:      sgstPct,
+    cgstPct:      cgstPct,
+    subtotal:     subtotal,
+    sgstAmt:      sgstAmt,
+    cgstAmt:      cgstAmt,
+    grandTotal:   grandTotal,
+  };
+}
+
+async function submitTaxInvoice() {
+  var btn = document.getElementById('ti_submit_btn');
+  var statusEl = document.getElementById('ti_status_msg');
+  var progressEl = document.getElementById('ti_progress');
+
+  function setStatus(msg, type) {
+    if (!statusEl) return;
+    statusEl.className = 'status-msg ' + (type || '');
+    statusEl.textContent = msg;
+    statusEl.style.display = 'block';
+  }
+  function setProg(pct) { if (progressEl) progressEl.style.width = pct + '%'; }
+
+  if (btn) btn.disabled = true;
+  setProg(10);
+  setStatus('Preparing invoice...', 'info');
+
+  try {
+    var data = collectTaxInvoiceData();
+
+    if (!data.invoiceType)   throw new Error('Please select an invoice type.');
+    if (!data.bankKey)       throw new Error('Please select a client bank.');
+    if (!data.branchAddress) throw new Error('Please enter the bank branch address.');
+    if (data.grandTotal <= 0) throw new Error('Please fill in line items — total is zero.');
+
+    setProg(30);
+    setStatus('Generating invoice...', 'info');
+
+    var res = await fetch(getEndpoint() + '/api/tax-invoice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    setProg(80);
+    var result = await res.json();
+    if (result.error) throw new Error(result.error);
+
+    setProg(100);
+    setStatus('✅ Invoice generated! Ref: ' + (result.invoiceRef || data.invoiceRef)
+      + (result.driveUrl ? ' — Drive: ' + result.driveUrl : ''), 'success');
+    showToast('Invoice generated!', 'success');
+
+  } catch(e) {
+    setStatus('❌ ' + e.message, 'error');
+    showToast('Invoice failed', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 window.addEventListener('DOMContentLoaded', () => {
   // Show identity modal if exec not yet identified
   if (!localStorage.getItem('rk_office_exec')) {
@@ -5539,6 +6256,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     vdt.value = now.toISOString().slice(0,16);
+  }
+  // Set default invoice date to today
+  var tiDate = document.getElementById('ti_date');
+  if (tiDate && !tiDate.value) {
+    var today = new Date();
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    tiDate.value = today.toISOString().slice(0, 10);
   }
   // Attach autosave listeners
   document.addEventListener('change', scheduleAutosave);
