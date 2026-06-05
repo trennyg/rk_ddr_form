@@ -1411,6 +1411,26 @@
   </div>
 
   <div class="card">
+    <div class="card-hdr">🤝 Person Met at Property</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Person Met</label>
+          <input type="text" id="f_prop_person_met" placeholder="Name of person met">
+        </div>
+        <div class="field">
+          <label>Person Met Contact</label>
+          <input type="tel" id="f_prop_person_met_contact" placeholder="10-digit mobile">
+        </div>
+      </div>
+      <div class="field">
+        <label>Person Met Relation</label>
+        <input type="text" id="f_prop_person_met_relation" placeholder="e.g. Owner, Caretaker, Tenant, Neighbour">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-hdr">📸 Property / Asset Visit Photos</div>
     <div class="card-body">
       <div class="upload-zone" id="uz_property_photos">
@@ -4400,7 +4420,7 @@ function buildRow() {
   saveItrFieldsToStore();
   console.log('buildRow itrStore:', JSON.stringify(itrStore));
 
-  const row = new Array(390).fill('');
+  const row = new Array(393).fill('');
   const now = new Date().toISOString();
 
   row[0] = now;
@@ -4655,6 +4675,11 @@ function buildRow() {
   row[367] = g('f_app_person_met');
   row[368] = g('f_app_person_met_contact');
   row[369] = g('f_app_person_met_desig');
+
+  // Property person met (cols 390-392)
+  row[390] = g('f_prop_person_met');
+  row[391] = g('f_prop_person_met_contact');
+  row[392] = g('f_prop_person_met_relation');
 
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
