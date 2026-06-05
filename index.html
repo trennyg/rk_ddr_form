@@ -1551,6 +1551,25 @@
           <label>Collateral Property Address (if applicable)</label>
           <textarea id="f_edu_collateral_addr" rows="2" placeholder="Property address — only if a property is pledged as collateral (typically loans above ₹10 lakh)"></textarea>
         </div>
+        <div class="card">
+          <div class="card-hdr">🤝 Person Met at Collateral Property</div>
+          <div class="card-body">
+            <div class="field-row">
+              <div class="field">
+                <label>Person Met</label>
+                <input type="text" id="f_edu_collateral_person_met" placeholder="Name of person met">
+              </div>
+              <div class="field">
+                <label>Person Met Contact</label>
+                <input type="tel" id="f_edu_collateral_person_met_contact" placeholder="10-digit mobile">
+              </div>
+            </div>
+            <div class="field">
+              <label>Person Met Relation</label>
+              <input type="text" id="f_edu_collateral_person_met_relation" placeholder="e.g. Owner, Caretaker, Tenant, Neighbour">
+            </div>
+          </div>
+        </div>
         <div class="field">
           <label>Collateral Property Visit Photos</label>
           <div class="upload-zone" id="uz_edu_collateral_photos">
@@ -4420,7 +4439,7 @@ function buildRow() {
   saveItrFieldsToStore();
   console.log('buildRow itrStore:', JSON.stringify(itrStore));
 
-  const row = new Array(393).fill('');
+  const row = new Array(396).fill('');
   const now = new Date().toISOString();
 
   row[0] = now;
@@ -4680,6 +4699,11 @@ function buildRow() {
   row[390] = g('f_prop_person_met');
   row[391] = g('f_prop_person_met_contact');
   row[392] = g('f_prop_person_met_relation');
+
+  // Education collateral person met (cols 393-395)
+  row[393] = g('f_edu_collateral_person_met');
+  row[394] = g('f_edu_collateral_person_met_contact');
+  row[395] = g('f_edu_collateral_person_met_relation');
 
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
