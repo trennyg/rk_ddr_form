@@ -6179,11 +6179,11 @@ function renderTaxInvoicePreview() {
 
   var g = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
 
-  var type         = g('ti_type');
-  var invRef       = g('ti_invoice_ref') || '—';
-  var invDate      = g('ti_date') || '—';
-  var bankKey      = g('ti_bank');
-  var configKey    = bankKey;
+  var type           = g('ti_type');
+  var invRef         = g('ti_invoice_ref') || '—';
+  var invDate        = g('ti_date') || '';
+  var bankKey        = g('ti_bank');
+  var configKey      = bankKey;
   if (bankKey === 'BOI_MAHIM') {
     var boiSel = document.getElementById('ti_boi_account');
     configKey = boiSel ? boiSel.value : 'BOI_MAHIM';
@@ -6194,51 +6194,76 @@ function renderTaxInvoicePreview() {
   var branchAddr   = g('ti_branch_address');
   var bankGst      = g('ti_bank_gst') || g('ti_poss_bank_gst') || '';
 
-  var gstBtn = document.getElementById('ti_gst_toggle');
-  var gstOn  = gstBtn && gstBtn.dataset.on === 'true';
+  var gstBtn  = document.getElementById('ti_gst_toggle');
+  var gstOn   = gstBtn && gstBtn.dataset.on === 'true';
   var sgstPct = parseFloat(g('ti_sgst_pct') || '9') || 0;
   var cgstPct = parseFloat(g('ti_cgst_pct') || '9') || 0;
-  var subtotal = getTaxInvoiceSubtotal();
-  var sgstAmt  = gstOn ? Math.round(subtotal * sgstPct / 100) : 0;
-  var cgstAmt  = gstOn ? Math.round(subtotal * cgstPct / 100) : 0;
+  var subtotal   = getTaxInvoiceSubtotal();
+  var sgstAmt    = gstOn ? Math.round(subtotal * sgstPct / 100) : 0;
+  var cgstAmt    = gstOn ? Math.round(subtotal * cgstPct / 100) : 0;
   var grandTotal = subtotal + sgstAmt + cgstAmt;
 
-  function fmt(n) { return n > 0 ? '₹ ' + Math.round(n).toLocaleString('en-IN') : '—'; }
-
-  function fmtDateStr(s) {
+  var B = '1px solid #000';
+  function td(content, style) { return '<td style="border:' + B + ';padding:4px 6px;' + (style||'') + '">' + (content||'&nbsp;') + '</td>'; }
+  function tdspan(content, colspan, style) { return '<td colspan="' + colspan + '" style="border:' + B + ';padding:4px 6px;' + (style||'') + '">' + (content||'&nbsp;') + '</td>'; }
+  function fmtI(n) { return n > 0 ? '₹ ' + Math.round(n).toLocaleString('en-IN') + '/-' : '-'; }
+  function fmtDateS(s) {
     if (!s) return '';
-    try {
-      var d = new Date(s);
-      return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    } catch(e) { return s; }
+    try { var d = new Date(s); return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+    catch(e) { return s; }
   }
 
-  if (!type) {
-    ppBody.innerHTML = '<div class="pp-inv-empty">Fill in the form on the right to see a live invoice preview here.</div>';
-    return;
-  }
+  var sacCode = type === 'parking' ? '997111' : '998592';
+  var inWords = grandTotal > 0 ? 'Rupees ' + numberToWordsJS(Math.round(grandTotal)) + ' Only' : '';
 
-  // ── Borrower/acct line ──
-  var acctLine = '';
+  // ── Addressee lines ──
+  var addresseeLines = [];
+  if (addresseeTitle) addresseeLines.push(addresseeTitle);
+  (branchAddr || '').split('\n').forEach(function(l) { if (l.trim()) addresseeLines.push(l.trim()); });
+  var addresseeHtml = addresseeLines.map(function(l) { return '<div>' + l + '</div>'; }).join('');
+
+  // ── Common header ──
+  var header = '<div style="text-align:center;font-weight:700;font-size:15px;color:#cc0000;margin-bottom:3px;">R.K. Associates</div>'
+    + '<div style="text-align:center;font-size:11px;color:#333;margin-bottom:2px;">1B/96, Phoenix Paragon Plaza, Next to Phoenix Mall, Opp. HDFC Bank, Kamani, L.B.S Road, Kurla West, Mumbai - 400070</div>'
+    + '<div style="text-align:center;font-size:11px;color:#cc0000;margin-bottom:12px;">rkenforcement@gmail.com</div>';
+
+  // ── Meta block (addressee left, inv no right) ──
+  var metaBlock = '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><tr>'
+    + '<td style="vertical-align:top;font-size:12px;line-height:1.7;width:55%;">'
+    + (addresseeHtml || '<span style="color:#aaa">To, (fill address on right)</span>')
+    + '</td>'
+    + '<td style="vertical-align:top;text-align:right;font-size:12px;line-height:1.7;width:45%;">'
+    + '<div><strong>Inv. No.:</strong> ' + invRef + '</div>'
+    + '<div><strong>Date :</strong> ' + fmtDateS(invDate) + '</div>'
+    + (vendorCode ? '<div><strong>Vendor Code : ' + vendorCode + '</strong></div>' : '')
+    + '</td>'
+    + '</tr></table>';
+
+  // ── TAX INVOICE heading ──
+  var invHeading = '<div style="text-align:center;font-weight:700;font-size:14px;border:1px solid #000;padding:5px;margin-bottom:8px;letter-spacing:0.06em;">TAX INVOICE</div>';
+
+  var bodyHtml = '';
+
   if (type === 'recovery') {
-    var recNames = [];
+    var recNames = [], recAccts = [];
     document.querySelectorAll('.ti-recovery-row').forEach(function(row) {
       var n = (row.querySelector('.ti-rec-name') || {}).value || '';
+      var a = (row.querySelector('.ti-rec-acct') || {}).value || '';
       if (n) recNames.push(n);
+      if (a) recAccts.push(a);
     });
-    acctLine = recNames.join(' / ') || '—';
-  } else if (type === 'parking') {
-    var pb = g('ti_park_borrower');
-    var pa = g('ti_park_acct_no');
-    acctLine = [pb, pa ? 'A/C: ' + pa : ''].filter(Boolean).join('   ') || '—';
-  } else if (type === 'possession') {
-    acctLine = g('ti_poss_borrower') || '—';
-  }
+    var borrowerName = recNames.join(' & ') || '—';
 
-  // ── Line item rows HTML ──
-  var lineRowsHtml = '';
+    bodyHtml += '<div style="border:' + B + ';padding:6px 8px;margin-bottom:0;font-size:13px;">'
+      + 'Name of A/c.&nbsp;&nbsp;<strong style="color:#0070C0;">' + borrowerName + '</strong></div>';
 
-  if (type === 'recovery') {
+    bodyHtml += '<table style="width:100%;border-collapse:collapse;margin-bottom:0;">';
+    bodyHtml += '<thead><tr>'
+      + '<th style="border:' + B + ';padding:5px 8px;background:#fff;font-size:12px;text-align:center;width:60%;">Description</th>'
+      + '<th style="border:' + B + ';padding:5px 8px;background:#fff;font-size:12px;text-align:center;width:20%;">Comm. @</th>'
+      + '<th style="border:' + B + ';padding:5px 8px;background:#fff;font-size:12px;text-align:center;width:20%;">Total Amount</th>'
+      + '</tr></thead><tbody>';
+
     document.querySelectorAll('.ti-recovery-row').forEach(function(row) {
       var name = (row.querySelector('.ti-rec-name') || {}).value || '';
       var acct = (row.querySelector('.ti-rec-acct') || {}).value || '';
@@ -6246,138 +6271,212 @@ function renderTaxInvoicePreview() {
       var amt  = parseFloat((row.querySelector('.ti-rec-amt') || {}).value || 0) || 0;
       var rate = parseFloat((row.querySelector('.ti-rec-rate') || {}).value || 0) || 0;
       var comm = amt && rate ? Math.round(amt * rate / 100) : 0;
-      if (!name && !amt) return;
-      var desc = 'Being our recovery charges of ₹' + (amt ? amt.toLocaleString('en-IN') : '—')
-        + ' recovered against above Loan Case'
-        + (acct ? ' (A/C: ' + acct + ')' : '')
-        + (dt ? ' on ' + fmtDateStr(dt) : '');
-      lineRowsHtml += '<tr><td>' + desc + '</td><td class="td-center">' + (rate ? rate + '%' : '—') + '</td><td class="td-right">' + fmt(comm) + '</td></tr>';
+      var desc = 'Being our  recovery charges of Rs. ' + (amt ? amt.toLocaleString('en-IN') : '—')
+        + ' recovered  against  above  ' + (g('ti_branch_address').split('\n')[0] || '') + ' Loan Case given to us';
+      bodyHtml += '<tr>'
+        + td(desc, 'font-size:12px;')
+        + td(rate ? rate + ' %' : '', 'text-align:center;font-size:12px;')
+        + td(comm ? comm.toLocaleString('en-IN') + '/-' : '', 'text-align:right;font-size:12px;')
+        + '</tr>';
     });
+
     if (bankGst) {
-      lineRowsHtml += '<tr><td colspan="3" style="background:#f2f2f2;font-weight:700;font-size:11px;">BANK GST NO. ' + bankGst + '</td></tr>';
+      bodyHtml += '<tr>' + tdspan('<strong>' + (bankKey === 'SBI' ? 'SBI' : 'BOI') + ' GST NO. ' + bankGst + '</strong>', 1, 'font-size:11px;')
+        + td('<strong>Sub Total</strong>', 'text-align:right;font-size:12px;')
+        + td(subtotal ? subtotal.toLocaleString('en-IN') + '/-' : '', 'text-align:right;font-size:12px;')
+        + '</tr>';
+    } else {
+      bodyHtml += '<tr>' + td('', 'font-size:11px;')
+        + td('<strong>Sub Total</strong>', 'text-align:right;font-size:12px;')
+        + td(subtotal ? subtotal.toLocaleString('en-IN') + '/-' : '', 'text-align:right;font-size:12px;')
+        + '</tr>';
     }
-  } else if (type === 'parking') {
-    var vehNo = g('ti_veh_no');
-    if (vehNo) lineRowsHtml += '<tr><td colspan="3" style="font-weight:700;">Vehicle No: ' + vehNo + '</td></tr>';
+
+    bodyHtml += '<tr>' + td('', '') + td('S GST @ ' + sgstPct + '%', 'text-align:right;font-size:12px;') + td(sgstAmt ? sgstAmt.toLocaleString('en-IN') + '/-' : '-', 'text-align:right;font-size:12px;') + '</tr>';
+    bodyHtml += '<tr>' + td('<em>(Total Invoice value in figure )</em>', 'font-size:11px;') + td('C GST @ ' + cgstPct + '%', 'text-align:right;font-size:12px;') + td(cgstAmt ? cgstAmt.toLocaleString('en-IN') + '/-' : '-', 'text-align:right;font-size:12px;') + '</tr>';
+    bodyHtml += '<tr>' + tdspan('Total Amount in words : ' + inWords, 1, 'font-size:11px;') + td('<strong>Grand Total</strong>', 'text-align:right;font-size:12px;font-weight:700;') + td(grandTotal ? '<strong>' + grandTotal.toLocaleString('en-IN') + '/-</strong>' : '', 'text-align:right;font-size:12px;') + '</tr>';
+
+    bodyHtml += '</tbody></table>';
+    bodyHtml += '<div style="background:#000;color:#fff;text-align:center;font-size:11px;font-weight:700;padding:4px;margin-top:0;letter-spacing:0.04em;">IMPORTANT PLEASE INDICATE OUR BILL REF. NO.&amp; CUSTOMER NAME WHILE MAKING PAYMENTS</div>';
+  }
+
+  else if (type === 'parking') {
+    var parkBorrower = g('ti_park_borrower');
+    var parkAcct     = g('ti_park_acct_no');
+    var vehNo        = g('ti_veh_no');
+    var seizureDate  = g('ti_seizure_date');
+    var parkLoc      = g('ti_park_location');
+    var parkContact  = g('ti_park_contact_person');
+
+    bodyHtml += '<table style="width:100%;border-collapse:collapse;margin-bottom:0;"><tr>'
+      + '<td style="border:' + B + ';padding:6px 8px;width:55%;font-size:12px;vertical-align:top;">'
+      + 'Name of A/c&nbsp;&nbsp;<strong style="color:#0070C0;">' + (parkBorrower || '—') + '</strong></td>'
+      + '<td style="border:' + B + ';padding:6px 8px;width:45%;font-size:12px;vertical-align:top;line-height:1.8;">'
+      + '<div>Acct. No.&nbsp;&nbsp;' + (parkAcct || '') + '</div>'
+      + '<div>Veh. No.&nbsp;&nbsp;<strong>' + (vehNo || '') + '</strong></div>'
+      + '</td></tr></table>';
+
+    bodyHtml += '<table style="width:100%;border-collapse:collapse;margin-bottom:0;">';
+    bodyHtml += '<thead><tr>'
+      + '<th style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:center;width:28%;">Particulars</th>'
+      + '<th style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:center;width:13%;">Date From</th>'
+      + '<th style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:center;width:13%;">Date Up To</th>'
+      + '<th style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:center;width:10%;">Total Days</th>'
+      + '<th style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:center;width:10%;">Rate/<br>Day</th>'
+      + '<th style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:center;width:14%;">Amount</th>'
+      + '</tr></thead><tbody>';
+
     document.querySelectorAll('.ti-parking-row').forEach(function(row) {
-      var part = (row.querySelector('.ti-park-particulars') || {}).value || 'Parking & Security Charges';
+      var part = (row.querySelector('.ti-park-particulars') || {}).value || 'Parking & Security Charges of HGV/LCV';
       var from = (row.querySelector('.ti-park-from') || {}).value || '';
       var to   = (row.querySelector('.ti-park-to')   || {}).value || '';
       var rate = parseFloat((row.querySelector('.ti-park-rate') || {}).value || 0) || 0;
       var days = (from && to) ? Math.max(1, Math.round((new Date(to) - new Date(from)) / (1000*60*60*24)) + 1) : 0;
       var amt  = days && rate ? days * rate : 0;
-      var daysRate = days && rate ? days + ' days @ ₹' + rate + '/day' : '—';
-      lineRowsHtml += '<tr><td>' + part + (from ? ' ' + fmtDateStr(from) : '') + (to ? ' to ' + fmtDateStr(to) : '') + '</td><td class="td-center">' + daysRate + '</td><td class="td-right">' + fmt(amt) + '</td></tr>';
+      bodyHtml += '<tr>'
+        + td(part, 'font-size:11px;')
+        + td(fmtDateS(from), 'text-align:center;font-size:11px;')
+        + td(fmtDateS(to),   'text-align:center;font-size:11px;')
+        + td(days || '', 'text-align:center;font-size:11px;')
+        + td(rate ? rate + '/-' : '', 'text-align:center;font-size:11px;')
+        + td(amt  ? amt.toLocaleString('en-IN') + '/-' : '', 'text-align:right;font-size:11px;')
+        + '</tr>';
     });
-    var parkLoc = g('ti_park_location');
-    var parkContact = g('ti_park_contact_person');
-    var seizureDt = g('ti_seizure_date');
-    if (parkLoc || parkContact) {
-      lineRowsHtml += '<tr><td colspan="3" style="font-size:11px;">'
-        + (parkLoc ? '<strong>PARKED AT:</strong> ' + parkLoc + '<br>' : '')
-        + (parkContact ? 'Contact: ' + parkContact : '')
-        + (seizureDt ? ' | Seizure: ' + fmtDateStr(seizureDt) : '')
-        + '</td></tr>';
+
+    if (parkLoc) {
+      bodyHtml += '<tr>'
+        + '<td style="border:' + B + ';padding:4px 5px;font-size:11px;font-weight:700;">PARKED AT</td>'
+        + '<td colspan="3" style="border:' + B + ';padding:4px 5px;font-size:11px;">' + parkLoc + '</td>'
+        + '<td style="border:' + B + ';padding:4px 5px;font-size:11px;font-weight:700;text-align:center;">SEIZER DT</td>'
+        + '<td style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:center;">' + fmtDateS(seizureDate) + '</td>'
+        + '</tr>';
     }
-    lineRowsHtml += '<tr><td style="font-size:11px;line-height:1.6;">'
-      + 'Our GSTIN: 27AMCPK9556H2ZO<br>Our PAN: AMCPK9556H'
-      + (bankGst ? '<br>Bank GSTIN: ' + bankGst : '')
-      + '<br>SAC: 997111</td>'
-      + '<td class="td-right" style="font-weight:700;">Sub Total</td>'
-      + '<td class="td-right" style="font-weight:700;">' + fmt(subtotal) + '</td></tr>';
-  } else if (type === 'possession') {
-    var possDate = fmtDateStr(g('ti_poss_date'));
-    var possAddr = g('ti_poss_property_addr');
-    var desc = 'Being our charges for assisting the authorised officer in taking physical possession of the secured property'
-      + (possDate ? ' on ' + possDate : '')
-      + (possAddr ? ', as per bank\'s schedule at ' + possAddr : '') + '.';
-    lineRowsHtml += '<tr><td colspan="3" style="font-weight:700;">' + desc + '</td></tr>';
+
+    if (parkContact) {
+      bodyHtml += '<tr>'
+        + '<td style="border:' + B + ';padding:4px 5px;font-size:11px;font-weight:700;">Contact Person</td>'
+        + '<td colspan="3" style="border:' + B + ';padding:4px 5px;font-size:11px;">' + parkContact + '</td>'
+        + '<td colspan="2" style="border:' + B + ';padding:4px 5px;font-size:11px;"></td>'
+        + '</tr>';
+    }
+
+    bodyHtml += '<tr>'
+      + '<td colspan="3" style="border:' + B + ';padding:4px 5px;font-size:11px;line-height:1.7;">'
+      + 'Our GSTIN. No.&nbsp;&nbsp;27AMCPK9556H2ZO<br>'
+      + 'Our PAN No.&nbsp;&nbsp;&nbsp;&nbsp;AMCPK9556H<br>'
+      + (bankGst ? 'BANK GSTIN NO.&nbsp;&nbsp;' + bankGst + '<br>' : '')
+      + 'SAC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;997111'
+      + '</td>'
+      + '<td colspan="2" style="border:' + B + ';padding:4px 5px;font-size:11px;font-weight:700;text-align:right;">Sub Total</td>'
+      + '<td style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:right;font-weight:700;">' + (subtotal ? subtotal.toLocaleString('en-IN') + '/-' : '-') + '</td>'
+      + '</tr>';
+
+    bodyHtml += '<tr>'
+      + '<td colspan="3" style="border:' + B + ';padding:4px 5px;font-size:11px;"></td>'
+      + '<td colspan="2" style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:right;">SGST @ ' + sgstPct + '%</td>'
+      + '<td style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:right;">' + (sgstAmt ? sgstAmt.toLocaleString('en-IN') + '/-' : '-') + '</td>'
+      + '</tr>';
+
+    bodyHtml += '<tr>'
+      + '<td colspan="3" style="border:' + B + ';padding:4px 5px;font-size:11px;"></td>'
+      + '<td colspan="2" style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:right;">CGST @ ' + cgstPct + '%</td>'
+      + '<td style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:right;">' + (cgstAmt ? cgstAmt.toLocaleString('en-IN') + '/-' : '-') + '</td>'
+      + '</tr>';
+
+    bodyHtml += '<tr>'
+      + '<td colspan="3" style="border:' + B + ';padding:4px 5px;font-size:11px;font-weight:700;">Total in Words : &nbsp;' + inWords + '</td>'
+      + '<td colspan="2" style="border:' + B + ';padding:4px 5px;font-size:11px;font-weight:700;text-align:right;">Gr. Total</td>'
+      + '<td style="border:' + B + ';padding:4px 5px;font-size:11px;text-align:right;font-weight:700;">' + (grandTotal ? grandTotal.toLocaleString('en-IN') + '/-' : '-') + '</td>'
+      + '</tr>';
+
+    bodyHtml += '<tr>' + tdspan('IMPORTANT PLEASE INDICATE OUR BILL REF. NO.&amp; CUSTOMER NAME WHILE MAKING PAYMENTS', 6, 'text-align:center;font-weight:700;font-size:11px;') + '</tr>';
+    bodyHtml += '</tbody></table>';
+
+    if (cfg.accNo) {
+      bodyHtml += '<div style="font-size:11px;line-height:1.7;margin:10px 0;border:1px solid #000;padding:6px 8px;">'
+        + 'We request you to kindly release above charges by the way of Cheque / Pay order or transfer the amount in our name '
+        + '<strong>M/s. R. K. Associates</strong>, the details are <strong>C/A. No. ' + cfg.accNo + ', ' + (cfg.bankName || '') + '</strong>, '
+        + '<strong>IFSC No. ' + (cfg.ifsc || '') + '</strong>. Please issue the payment at earliest.'
+        + '</div>';
+    }
+  }
+
+  else if (type === 'possession') {
+    var possAcct     = g('ti_poss_acct_no');
+    var possBorrower = g('ti_poss_borrower');
+    var possDate     = g('ti_poss_date');
+    var possAddr     = g('ti_poss_property_addr');
+    var possBankGst  = g('ti_poss_bank_gst') || bankGst;
+
+    bodyHtml += '<div style="border:' + B + ';padding:5px 8px;margin-bottom:0;font-size:12px;">Acct. No : &nbsp;<strong>' + (possAcct || '') + '</strong></div>';
+    bodyHtml += '<div style="border:' + B + ';border-top:none;padding:5px 8px;margin-bottom:0;font-size:13px;">Name of A/c.&nbsp;&nbsp;<strong style="color:#0070C0;">' + (possBorrower || '—') + '</strong></div>';
+
+    bodyHtml += '<table style="width:100%;border-collapse:collapse;margin-bottom:0;">';
+    bodyHtml += '<thead><tr>'
+      + '<th style="border:' + B + ';padding:5px 8px;font-size:12px;text-align:center;width:60%;">Description</th>'
+      + '<th style="border:' + B + ';padding:5px 8px;font-size:12px;text-align:center;width:20%;">Amount</th>'
+      + '<th style="border:' + B + ';padding:5px 8px;font-size:12px;text-align:center;width:20%;">Total Amount</th>'
+      + '</tr></thead><tbody>';
+
+    var possDesc = 'Being our charges for assisting the authorised officer in taking physical possession of the secured property'
+      + (possDate ? ' on ' + fmtDateS(possDate) : '')
+      + (possAddr ? ', as per bank\'s schedule At ' + possAddr : '');
+    bodyHtml += '<tr>' + tdspan(possDesc, 3, 'font-size:12px;font-weight:700;') + '</tr>';
+
     var possItems = [
-      ['ti_poss_main',         'Possession Charges'],
-      ['ti_poss_photo',        'Photo / Postage'],
-      ['ti_poss_lock',         'Lock & DCP'],
-      ['ti_poss_police_notice','Local Police Station Notice Serving'],
+      ['ti_poss_photo',        'Photo/Postage/Lock &amp; Dcp/Local Police Station Notice Serving'],
+      ['ti_poss_lock',         'Lock &amp; DCP'],
+      ['ti_poss_police_notice','Police Station Notice Serving'],
       ['ti_poss_police_prot',  'Police Protection Fee'],
-      ['ti_poss_misc',         'Other Miscellaneous Charge From Pocket'],
+      ['ti_poss_misc',         'Other Misclenious Charge From Pocket'],
     ];
+    var mainVal = parseFloat((document.getElementById('ti_poss_main') || {}).value || 0) || 0;
+    if (mainVal) {
+      bodyHtml += '<tr>' + td('', 'font-size:12px;') + td(mainVal.toLocaleString('en-IN') + '/-', 'text-align:right;font-size:12px;') + td('', '') + '</tr>';
+    }
     possItems.forEach(function(item) {
       var val = parseFloat((document.getElementById(item[0]) || {}).value || 0) || 0;
-      if (val > 0) lineRowsHtml += '<tr><td>' + item[1] + '</td><td></td><td class="td-right">' + fmt(val) + '</td></tr>';
+      if (val > 0) {
+        bodyHtml += '<tr>' + td(item[1], 'font-size:11px;') + td(val.toLocaleString('en-IN') + '/-', 'text-align:right;font-size:12px;') + td('', '') + '</tr>';
+      }
     });
-    if (bankGst) {
-      lineRowsHtml += '<tr><td colspan="3" style="background:#f2f2f2;font-weight:700;font-size:11px;">GST NO.: ' + bankGst + '</td></tr>';
+
+    if (possBankGst) {
+      bodyHtml += '<tr>' + tdspan('<strong>GST NO. : ' + possBankGst + '</strong>', 3, 'font-size:11px;') + '</tr>';
     }
+
+    bodyHtml += '<tr>'
+      + tdspan('Total Amount in words : ' + inWords, 1, 'font-size:11px;')
+      + td('<strong>Grand Total</strong>', 'text-align:right;font-size:12px;font-weight:700;')
+      + td('<strong>' + (grandTotal ? grandTotal.toLocaleString('en-IN') + '/-' : '-') + '</strong>', 'text-align:right;font-size:12px;')
+      + '</tr>';
+
+    bodyHtml += '<tr>' + tdspan('IMPORTANT PLEASE INDICATE OUR BILL REF. NO.&amp; CUSTOMER NAME WHILE MAKING PAYMENTS', 3, 'text-align:center;font-weight:700;font-size:11px;') + '</tr>';
+    bodyHtml += '</tbody></table>';
   }
 
-  if (gstOn && sgstAmt > 0) {
-    lineRowsHtml += '<tr><td>SGST @ ' + sgstPct + '%</td><td class="td-right">' + fmt(sgstAmt) + '</td><td></td></tr>';
-  }
-  if (gstOn && cgstAmt > 0) {
-    lineRowsHtml += '<tr><td>CGST @ ' + cgstPct + '%</td><td class="td-right">' + fmt(cgstAmt) + '</td><td></td></tr>';
-  }
-
-  var sacCode = type === 'parking' ? '997111' : '998592';
-  var inWords = grandTotal > 0 ? numberToWordsJS(Math.round(grandTotal)) + ' Only' : '';
-
-  lineRowsHtml += '<tr class="tr-total"><td>Grand Total</td><td></td><td class="td-right">' + fmt(grandTotal) + '</td></tr>';
-  if (inWords) lineRowsHtml += '<tr class="tr-words"><td colspan="3">Total Amount in Words: Rupees ' + inWords + '</td></tr>';
-
-  // ── Addressee lines ──
-  var addresseeLines = [addresseeTitle, branchAddr].filter(Boolean).join('\n').split('\n').filter(Boolean);
-  var addresseeHtml = addresseeLines.map(function(l) { return '<div>' + l + '</div>'; }).join('');
-
-  // ── Payment instruction ──
-  var paymentText = cfg.accNo
-    ? 'We request you to kindly release above charges by Cheque / Pay order or transfer to M/s. R. K. Associates — C/A No. ' + cfg.accNo + ', ' + (cfg.bankName || '') + ', IFSC: ' + (cfg.ifsc || '') + '.'
-    : '';
-
-  // ── GST block lines ──
   var gstBlockLines = [
-    'GST NO      : 27AMCPK9556H2ZO  RAMESH KURHADE (RKASSOCIATES)',
-    'SAC/HSN CODE: ' + sacCode,
-    'PAN NO      : AMCPK9556H',
-    cfg.accNo    ? 'A/C NO.     : ' + cfg.accNo    : '',
-    cfg.bankName ? 'BANK        : ' + cfg.bankName : '',
-    cfg.ifsc     ? 'IFSC        : ' + cfg.ifsc     : '',
+    'GST NO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: 27AMCPK9556H2ZO RAMESH KURHADE (RKASSOCIATES)',
+    'SAC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + sacCode,
+    'PAN NO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: AMCPK9556H',
+    cfg.accNo    ? 'A/C NO.&nbsp;&nbsp;&nbsp;&nbsp;: ' + cfg.accNo    : '',
+    cfg.bankName ? 'BANK&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + cfg.bankName : '',
+    cfg.ifsc     ? 'IFSC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + cfg.ifsc     : '',
   ].filter(Boolean);
 
-  var html = '<div class="pp-invoice-wrap">'
-    + '<div class="pp-inv-org">R.K. Associates</div>'
-    + '<div class="pp-inv-addr">1B/96, Phoenix Paragon Plaza, Next to Phoenix Mall, Opp. HDFC Bank, Kamani, L.B.S Road, Kurla West, Mumbai - 400070</div>'
-    + '<div class="pp-inv-email">rkenforcement@gmail.com</div>'
-    + '<div class="pp-inv-meta">'
-    + '<div class="pp-inv-addressee">' + (addresseeHtml || '<div style="color:#999">To, (fill address)</div>') + '</div>'
-    + '<div class="pp-inv-ref-block">'
-    + '<div><strong>Inv. No.:</strong> ' + invRef + '</div>'
-    + '<div><strong>Date:</strong> ' + fmtDateStr(invDate) + '</div>'
-    + (vendorCode ? '<div><strong>Vendor Code:</strong> ' + vendorCode + '</div>' : '')
-    + '</div></div>'
-    + '<div class="pp-inv-heading">TAX INVOICE</div>'
-    + '<table class="pp-inv-table" style="margin-bottom:0;"><tbody><tr>'
-    + '<td style="width:60%;border:1px solid #000;padding:5px 8px;">'
-    + '<span style="font-size:11px;color:#555;">Name of A/c.</span>&nbsp;&nbsp;'
-    + '<span style="color:#0070C0;font-weight:700;">' + acctLine + '</span>'
-    + '</td>'
-    + '<td style="width:40%;border:1px solid #000;padding:5px 8px;font-size:11px;">'
-    + '<span style="color:#555;">Acct. No :&nbsp;</span>'
-    + (type === 'parking' ? g('ti_park_acct_no') : type === 'possession' ? g('ti_poss_acct_no') : '')
-    + '</td>'
-    + '</tr></tbody></table>'
-    + '<table class="pp-inv-table">'
-    + '<thead><tr><th style="width:60%">Description</th><th style="width:20%">Comm. @</th><th style="width:20%">Total (₹)</th></tr></thead>'
-    + '<tbody>' + (lineRowsHtml || '<tr><td colspan="3" style="color:#999;text-align:center;">Fill in line items on the right →</td></tr>') + '</tbody>'
-    + '</table>'
-    + '<div class="pp-inv-note-bar">IMPORTANT: PLEASE INDICATE OUR BILL REF. NO. &amp; CUSTOMER NAME WHILE MAKING PAYMENTS</div>'
-    + (paymentText ? '<div class="pp-inv-payment">' + paymentText + '</div>' : '')
-    + '<div class="pp-inv-sig">For R. K. Associates</div>'
-    + '<div style="font-size:11px;margin-bottom:8px;color:#555;">(Authorised Signatory)</div>'
-    + '<div class="pp-inv-gst-block">' + gstBlockLines.join('<br>') + '</div>'
-    + '<div class="pp-inv-footer-note">Note: GST as applicable is payable by the service receiver</div>'
-    + '</div>';
+  var footer = '<div style="margin-top:12px;font-size:13px;font-weight:700;">For R. K. Associates</div>'
+    + '<div style="font-size:11px;color:#555;margin-bottom:10px;">(Authorised Signatory)</div>'
+    + '<div style="border:1px solid #000;padding:6px 8px;font-size:11px;font-family:\'Courier New\',monospace;font-weight:700;line-height:1.8;margin-bottom:8px;">'
+    + gstBlockLines.join('<br>') + '</div>'
+    + '<div style="font-size:11px;color:#555;font-style:italic;">Note : GST as applicable is payable by the service receiver</div>';
 
-  ppBody.innerHTML = html;
+  if (!type) {
+    ppBody.innerHTML = '<div class="pp-inv-empty">Fill in the form on the right to see a live invoice preview here.</div>';
+    return;
+  }
+
+  ppBody.innerHTML = '<div class="pp-invoice-wrap">' + header + metaBlock + invHeading + bodyHtml + footer + '</div>';
 }
-
 // ── Number to words (JS version for preview) ──────────────────────────────
 function numberToWordsJS(n) {
   var ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine',
