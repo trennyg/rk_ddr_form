@@ -1001,6 +1001,30 @@
   </div>
 
   <div class="card">
+    <div class="card-hdr">🤝 Person Met at Office / Business</div>
+    <div class="card-body">
+      <div class="field">
+        <label>Nature of Organisation</label>
+        <input type="text" id="f_app_nature_of_org" placeholder="e.g. Private Limited, Proprietorship, Government, MNC, School...">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Person Met</label>
+          <input type="text" id="f_app_person_met" placeholder="Full name">
+        </div>
+        <div class="field">
+          <label>Designation</label>
+          <input type="text" id="f_app_person_met_desig" placeholder="e.g. HR Manager, Director">
+        </div>
+      </div>
+      <div class="field">
+        <label>Person Met Contact</label>
+        <input type="tel" id="f_app_person_met_contact" placeholder="10-digit mobile">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-hdr">📸 Office / Business Visit Photos</div>
     <div class="card-body">
       <div class="upload-zone" id="uz_app_office_photos">
@@ -3678,6 +3702,29 @@ function buildCoAppBlock(n) {
       </div>
     </div>
     <div class="card">
+      <div class="card-hdr">🤝 Co-App ${n} — Person Met at Office / Business</div>
+      <div class="card-body">
+        <div class="field">
+          <label>Nature of Organisation</label>
+          <input type="text" id="f_${p}_nature_of_org" placeholder="e.g. Private Limited, Proprietorship, Government, MNC, School...">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Person Met</label>
+            <input type="text" id="f_${p}_person_met" placeholder="Full name">
+          </div>
+          <div class="field">
+            <label>Designation</label>
+            <input type="text" id="f_${p}_person_met_desig" placeholder="e.g. HR Manager, Director">
+          </div>
+        </div>
+        <div class="field">
+          <label>Person Met Contact</label>
+          <input type="tel" id="f_${p}_person_met_contact" placeholder="10-digit mobile">
+        </div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-hdr">📸 Co-App ${n} — Office / Business Visit Photos</div>
       <div class="card-body">
         <div class="upload-zone" id="uz_${p}_office_photos">
@@ -4353,7 +4400,7 @@ function buildRow() {
   saveItrFieldsToStore();
   console.log('buildRow itrStore:', JSON.stringify(itrStore));
 
-  const row = new Array(366).fill('');
+  const row = new Array(390).fill('');
   const now = new Date().toISOString();
 
   row[0] = now;
@@ -4449,6 +4496,11 @@ function buildRow() {
     row[346 + (ci - 1) * 4 + 1] = g(`f_co${ci}_res_person_met_contact`);
     row[346 + (ci - 1) * 4 + 2] = g(`f_co${ci}_res_person_met_relation`);
     row[346 + (ci - 1) * 4 + 3] = g(`f_co${ci}_res_unit_type`);
+    // Co-app office person met (cols 370-389, 4 per co-app)
+    row[370 + (ci - 1) * 4]     = g('f_co' + ci + '_nature_of_org');
+    row[370 + (ci - 1) * 4 + 1] = g('f_co' + ci + '_person_met');
+    row[370 + (ci - 1) * 4 + 2] = g('f_co' + ci + '_person_met_contact');
+    row[370 + (ci - 1) * 4 + 3] = g('f_co' + ci + '_person_met_desig');
   }
 
   // Field Visit cols 141-150
@@ -4597,6 +4649,12 @@ function buildRow() {
   row[343] = g('f_res_person_met_contact');
   row[344] = g('f_res_person_met_relation');
   row[345] = g('f_res_unit_type');
+
+  // Applicant office person met (cols 366-369)
+  row[366] = g('f_app_nature_of_org');
+  row[367] = g('f_app_person_met');
+  row[368] = g('f_app_person_met_contact');
+  row[369] = g('f_app_person_met_desig');
 
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
