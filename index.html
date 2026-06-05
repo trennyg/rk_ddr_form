@@ -526,6 +526,150 @@
   }
   .pp-rotate:hover { background: rgba(30,40,80,0.95); }
 
+  /* ── Tax Invoice left panel preview ── */
+  .pp-invoice-wrap {
+    height: 100%;
+    overflow-y: auto;
+    background: #fff;
+    padding: 18px 16px;
+    font-family: Arial, sans-serif;
+    font-size: 10px;
+    color: #000;
+    line-height: 1.4;
+  }
+  .pp-inv-org {
+    text-align: center;
+    font-weight: 700;
+    font-size: 11px;
+    color: #cc0000;
+    margin-bottom: 2px;
+  }
+  .pp-inv-addr {
+    text-align: center;
+    font-size: 9px;
+    color: #333;
+    margin-bottom: 2px;
+  }
+  .pp-inv-email {
+    text-align: center;
+    font-size: 9px;
+    color: #cc0000;
+    margin-bottom: 8px;
+  }
+  .pp-inv-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    align-items: flex-start;
+  }
+  .pp-inv-addressee {
+    font-size: 9px;
+    line-height: 1.6;
+    max-width: 55%;
+  }
+  .pp-inv-ref-block {
+    text-align: right;
+    font-size: 9px;
+    line-height: 1.7;
+  }
+  .pp-inv-heading {
+    text-align: center;
+    font-weight: 700;
+    font-size: 11px;
+    border: 1px solid #000;
+    padding: 3px;
+    margin-bottom: 6px;
+    letter-spacing: 0.08em;
+  }
+  .pp-inv-acct {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    margin-bottom: 0;
+  }
+  .pp-inv-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 6px;
+  }
+  .pp-inv-table th {
+    background: #000;
+    color: #fff;
+    padding: 3px 5px;
+    font-size: 9px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .pp-inv-table td {
+    border: 1px solid #000;
+    padding: 3px 5px;
+    font-size: 9px;
+    vertical-align: top;
+  }
+  .pp-inv-table .td-right {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .pp-inv-table .td-center {
+    text-align: center;
+  }
+  .pp-inv-table .tr-total td {
+    background: #f2f2f2;
+    font-weight: 700;
+  }
+  .pp-inv-table .tr-words td {
+    font-style: italic;
+    font-size: 8px;
+  }
+  .pp-inv-note-bar {
+    background: #000;
+    color: #fff;
+    text-align: center;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 3px 5px;
+    margin-bottom: 6px;
+    letter-spacing: 0.04em;
+  }
+  .pp-inv-payment {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    font-size: 8px;
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+  .pp-inv-sig {
+    font-size: 9px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .pp-inv-gst-block {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1.7;
+    margin-bottom: 6px;
+    font-family: 'Courier New', monospace;
+  }
+  .pp-inv-footer-note {
+    font-size: 8px;
+    color: #555;
+    font-style: italic;
+  }
+  .pp-inv-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #999;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    text-align: center;
+    padding: 20px;
+  }
+
   /* ── Office exec identity modal ── */
   #exec-id-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.72);
@@ -1791,7 +1935,7 @@
       <div id="ti_boi_account_wrap" style="display:none">
         <div class="field">
           <label>Receiving Account (BOI)</label>
-          <select id="ti_boi_account">
+          <select id="ti_boi_account" onchange="handleTaxInvoiceBankChange(document.getElementById('ti_bank').value); renderTaxInvoicePreview()">
             <option value="BOI_MAHIM">Bank of India, Mahim (W) — A/C 003020110000859</option>
             <option value="BOI_DADAR">Bank of India, Dadar (W) — A/C 001520100005524</option>
           </select>
@@ -1799,7 +1943,7 @@
       </div>
       <div class="field">
         <label>Addressee Title</label>
-        <select id="ti_addressee_title">
+        <select id="ti_addressee_title" onchange="renderTaxInvoicePreview()">
           <option value="The Branch Manager,">The Branch Manager,</option>
           <option value="The Asst. General Manager,">The Asst. General Manager,</option>
           <option value="The Chief Manager,">The Chief Manager,</option>
@@ -1811,11 +1955,13 @@
       <div class="field">
         <label>Bank Branch Name &amp; Address</label>
         <textarea id="ti_branch_address" rows="3"
+          oninput="renderTaxInvoicePreview()"
           placeholder="e.g. State Bank of India, (RACPC-17897)&#10;1st floor, UTI Bldg, Plot No.12, Rd. No.11, MIDC,&#10;Andheri (E), Mumbai – 400 093"></textarea>
       </div>
       <div class="field" id="ti_bank_gst_wrap">
         <label>Bank's GST Number</label>
         <input type="text" id="ti_bank_gst" placeholder="e.g. 27AAACS8577K2ZO"
+          oninput="renderTaxInvoicePreview()"
           style="font-family:'DM Mono',monospace">
       </div>
       <div class="field">
@@ -1913,6 +2059,7 @@
         <div class="field">
           <label>Bank's GST Number</label>
           <input type="text" id="ti_poss_bank_gst" placeholder="e.g. 27AAACB0472C1Z9"
+            oninput="renderTaxInvoicePreview()"
             style="font-family:'DM Mono',monospace">
         </div>
       </div>
@@ -2337,6 +2484,7 @@ function switchTab(n) {
     if (invoicePane) invoicePane.classList.add('active');
     currentTab = 'invoice';
     fetchTaxInvoiceRef();
+    renderTaxInvoicePreview();
     window.scrollTo(0, 0);
     return;
   }
@@ -2385,11 +2533,14 @@ function applyFormMode(mode) {
       badge.textContent = 'Mode: TAX INVOICE ✎';
       badge.style.display = 'inline-block';
     }
+    renderTaxInvoicePreview();
     return;
   }
   currentFormMode = mode;
   var tabBar2 = document.getElementById('tabBar');
   if (tabBar2) tabBar2.style.display = '';
+  var ppBody2 = document.getElementById('preview-panel-body');
+  if (ppBody2 && currentFormMode !== 'invoice') renderPreviewPanel();
   var hiddenForBSADSA = [3, 6, 7, 8];
   hiddenForBSADSA.forEach(function(n) {
     var btn = document.getElementById('tab' + n);
@@ -5855,6 +6006,7 @@ async function fetchTaxInvoiceRef() {
     var res = await fetch(getEndpoint() + '/api/tax-invoice/ref');
     var data = await res.json();
     refEl.value = data.ref || 'Error';
+    renderTaxInvoicePreview();
   } catch(e) {
     refEl.value = 'Could not fetch ref';
   }
@@ -5872,6 +6024,7 @@ function handleTaxInvoiceBankChange(bankKey) {
   if (!cfg) return;
   var vcEl = document.getElementById('ti_vendor_code');
   if (vcEl) vcEl.value = cfg.vendorCode;
+  renderTaxInvoicePreview();
 }
 
 function handleTaxInvoiceTypeChange(type) {
@@ -5889,6 +6042,7 @@ function handleTaxInvoiceTypeChange(type) {
   if (gstCard) gstCard.style.display = type ? '' : 'none';
   if (submitCard) submitCard.style.display = type ? '' : 'none';
   updateTaxInvoiceGST();
+  renderTaxInvoicePreview();
 }
 
 function toggleTaxInvoiceGst() {
@@ -6016,6 +6170,224 @@ function updateTaxInvoiceGST() {
     + '<td></td><td style="padding:7px 10px;text-align:right;font-size:12px;font-weight:700;color:var(--accent)">' + fmt(total) + '</td></tr>';
 
   tbody.innerHTML = rows || '<tr><td colspan="3" style="padding:10px;color:var(--muted);text-align:center;font-size:13px">Fill in line items above to see preview</td></tr>';
+  renderTaxInvoicePreview();
+}
+
+// ── Left panel live invoice preview ───────────────────────────────────────
+function renderTaxInvoicePreview() {
+  var ppBody = document.getElementById('preview-panel-body');
+  if (!ppBody) return;
+  if (currentFormMode !== 'invoice') return;
+
+  var g = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+  var type         = g('ti_type');
+  var invRef       = g('ti_invoice_ref') || '—';
+  var invDate      = g('ti_date') || '—';
+  var bankKey      = g('ti_bank');
+  var configKey    = bankKey;
+  if (bankKey === 'BOI_MAHIM') {
+    var boiSel = document.getElementById('ti_boi_account');
+    configKey = boiSel ? boiSel.value : 'BOI_MAHIM';
+  }
+  var cfg          = TAX_INVOICE_BANK_CONFIGS[configKey] || {};
+  var vendorCode   = cfg.vendorCode || '';
+  var addresseeTitle = g('ti_addressee_title') === 'other' ? g('ti_addressee_title_other') : g('ti_addressee_title');
+  var branchAddr   = g('ti_branch_address');
+  var bankGst      = g('ti_bank_gst') || g('ti_poss_bank_gst') || '';
+
+  var gstBtn = document.getElementById('ti_gst_toggle');
+  var gstOn  = gstBtn && gstBtn.dataset.on === 'true';
+  var sgstPct = parseFloat(g('ti_sgst_pct') || '9') || 0;
+  var cgstPct = parseFloat(g('ti_cgst_pct') || '9') || 0;
+  var subtotal = getTaxInvoiceSubtotal();
+  var sgstAmt  = gstOn ? Math.round(subtotal * sgstPct / 100) : 0;
+  var cgstAmt  = gstOn ? Math.round(subtotal * cgstPct / 100) : 0;
+  var grandTotal = subtotal + sgstAmt + cgstAmt;
+
+  function fmt(n) { return n > 0 ? '₹ ' + Math.round(n).toLocaleString('en-IN') : '—'; }
+
+  function fmtDateStr(s) {
+    if (!s) return '';
+    try {
+      var d = new Date(s);
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch(e) { return s; }
+  }
+
+  if (!type) {
+    ppBody.innerHTML = '<div class="pp-inv-empty">Fill in the form on the right to see a live invoice preview here.</div>';
+    return;
+  }
+
+  // ── Borrower/acct line ──
+  var acctLine = '';
+  if (type === 'recovery') {
+    var recNames = [];
+    document.querySelectorAll('.ti-recovery-row').forEach(function(row) {
+      var n = (row.querySelector('.ti-rec-name') || {}).value || '';
+      if (n) recNames.push(n);
+    });
+    acctLine = recNames.join(' / ') || '—';
+  } else if (type === 'parking') {
+    var pb = g('ti_park_borrower');
+    var pa = g('ti_park_acct_no');
+    acctLine = [pb, pa ? 'A/C: ' + pa : ''].filter(Boolean).join('   ') || '—';
+  } else if (type === 'possession') {
+    acctLine = g('ti_poss_borrower') || '—';
+  }
+
+  // ── Line item rows HTML ──
+  var lineRowsHtml = '';
+
+  if (type === 'recovery') {
+    document.querySelectorAll('.ti-recovery-row').forEach(function(row) {
+      var name = (row.querySelector('.ti-rec-name') || {}).value || '';
+      var acct = (row.querySelector('.ti-rec-acct') || {}).value || '';
+      var dt   = (row.querySelector('.ti-rec-date') || {}).value || '';
+      var amt  = parseFloat((row.querySelector('.ti-rec-amt') || {}).value || 0) || 0;
+      var rate = parseFloat((row.querySelector('.ti-rec-rate') || {}).value || 0) || 0;
+      var comm = amt && rate ? Math.round(amt * rate / 100) : 0;
+      if (!name && !amt) return;
+      var desc = 'Being our recovery charges of ₹' + (amt ? amt.toLocaleString('en-IN') : '—')
+        + ' recovered against above Loan Case'
+        + (acct ? ' (A/C: ' + acct + ')' : '')
+        + (dt ? ' on ' + fmtDateStr(dt) : '');
+      lineRowsHtml += '<tr><td>' + desc + '</td><td class="td-center">' + (rate ? rate + '%' : '—') + '</td><td class="td-right">' + fmt(comm) + '</td></tr>';
+    });
+    if (bankGst) {
+      lineRowsHtml += '<tr><td colspan="3" style="background:#f2f2f2;font-weight:700;font-size:8px;">BANK GST NO. ' + bankGst + '</td></tr>';
+    }
+  } else if (type === 'parking') {
+    var vehNo = g('ti_veh_no');
+    if (vehNo) lineRowsHtml += '<tr><td colspan="3" style="font-weight:700;">Vehicle No: ' + vehNo + '</td></tr>';
+    document.querySelectorAll('.ti-parking-row').forEach(function(row) {
+      var part = (row.querySelector('.ti-park-particulars') || {}).value || 'Parking & Security Charges';
+      var from = (row.querySelector('.ti-park-from') || {}).value || '';
+      var to   = (row.querySelector('.ti-park-to')   || {}).value || '';
+      var rate = parseFloat((row.querySelector('.ti-park-rate') || {}).value || 0) || 0;
+      var days = (from && to) ? Math.max(1, Math.round((new Date(to) - new Date(from)) / (1000*60*60*24)) + 1) : 0;
+      var amt  = days && rate ? days * rate : 0;
+      var daysRate = days && rate ? days + ' days @ ₹' + rate + '/day' : '—';
+      lineRowsHtml += '<tr><td>' + part + (from ? ' ' + fmtDateStr(from) : '') + (to ? ' to ' + fmtDateStr(to) : '') + '</td><td class="td-center">' + daysRate + '</td><td class="td-right">' + fmt(amt) + '</td></tr>';
+    });
+    var parkLoc = g('ti_park_location');
+    var parkContact = g('ti_park_contact_person');
+    var seizureDt = g('ti_seizure_date');
+    if (parkLoc || parkContact) {
+      lineRowsHtml += '<tr><td colspan="3" style="font-size:8px;">'
+        + (parkLoc ? '<strong>PARKED AT:</strong> ' + parkLoc + '<br>' : '')
+        + (parkContact ? 'Contact: ' + parkContact : '')
+        + (seizureDt ? ' | Seizure: ' + fmtDateStr(seizureDt) : '')
+        + '</td></tr>';
+    }
+    lineRowsHtml += '<tr><td style="font-size:8px;line-height:1.6;">'
+      + 'Our GSTIN: 27AMCPK9556H2ZO<br>Our PAN: AMCPK9556H'
+      + (bankGst ? '<br>Bank GSTIN: ' + bankGst : '')
+      + '<br>SAC: 997111</td>'
+      + '<td class="td-right" style="font-weight:700;">Sub Total</td>'
+      + '<td class="td-right" style="font-weight:700;">' + fmt(subtotal) + '</td></tr>';
+  } else if (type === 'possession') {
+    var possDate = fmtDateStr(g('ti_poss_date'));
+    var possAddr = g('ti_poss_property_addr');
+    var desc = 'Being our charges for assisting the authorised officer in taking physical possession of the secured property'
+      + (possDate ? ' on ' + possDate : '')
+      + (possAddr ? ', as per bank\'s schedule at ' + possAddr : '') + '.';
+    lineRowsHtml += '<tr><td colspan="3" style="font-weight:700;">' + desc + '</td></tr>';
+    var possItems = [
+      ['ti_poss_main',         'Possession Charges'],
+      ['ti_poss_photo',        'Photo / Postage'],
+      ['ti_poss_lock',         'Lock & DCP'],
+      ['ti_poss_police_notice','Local Police Station Notice Serving'],
+      ['ti_poss_police_prot',  'Police Protection Fee'],
+      ['ti_poss_misc',         'Other Miscellaneous Charge From Pocket'],
+    ];
+    possItems.forEach(function(item) {
+      var val = parseFloat((document.getElementById(item[0]) || {}).value || 0) || 0;
+      if (val > 0) lineRowsHtml += '<tr><td>' + item[1] + '</td><td></td><td class="td-right">' + fmt(val) + '</td></tr>';
+    });
+    if (bankGst) {
+      lineRowsHtml += '<tr><td colspan="3" style="background:#f2f2f2;font-weight:700;font-size:8px;">GST NO.: ' + bankGst + '</td></tr>';
+    }
+  }
+
+  if (gstOn && sgstAmt > 0) {
+    lineRowsHtml += '<tr><td>SGST @ ' + sgstPct + '%</td><td class="td-right">' + fmt(sgstAmt) + '</td><td></td></tr>';
+  }
+  if (gstOn && cgstAmt > 0) {
+    lineRowsHtml += '<tr><td>CGST @ ' + cgstPct + '%</td><td class="td-right">' + fmt(cgstAmt) + '</td><td></td></tr>';
+  }
+
+  var sacCode = type === 'parking' ? '997111' : '998592';
+  var inWords = grandTotal > 0 ? numberToWordsJS(Math.round(grandTotal)) + ' Only' : '';
+
+  lineRowsHtml += '<tr class="tr-total"><td>Grand Total</td><td></td><td class="td-right">' + fmt(grandTotal) + '</td></tr>';
+  if (inWords) lineRowsHtml += '<tr class="tr-words"><td colspan="3">Total Amount in Words: Rupees ' + inWords + '</td></tr>';
+
+  // ── Addressee lines ──
+  var addresseeLines = [addresseeTitle, branchAddr].filter(Boolean).join('\n').split('\n').filter(Boolean);
+  var addresseeHtml = addresseeLines.map(function(l) { return '<div>' + l + '</div>'; }).join('');
+
+  // ── Payment instruction ──
+  var paymentText = cfg.accNo
+    ? 'We request you to kindly release above charges by Cheque / Pay order or transfer to M/s. R. K. Associates — C/A No. ' + cfg.accNo + ', ' + (cfg.bankName || '') + ', IFSC: ' + (cfg.ifsc || '') + '.'
+    : '';
+
+  // ── GST block lines ──
+  var gstBlockLines = [
+    'GST NO      : 27AMCPK9556H2ZO  RAMESH KURHADE (RKASSOCIATES)',
+    'SAC/HSN CODE: ' + sacCode,
+    'PAN NO      : AMCPK9556H',
+    cfg.accNo    ? 'A/C NO.     : ' + cfg.accNo    : '',
+    cfg.bankName ? 'BANK        : ' + cfg.bankName : '',
+    cfg.ifsc     ? 'IFSC        : ' + cfg.ifsc     : '',
+  ].filter(Boolean);
+
+  var html = '<div class="pp-invoice-wrap">'
+    + '<div class="pp-inv-org">R.K. Associates</div>'
+    + '<div class="pp-inv-addr">1B/96, Phoenix Paragon Plaza, Next to Phoenix Mall, Opp. HDFC Bank, Kamani, L.B.S Road, Kurla West, Mumbai - 400070</div>'
+    + '<div class="pp-inv-email">rkenforcement@gmail.com</div>'
+    + '<div class="pp-inv-meta">'
+    + '<div class="pp-inv-addressee">' + (addresseeHtml || '<div style="color:#999">To, (fill address)</div>') + '</div>'
+    + '<div class="pp-inv-ref-block">'
+    + '<div><strong>Inv. No.:</strong> ' + invRef + '</div>'
+    + '<div><strong>Date:</strong> ' + fmtDateStr(invDate) + '</div>'
+    + (vendorCode ? '<div><strong>Vendor Code:</strong> ' + vendorCode + '</div>' : '')
+    + '</div></div>'
+    + '<div class="pp-inv-heading">TAX INVOICE</div>'
+    + '<div class="pp-inv-acct">Name of A/c: ' + acctLine + '</div>'
+    + '<table class="pp-inv-table">'
+    + '<thead><tr><th style="width:60%">Description</th><th style="width:20%">Amount (₹)</th><th style="width:20%">Total (₹)</th></tr></thead>'
+    + '<tbody>' + (lineRowsHtml || '<tr><td colspan="3" style="color:#999;text-align:center;">Fill in line items on the right →</td></tr>') + '</tbody>'
+    + '</table>'
+    + '<div class="pp-inv-note-bar">IMPORTANT: PLEASE INDICATE OUR BILL REF. NO. &amp; CUSTOMER NAME WHILE MAKING PAYMENTS</div>'
+    + (paymentText ? '<div class="pp-inv-payment">' + paymentText + '</div>' : '')
+    + '<div class="pp-inv-sig">For R. K. Associates</div>'
+    + '<div style="font-size:8px;margin-bottom:8px;color:#555;">(Authorised Signatory)</div>'
+    + '<div class="pp-inv-gst-block">' + gstBlockLines.join('<br>') + '</div>'
+    + '<div class="pp-inv-footer-note">Note: GST as applicable is payable by the service receiver</div>'
+    + '</div>';
+
+  ppBody.innerHTML = html;
+}
+
+// ── Number to words (JS version for preview) ──────────────────────────────
+function numberToWordsJS(n) {
+  var ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine',
+    'Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  var tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function two(n) { return n < 20 ? ones[n] : tens[Math.floor(n/10)] + (n%10 ? ' ' + ones[n%10] : ''); }
+  function recurse(n) {
+    if (n === 0) return '';
+    if (n < 20) return ones[n];
+    if (n < 100) return tens[Math.floor(n/10)] + (n%10 ? ' ' + ones[n%10] : '');
+    if (n < 1000) return ones[Math.floor(n/100)] + ' Hundred' + (n%100 ? ' & ' + two(n%100) : '');
+    if (n < 100000) return recurse(Math.floor(n/1000)) + ' Thousand' + (n%1000 ? ' ' + recurse(n%1000) : '');
+    if (n < 10000000) return recurse(Math.floor(n/100000)) + ' Lakh' + (n%100000 ? ' ' + recurse(n%100000) : '');
+    return recurse(Math.floor(n/10000000)) + ' Crore' + (n%10000000 ? ' ' + recurse(n%10000000) : '');
+  }
+  n = Math.round(n);
+  return n <= 0 ? 'Zero' : recurse(n).trim();
 }
 
 // ── Recovery rows ──────────────────────────────────────────
