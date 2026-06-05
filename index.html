@@ -678,6 +678,80 @@
       </div>
     </div>
   </div>
+  <div class="card">
+    <div class="card-hdr">🧾 Invoice Details</div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Due Diligence Charges (₹)</label>
+          <input type="number" id="f_inv_dd_amount" placeholder="e.g. 2000" oninput="updateInvoicePreview()">
+        </div>
+        <div class="field">
+          <label>Conveyance Charges (₹)</label>
+          <input type="number" id="f_inv_conveyance" placeholder="e.g. 500" oninput="updateInvoicePreview()">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin:10px 0 6px;">
+        <button type="button" id="inv_gst_toggle"
+          style="border:none;border-radius:20px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--surface2);color:var(--text);transition:background 0.2s,color 0.2s;"
+          onclick="toggleInvoiceGst()">GST: OFF</button>
+        <span id="inv_gst_off_label" style="font-size:13px;color:var(--muted);">GST not applicable</span>
+      </div>
+      <div id="inv_gst_fields" style="display:none;">
+        <div class="field-row">
+          <div class="field">
+            <label>SGST %</label>
+            <input type="number" id="f_inv_sgst_pct" placeholder="e.g. 9" oninput="updateInvoicePreview()">
+          </div>
+          <div class="field">
+            <label>CGST %</label>
+            <input type="number" id="f_inv_cgst_pct" placeholder="e.g. 9" oninput="updateInvoicePreview()">
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="f_inv_gst_enabled" value="false">
+      <input type="hidden" id="f_inv_total" value="">
+      <!-- Live invoice preview -->
+      <div style="margin-top:14px;overflow-x:auto;">
+        <table id="inv_preview_table" style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:#000;color:#fff;">
+              <th style="padding:7px 10px;text-align:left;font-weight:700;">Description</th>
+              <th style="padding:7px 10px;text-align:right;font-weight:700;white-space:nowrap;">Amount (₹)</th>
+              <th style="padding:7px 10px;text-align:right;font-weight:700;white-space:nowrap;">Total (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:7px 10px;color:var(--text);">Being our charges for carrying out due diligence and verifying credit worthiness of the borrower.</td>
+              <td id="inv_row_dd" style="padding:7px 10px;text-align:right;color:var(--text);white-space:nowrap;"></td>
+              <td style="padding:7px 10px;"></td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:7px 10px;color:var(--text);">Conveyance Charges</td>
+              <td id="inv_row_conv" style="padding:7px 10px;text-align:right;color:var(--text);white-space:nowrap;"></td>
+              <td style="padding:7px 10px;"></td>
+            </tr>
+            <tr id="inv_row_sgst_tr" style="display:none;border-bottom:1px solid var(--border);">
+              <td id="inv_row_sgst_lbl" style="padding:7px 10px;color:var(--text);"></td>
+              <td id="inv_row_sgst" style="padding:7px 10px;text-align:right;color:var(--text);white-space:nowrap;"></td>
+              <td style="padding:7px 10px;"></td>
+            </tr>
+            <tr id="inv_row_cgst_tr" style="display:none;border-bottom:1px solid var(--border);">
+              <td id="inv_row_cgst_lbl" style="padding:7px 10px;color:var(--text);"></td>
+              <td id="inv_row_cgst" style="padding:7px 10px;text-align:right;color:var(--text);white-space:nowrap;"></td>
+              <td style="padding:7px 10px;"></td>
+            </tr>
+            <tr style="background:var(--surface2);">
+              <td style="padding:7px 10px;font-weight:700;color:var(--text);">Total Amount</td>
+              <td style="padding:7px 10px;"></td>
+              <td id="inv_row_total" style="padding:7px 10px;text-align:right;font-weight:700;color:var(--text);white-space:nowrap;"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
   <div class="nav-btns">
     <span></span>
     <button class="btn btn-primary" type="button" onclick="switchTab(2)">Next → Applicant</button>
@@ -4172,6 +4246,64 @@ function isBiz(prefix) {
   return v.includes('business') || v.includes('self employ');
 }
 
+function updateInvoicePreview() {
+  var dd   = parseFloat(document.getElementById('f_inv_dd_amount').value) || 0;
+  var conv = parseFloat(document.getElementById('f_inv_conveyance').value) || 0;
+  var sgstPct = parseFloat(document.getElementById('f_inv_sgst_pct').value) || 0;
+  var cgstPct = parseFloat(document.getElementById('f_inv_cgst_pct').value) || 0;
+  var gstEnabled = document.getElementById('f_inv_gst_enabled').value === 'true';
+
+  var subtotal = dd + conv;
+  var sgstAmt  = gstEnabled ? subtotal * sgstPct / 100 : 0;
+  var cgstAmt  = gstEnabled ? subtotal * cgstPct / 100 : 0;
+  var total    = subtotal + sgstAmt + cgstAmt;
+
+  function fmt(n) { return n ? '₹ ' + Math.round(n).toLocaleString('en-IN') : '—'; }
+
+  document.getElementById('inv_row_dd').textContent   = fmt(dd);
+  document.getElementById('inv_row_conv').textContent = fmt(conv);
+  document.getElementById('inv_row_total').textContent = fmt(total);
+
+  var sgstTr = document.getElementById('inv_row_sgst_tr');
+  var cgstTr = document.getElementById('inv_row_cgst_tr');
+  if (gstEnabled) {
+    document.getElementById('inv_row_sgst_lbl').textContent = 'SGST (' + sgstPct + '%)';
+    document.getElementById('inv_row_sgst').textContent     = fmt(sgstAmt);
+    document.getElementById('inv_row_cgst_lbl').textContent = 'CGST (' + cgstPct + '%)';
+    document.getElementById('inv_row_cgst').textContent     = fmt(cgstAmt);
+    sgstTr.style.display = '';
+    cgstTr.style.display = '';
+  } else {
+    sgstTr.style.display = 'none';
+    cgstTr.style.display = 'none';
+  }
+
+  document.getElementById('f_inv_total').value = total ? Math.round(total).toString() : '';
+}
+
+function toggleInvoiceGst() {
+  var hiddenEl  = document.getElementById('f_inv_gst_enabled');
+  var fieldsDiv = document.getElementById('inv_gst_fields');
+  var btn       = document.getElementById('inv_gst_toggle');
+  var offLabel  = document.getElementById('inv_gst_off_label');
+  var isOn = hiddenEl.value !== 'true';
+
+  hiddenEl.value = isOn ? 'true' : 'false';
+  fieldsDiv.style.display = isOn ? '' : 'none';
+  if (offLabel) offLabel.style.display = isOn ? 'none' : '';
+  btn.style.background = isOn ? 'var(--accent)' : 'var(--surface2)';
+  btn.style.color      = isOn ? '#000' : 'var(--text)';
+  btn.textContent      = isOn ? 'GST: ON' : 'GST: OFF';
+
+  if (isOn) {
+    var sgstEl = document.getElementById('f_inv_sgst_pct');
+    var cgstEl = document.getElementById('f_inv_cgst_pct');
+    if (!sgstEl.value) sgstEl.value = '9';
+    if (!cgstEl.value) cgstEl.value = '9';
+  }
+  updateInvoicePreview();
+}
+
 function buildRow() {
   // Ensure ITR section exists in DOM, then sync to store
   const itrContainer = document.getElementById('itrContainer');
@@ -4181,7 +4313,7 @@ function buildRow() {
   saveItrFieldsToStore();
   console.log('buildRow itrStore:', JSON.stringify(itrStore));
 
-  const row = new Array(313).fill('');
+  const row = new Array(342).fill('');
   const now = new Date().toISOString();
 
   row[0] = now;
@@ -4406,6 +4538,14 @@ function buildRow() {
     row[325 + ci] = `__FILE__co${ci}_res_photos`;     // 326-330
     row[330 + ci] = `__FILE__co${ci}_office_photos`;  // 331-335
   }
+
+  // Invoice details (cols 336-341)
+  row[336] = g('f_inv_dd_amount');
+  row[337] = g('f_inv_conveyance');
+  row[338] = g('f_inv_gst_enabled');
+  row[339] = g('f_inv_sgst_pct');
+  row[340] = g('f_inv_cgst_pct');
+  row[341] = g('f_inv_total');
 
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
@@ -4655,6 +4795,22 @@ function restoreFormValues(metaOrVals) {
     });
     // Re-restore ITR fields from store
     restoreItrFieldsFromStore();
+    // Re-apply GST toggle state from restored value
+    var gstVal = document.getElementById('f_inv_gst_enabled');
+    var gstFields = document.getElementById('inv_gst_fields');
+    var gstToggleBtn = document.getElementById('inv_gst_toggle');
+    var gstOffLabel  = document.getElementById('inv_gst_off_label');
+    if (gstVal && gstFields) {
+      var isOn = gstVal.value === 'true';
+      gstFields.style.display = isOn ? '' : 'none';
+      if (gstOffLabel) gstOffLabel.style.display = isOn ? 'none' : '';
+      if (gstToggleBtn) {
+        gstToggleBtn.style.background = isOn ? 'var(--accent)' : 'var(--surface2)';
+        gstToggleBtn.style.color = isOn ? '#000' : 'var(--text)';
+        gstToggleBtn.textContent = isOn ? 'GST: ON' : 'GST: OFF';
+      }
+    }
+    updateInvoicePreview();
   }, 400);
 
   // Restore Drive-uploaded photos from draft
