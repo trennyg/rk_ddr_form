@@ -1176,6 +1176,26 @@
           </select>
         </div>
       </div>
+      <div class="field-row">
+        <div class="field">
+          <label>PERSON MET</label>
+          <input type="text" id="f_res_person_met" placeholder="Name of person met at residence">
+        </div>
+        <div class="field">
+          <label>PERSON MET CONTACT</label>
+          <input type="tel" id="f_res_person_met_contact" placeholder="Contact number">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>PERSON MET RELATION</label>
+          <input type="text" id="f_res_person_met_relation" placeholder="e.g. Self, Spouse, Parent, Neighbour">
+        </div>
+        <div class="field">
+          <label>RESIDENCE UNIT TYPE</label>
+          <input type="text" id="f_res_unit_type" placeholder="e.g. 1 BHK, 2 BHK, Studio, Row House">
+        </div>
+      </div>
       <div class="field">
         <label>Field Visit Notes & Observations</label>
         <textarea id="f_field_notes" placeholder="Nameplate visible, condition of residence, access, observations..." rows="3"></textarea>
@@ -3534,6 +3554,26 @@ function buildCoAppBlock(n) {
           <label>Current Address Verification Remarks</label>
           <textarea id="f_${p}_res_remarks" rows="2" placeholder="e.g. Residence verified at the stated address. Nameplate confirmed. Verification found satisfactory."></textarea>
         </div>
+        <div class="field-row">
+          <div class="field">
+            <label>PERSON MET</label>
+            <input type="text" id="f_${p}_res_person_met" placeholder="Name of person met">
+          </div>
+          <div class="field">
+            <label>PERSON MET CONTACT</label>
+            <input type="tel" id="f_${p}_res_person_met_contact" placeholder="Contact number">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>PERSON MET RELATION</label>
+            <input type="text" id="f_${p}_res_person_met_relation" placeholder="e.g. Self, Spouse, Parent">
+          </div>
+          <div class="field">
+            <label>RESIDENCE UNIT TYPE</label>
+            <input type="text" id="f_${p}_res_unit_type" placeholder="e.g. 1 BHK, 2 BHK, Studio">
+          </div>
+        </div>
         <div class="field" id="${p}_res_photos_wrap" style="display:none;margin-top:8px">
           <label>Residence Visit Photos</label>
           <div class="upload-zone" id="uz_${p}_res_photos">
@@ -4313,7 +4353,7 @@ function buildRow() {
   saveItrFieldsToStore();
   console.log('buildRow itrStore:', JSON.stringify(itrStore));
 
-  const row = new Array(342).fill('');
+  const row = new Array(366).fill('');
   const now = new Date().toISOString();
 
   row[0] = now;
@@ -4404,6 +4444,11 @@ function buildRow() {
     row[base+20] = g(`f_${p}_bank_branch`);
     row[base+21] = g(`f_${p}_account_no`);
     row[base+22] = g(`f_${p}_account_type`);
+    // Co-app residence person met (cols 346-365, 4 per co-app)
+    row[346 + (ci - 1) * 4]     = g(`f_co${ci}_res_person_met`);
+    row[346 + (ci - 1) * 4 + 1] = g(`f_co${ci}_res_person_met_contact`);
+    row[346 + (ci - 1) * 4 + 2] = g(`f_co${ci}_res_person_met_relation`);
+    row[346 + (ci - 1) * 4 + 3] = g(`f_co${ci}_res_unit_type`);
   }
 
   // Field Visit cols 141-150
@@ -4546,6 +4591,12 @@ function buildRow() {
   row[339] = g('f_inv_sgst_pct');
   row[340] = g('f_inv_cgst_pct');
   row[341] = g('f_inv_total');
+
+  // Applicant residence person met (cols 342-345)
+  row[342] = g('f_res_person_met');
+  row[343] = g('f_res_person_met_contact');
+  row[344] = g('f_res_person_met_relation');
+  row[345] = g('f_res_unit_type');
 
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
