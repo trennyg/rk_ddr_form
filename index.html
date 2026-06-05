@@ -533,26 +533,26 @@
     background: #fff;
     padding: 18px 16px;
     font-family: Arial, sans-serif;
-    font-size: 10px;
+    font-size: 13px;
     color: #000;
     line-height: 1.4;
   }
   .pp-inv-org {
     text-align: center;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 15px;
     color: #cc0000;
     margin-bottom: 2px;
   }
   .pp-inv-addr {
     text-align: center;
-    font-size: 9px;
+    font-size: 12px;
     color: #333;
     margin-bottom: 2px;
   }
   .pp-inv-email {
     text-align: center;
-    font-size: 9px;
+    font-size: 12px;
     color: #cc0000;
     margin-bottom: 8px;
   }
@@ -563,19 +563,19 @@
     align-items: flex-start;
   }
   .pp-inv-addressee {
-    font-size: 9px;
+    font-size: 12px;
     line-height: 1.6;
     max-width: 55%;
   }
   .pp-inv-ref-block {
     text-align: right;
-    font-size: 9px;
+    font-size: 12px;
     line-height: 1.7;
   }
   .pp-inv-heading {
     text-align: center;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 14px;
     border: 1px solid #000;
     padding: 3px;
     margin-bottom: 6px;
@@ -584,7 +584,7 @@
   .pp-inv-acct {
     border: 1px solid #000;
     padding: 4px 6px;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
     margin-bottom: 0;
   }
@@ -597,14 +597,14 @@
     background: #000;
     color: #fff;
     padding: 3px 5px;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
     text-align: center;
   }
   .pp-inv-table td {
     border: 1px solid #000;
     padding: 3px 5px;
-    font-size: 9px;
+    font-size: 12px;
     vertical-align: top;
   }
   .pp-inv-table .td-right {
@@ -620,13 +620,13 @@
   }
   .pp-inv-table .tr-words td {
     font-style: italic;
-    font-size: 8px;
+    font-size: 11px;
   }
   .pp-inv-note-bar {
     background: #000;
     color: #fff;
     text-align: center;
-    font-size: 8px;
+    font-size: 11px;
     font-weight: 700;
     padding: 3px 5px;
     margin-bottom: 6px;
@@ -635,26 +635,26 @@
   .pp-inv-payment {
     border: 1px solid #000;
     padding: 4px 6px;
-    font-size: 8px;
+    font-size: 11px;
     margin-bottom: 8px;
     line-height: 1.5;
   }
   .pp-inv-sig {
-    font-size: 9px;
+    font-size: 13px;
     font-weight: 700;
     margin-bottom: 2px;
   }
   .pp-inv-gst-block {
     border: 1px solid #000;
     padding: 4px 6px;
-    font-size: 8px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1.7;
     margin-bottom: 6px;
     font-family: 'Courier New', monospace;
   }
   .pp-inv-footer-note {
-    font-size: 8px;
+    font-size: 11px;
     color: #555;
     font-style: italic;
   }
@@ -664,7 +664,7 @@
     justify-content: center;
     height: 100%;
     color: #999;
-    font-size: 13px;
+    font-size: 16px;
     font-family: 'DM Sans', sans-serif;
     text-align: center;
     padding: 20px;
@@ -1993,17 +1993,19 @@
         <div class="field">
           <label>Vehicle Number</label>
           <input type="text" id="ti_veh_no" placeholder="e.g. MH 03 CH 3170"
+            oninput="renderTaxInvoicePreview()"
             style="font-family:'DM Mono',monospace">
         </div>
         <div class="field">
           <label>Borrower Name</label>
-          <input type="text" id="ti_park_borrower" placeholder="Full name">
+          <input type="text" id="ti_park_borrower" placeholder="Full name" oninput="renderTaxInvoicePreview()">
         </div>
       </div>
       <div class="field-row">
         <div class="field">
           <label>Account Number</label>
           <input type="text" id="ti_park_acct_no" placeholder="Account number"
+            oninput="renderTaxInvoicePreview()"
             style="font-family:'DM Mono',monospace">
         </div>
         <div class="field">
@@ -2019,11 +2021,11 @@
       <div class="field-row">
         <div class="field">
           <label>Contact Person</label>
-          <input type="text" id="ti_park_contact_person" placeholder="Name &amp; number">
+          <input type="text" id="ti_park_contact_person" placeholder="Name &amp; number" oninput="renderTaxInvoicePreview()">
         </div>
         <div class="field">
           <label>Previous Bill Reference (optional)</label>
-          <input type="text" id="ti_park_prev_bill_ref" placeholder="e.g. RK/25-26/2564">
+          <input type="text" id="ti_park_prev_bill_ref" placeholder="e.g. RK/25-26/2564" oninput="renderTaxInvoicePreview()">
         </div>
       </div>
       <div style="font-size:13px;color:var(--muted);margin:10px 0 6px">
@@ -2044,17 +2046,18 @@
         <div class="field">
           <label>Account Number</label>
           <input type="text" id="ti_poss_acct_no" placeholder="Account number"
+            oninput="renderTaxInvoicePreview()"
             style="font-family:'DM Mono',monospace">
         </div>
         <div class="field">
           <label>Borrower Name</label>
-          <input type="text" id="ti_poss_borrower" placeholder="Full name — shown in BOLD on invoice">
+          <input type="text" id="ti_poss_borrower" placeholder="Full name — shown in BOLD on invoice" oninput="renderTaxInvoicePreview()">
         </div>
       </div>
       <div class="field-row">
         <div class="field">
           <label>Possession Date</label>
-          <input type="date" id="ti_poss_date">
+          <input type="date" id="ti_poss_date" oninput="renderTaxInvoicePreview()">
         </div>
         <div class="field">
           <label>Bank's GST Number</label>
@@ -2066,6 +2069,7 @@
       <div class="field">
         <label>Property Address (where possession taken)</label>
         <textarea id="ti_poss_property_addr" rows="2"
+          oninput="renderTaxInvoicePreview()"
           placeholder="Full property address as per bank's schedule"></textarea>
       </div>
       <div style="font-size:13px;color:var(--muted);margin:10px 0 6px">
@@ -6256,7 +6260,7 @@ function renderTaxInvoicePreview() {
       lineRowsHtml += '<tr><td>' + desc + '</td><td class="td-center">' + (rate ? rate + '%' : '—') + '</td><td class="td-right">' + fmt(comm) + '</td></tr>';
     });
     if (bankGst) {
-      lineRowsHtml += '<tr><td colspan="3" style="background:#f2f2f2;font-weight:700;font-size:8px;">BANK GST NO. ' + bankGst + '</td></tr>';
+      lineRowsHtml += '<tr><td colspan="3" style="background:#f2f2f2;font-weight:700;font-size:11px;">BANK GST NO. ' + bankGst + '</td></tr>';
     }
   } else if (type === 'parking') {
     var vehNo = g('ti_veh_no');
@@ -6275,13 +6279,13 @@ function renderTaxInvoicePreview() {
     var parkContact = g('ti_park_contact_person');
     var seizureDt = g('ti_seizure_date');
     if (parkLoc || parkContact) {
-      lineRowsHtml += '<tr><td colspan="3" style="font-size:8px;">'
+      lineRowsHtml += '<tr><td colspan="3" style="font-size:11px;">'
         + (parkLoc ? '<strong>PARKED AT:</strong> ' + parkLoc + '<br>' : '')
         + (parkContact ? 'Contact: ' + parkContact : '')
         + (seizureDt ? ' | Seizure: ' + fmtDateStr(seizureDt) : '')
         + '</td></tr>';
     }
-    lineRowsHtml += '<tr><td style="font-size:8px;line-height:1.6;">'
+    lineRowsHtml += '<tr><td style="font-size:11px;line-height:1.6;">'
       + 'Our GSTIN: 27AMCPK9556H2ZO<br>Our PAN: AMCPK9556H'
       + (bankGst ? '<br>Bank GSTIN: ' + bankGst : '')
       + '<br>SAC: 997111</td>'
@@ -6307,7 +6311,7 @@ function renderTaxInvoicePreview() {
       if (val > 0) lineRowsHtml += '<tr><td>' + item[1] + '</td><td></td><td class="td-right">' + fmt(val) + '</td></tr>';
     });
     if (bankGst) {
-      lineRowsHtml += '<tr><td colspan="3" style="background:#f2f2f2;font-weight:700;font-size:8px;">GST NO.: ' + bankGst + '</td></tr>';
+      lineRowsHtml += '<tr><td colspan="3" style="background:#f2f2f2;font-weight:700;font-size:11px;">GST NO.: ' + bankGst + '</td></tr>';
     }
   }
 
@@ -6363,7 +6367,7 @@ function renderTaxInvoicePreview() {
     + '<div class="pp-inv-note-bar">IMPORTANT: PLEASE INDICATE OUR BILL REF. NO. &amp; CUSTOMER NAME WHILE MAKING PAYMENTS</div>'
     + (paymentText ? '<div class="pp-inv-payment">' + paymentText + '</div>' : '')
     + '<div class="pp-inv-sig">For R. K. Associates</div>'
-    + '<div style="font-size:8px;margin-bottom:8px;color:#555;">(Authorised Signatory)</div>'
+    + '<div style="font-size:11px;margin-bottom:8px;color:#555;">(Authorised Signatory)</div>'
     + '<div class="pp-inv-gst-block">' + gstBlockLines.join('<br>') + '</div>'
     + '<div class="pp-inv-footer-note">Note: GST as applicable is payable by the service receiver</div>'
     + '</div>';
@@ -6408,7 +6412,7 @@ function addRecoveryRow() {
     + '<div class="field"><label>Borrower Name</label>'
     + '<input type="text" class="ti-rec-name" placeholder="Full name" oninput="updateTaxInvoiceGST()"></div>'
     + '<div class="field"><label>A/C Number</label>'
-    + '<input type="text" class="ti-rec-acct" placeholder="Account number" style="font-family:\'DM Mono\',monospace"></div>'
+    + '<input type="text" class="ti-rec-acct" placeholder="Account number" oninput="renderTaxInvoicePreview()" style="font-family:\'DM Mono\',monospace"></div>'
     + '</div>'
     + '<div class="field-row">'
     + '<div class="field"><label>Recovery Date</label>'
