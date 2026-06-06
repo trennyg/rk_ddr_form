@@ -6424,11 +6424,11 @@ function renderTaxInvoicePreview() {
     bodyHtml += '<tr>' + tdspan(possDesc, 3, 'font-size:12px;font-weight:700;') + '</tr>';
 
     var possItems = [
-      ['ti_poss_photo',        'Photo/Postage/Lock &amp; Dcp/Local Police Station Notice Serving'],
+      ['ti_poss_photo',        'Photo / Postage'],
       ['ti_poss_lock',         'Lock &amp; DCP'],
-      ['ti_poss_police_notice','Police Station Notice Serving'],
+      ['ti_poss_police_notice','Local Police Station Notice Serving'],
       ['ti_poss_police_prot',  'Police Protection Fee'],
-      ['ti_poss_misc',         'Other Misclenious Charge From Pocket'],
+      ['ti_poss_misc',         'Other Miscellaneous Charges From Pocket'],
     ];
     var mainVal = parseFloat((document.getElementById('ti_poss_main') || {}).value || 0) || 0;
     if (mainVal) {
@@ -6604,11 +6604,11 @@ function collectTaxInvoiceData() {
   } else if (type === 'possession') {
     var possFields = [
       ['ti_poss_main',         'Possession Charges'],
-      ['ti_poss_photo',        'Photo/Postage'],
-      ['ti_poss_lock',         'Lock & Dcp/Local Police Station Notice Serving'],
-      ['ti_poss_police_notice','Police Station Notice Serving'],
+      ['ti_poss_photo',        'Photo / Postage'],
+      ['ti_poss_lock',         'Lock & DCP'],
+      ['ti_poss_police_notice','Local Police Station Notice Serving'],
       ['ti_poss_police_prot',  'Police Protection Fee'],
-      ['ti_poss_misc',         'Other Misclenious Charge From Pocket'],
+      ['ti_poss_misc',         'Other Miscellaneous Charges From Pocket'],
     ];
     possFields.forEach(function(item) {
       var val = parseFloat((document.getElementById(item[0]) || {}).value || 0) || 0;
