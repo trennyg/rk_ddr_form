@@ -2083,13 +2083,8 @@
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Lock &amp; DCP (₹)</label>
+          <label>LOCKSMITH CHARGES (₹)</label>
           <input type="number" id="ti_poss_lock" placeholder="e.g. 13288"
-            oninput="updateTaxInvoiceGST()">
-        </div>
-        <div class="field">
-          <label>Police Station Notice (₹)</label>
-          <input type="number" id="ti_poss_police_notice" placeholder="e.g. 12850"
             oninput="updateTaxInvoiceGST()">
         </div>
       </div>
@@ -2103,6 +2098,10 @@
           <label>Other Miscellaneous (₹)</label>
           <input type="number" id="ti_poss_misc" placeholder="0"
             oninput="updateTaxInvoiceGST()">
+          <input type="text" id="ti_poss_misc_desc"
+            placeholder="Describe miscellaneous expense"
+            style="margin-top:6px;width:100%;"
+            oninput="renderTaxInvoicePreview()">
         </div>
       </div>
     </div>
@@ -6142,13 +6141,13 @@ function updateTaxInvoiceGST() {
       }
     });
   } else if (type === 'possession') {
+    var miscDesc2 = (document.getElementById('ti_poss_misc_desc') || {}).value || '';
     var possItems = [
       ['ti_poss_main',         'Possession Charges'],
       ['ti_poss_photo',        'Photo / Postage'],
-      ['ti_poss_lock',         'Lock & DCP'],
-      ['ti_poss_police_notice','Police Station Notice Serving'],
+      ['ti_poss_lock',         'Locksmith Charges'],
       ['ti_poss_police_prot',  'Police Protection Fee'],
-      ['ti_poss_misc',         'Other Miscellaneous (From Pocket)'],
+      ['ti_poss_misc',         miscDesc2 ? 'Other Miscellaneous — ' + miscDesc2 : 'Other Miscellaneous Charges From Pocket'],
     ];
     possItems.forEach(function(item) {
       var val = parseFloat((document.getElementById(item[0]) || {}).value || 0) || 0;
@@ -6423,16 +6422,16 @@ function renderTaxInvoicePreview() {
       + (possAddr ? ', as per bank\'s schedule At ' + possAddr : '');
     bodyHtml += '<tr>' + tdspan(possDesc, 3, 'font-size:12px;font-weight:700;') + '</tr>';
 
+    var miscDesc = (document.getElementById('ti_poss_misc_desc') || {}).value || '';
     var possItems = [
       ['ti_poss_photo',        'Photo / Postage'],
-      ['ti_poss_lock',         'Lock &amp; DCP'],
-      ['ti_poss_police_notice','Local Police Station Notice Serving'],
+      ['ti_poss_lock',         'Locksmith Charges'],
       ['ti_poss_police_prot',  'Police Protection Fee'],
-      ['ti_poss_misc',         'Other Miscellaneous Charges From Pocket'],
+      ['ti_poss_misc',         miscDesc ? 'Other Miscellaneous — ' + miscDesc : 'Other Miscellaneous Charges From Pocket'],
     ];
     var mainVal = parseFloat((document.getElementById('ti_poss_main') || {}).value || 0) || 0;
     if (mainVal) {
-      bodyHtml += '<tr>' + td('', 'font-size:12px;') + td(mainVal.toLocaleString('en-IN') + '/-', 'text-align:right;font-size:12px;') + td('', '') + '</tr>';
+      bodyHtml += '<tr>' + td('Possession Charges', 'font-size:11px;') + td(mainVal.toLocaleString('en-IN') + '/-', 'text-align:right;font-size:12px;') + td('', '') + '</tr>';
     }
     possItems.forEach(function(item) {
       var val = parseFloat((document.getElementById(item[0]) || {}).value || 0) || 0;
@@ -6605,10 +6604,12 @@ function collectTaxInvoiceData() {
     var possFields = [
       ['ti_poss_main',         'Possession Charges'],
       ['ti_poss_photo',        'Photo / Postage'],
-      ['ti_poss_lock',         'Lock & DCP'],
-      ['ti_poss_police_notice','Local Police Station Notice Serving'],
+      ['ti_poss_lock',         'Locksmith Charges'],
       ['ti_poss_police_prot',  'Police Protection Fee'],
-      ['ti_poss_misc',         'Other Miscellaneous Charges From Pocket'],
+      (function(){
+        var md = (document.getElementById('ti_poss_misc_desc') || {}).value || '';
+        return ['ti_poss_misc', md ? 'Other Miscellaneous — ' + md : 'Other Miscellaneous Charges From Pocket'];
+      })(),
     ];
     possFields.forEach(function(item) {
       var val = parseFloat((document.getElementById(item[0]) || {}).value || 0) || 0;
