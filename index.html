@@ -5020,11 +5020,10 @@ function buildRow() {
   if (appResRemarks) fieldNotesVal += '\n\nAPPLICANT RESIDENCE REMARKS: ' + appResRemarks;
   if (appEmpRemarks) fieldNotesVal += '\n\nAPPLICANT EMPLOYMENT REMARKS: ' + appEmpRemarks;
   for (let ri = 1; ri <= 5; ri++) {
-    const coName = g(`f_co${ri}_name`) || ('Co-App ' + ri);
     const coResRem = g(`f_co${ri}_res_remarks`);
-    const coEmpRem = g(`f_co${ri}_emp_remarks`) || g(`f_co${ri}_biz_remarks`);
-    if (coResRem) fieldNotesVal += '\n\n' + coName.toUpperCase() + ' RESIDENCE REMARKS: ' + coResRem;
-    if (coEmpRem) fieldNotesVal += '\n\n' + coName.toUpperCase() + ' EMPLOYMENT REMARKS: ' + coEmpRem;
+    const coEmpRem = g(`f_co${ri}_emp_remarks`) || g(`f_co${ri}_biz_remarks`) || g(`f_co${ri}_emp_all_remarks`);
+    if (coResRem) fieldNotesVal += '\n\nCO-APP ' + ri + ' RESIDENCE REMARKS: ' + coResRem;
+    if (coEmpRem) fieldNotesVal += '\n\nCO-APP ' + ri + ' EMPLOYMENT REMARKS: ' + coEmpRem;
   }
   row[150] = fieldNotesVal;
 
