@@ -1049,6 +1049,10 @@
             </div>
           </div>
           <div class="field">
+            <label>Experience</label>
+            <input type="text" id="f_app_experience" placeholder="e.g. 5 years, 12 years">
+          </div>
+          <div class="field">
             <label>Office Address</label>
             <textarea id="f_app_office_addr" placeholder="Full office address" rows="2" oninput="var w=document.getElementById('warn-office-addr');if(w)w.style.display='none';"></textarea>
             <span id="warn-office-addr" style="display:none;color:#cc0000;font-size:0.82em;margin-top:3px;">Office address not filled — please enter manually. Required for cover page.</span>
@@ -1122,6 +1126,10 @@
         <div class="field">
           <label>Date of Incorporation / Start</label>
           <input type="date" id="f_app_biz_joining">
+        </div>
+        <div class="field">
+          <label>Experience / Years in Business</label>
+          <input type="text" id="f_app_biz_experience" placeholder="e.g. 8 years, 15 years">
         </div>
         <div class="field">
           <label>Business Address</label>
@@ -4150,6 +4158,7 @@ function buildCoAppBlock(n) {
               <div class="field"><label>Net Monthly Pay</label><input type="text" id="f_${p}_net_pay" placeholder="₹"></div>
               <div class="field"><label>Date of Joining</label><input type="date" id="f_${p}_joining"></div>
             </div>
+            <div class="field"><label>Experience</label><input type="text" id="f_${p}_experience" placeholder="e.g. 5 years"></div>
             <div class="field"><label>Office Address</label><textarea id="f_${p}_office_addr" rows="2" placeholder="Office address" oninput="var w=document.getElementById('warn-office-addr-${p}');if(w)w.style.display='none';"></textarea><span id="warn-office-addr-${p}" style="display:none;color:#cc0000;font-size:0.82em;margin-top:3px;">Office address not filled — please enter manually. Required for cover page.</span></div>
             <div class="field"><label>Employment Verification Remarks</label><textarea id="f_${p}_emp_remarks" rows="2" placeholder="e.g. Office premises visited. Employment confirmed. Verification found satisfactory."></textarea></div>
           </div>
@@ -4186,6 +4195,7 @@ function buildCoAppBlock(n) {
             <select id="f_${p}_udyam_ent_type"><option value="">Select</option><option>Micro</option><option>Small</option><option>Medium</option></select>
           </div>
           <div class="field"><label>Date of Incorporation</label><input type="date" id="f_${p}_biz_joining"></div>
+          <div class="field"><label>Experience / Years in Business</label><input type="text" id="f_${p}_biz_experience" placeholder="e.g. 8 years"></div>
           <div class="field"><label>Business Address</label><textarea id="f_${p}_biz_office_addr" rows="2"></textarea></div>
           <div class="field"><label>Business / Office Verification Remarks</label><textarea id="f_${p}_biz_remarks" rows="2" placeholder="e.g. Business premises visited. Certificate verified. Verification found satisfactory."></textarea></div>
         </div>
@@ -4929,10 +4939,12 @@ function buildRow() {
     const constitution = g('f_app_gst_constitution') || g('f_app_udyam_ent_type') || '';
     const directors    = g('f_app_gst_directors') || '';
     const udyamNo      = g('f_app_udyam_no') || '';
+    const legalAddr    = g('f_app_gst_address') || '';
     const parts = [];
     if (constitution) parts.push('Constitution: ' + constitution);
     if (directors)    parts.push('Directors/Partners: ' + directors);
     if (udyamNo)      parts.push('Udyam: ' + udyamNo);
+    if (legalAddr)    parts.push('Legal Address: ' + legalAddr);
     row[16] = parts.join(' | ');
   } else {
     row[16] = g('f_app_branch');
@@ -4974,10 +4986,12 @@ function buildRow() {
       const coConst   = g(`f_${p}_gst_constitution`) || g(`f_${p}_udyam_ent_type`) || '';
       const coDir     = g(`f_${p}_gst_directors`) || '';
       const coUdyam   = g(`f_${p}_udyam_no`) || '';
+      const coLegal   = g(`f_${p}_gst_address`) || '';
       const coParts = [];
       if (coConst)  coParts.push('Constitution: ' + coConst);
       if (coDir)    coParts.push('Directors/Partners: ' + coDir);
       if (coUdyam)  coParts.push('Udyam: ' + coUdyam);
+      if (coLegal)  coParts.push('Legal Address: ' + coLegal);
       row[base+13] = coParts.join(' | ');
     } else {
       row[base+13] = g(`f_${p}_branch`);
@@ -5164,6 +5178,14 @@ function buildRow() {
   row[393] = g('f_edu_collateral_person_met');
   row[394] = g('f_edu_collateral_person_met_contact');
   row[395] = g('f_edu_collateral_person_met_relation');
+
+  // Experience (cols 396-407)
+  row[396] = g('f_app_experience');
+  row[397] = g('f_app_biz_experience');
+  for (let ci = 1; ci <= 5; ci++) {
+    row[397 + ci] = g(`f_co${ci}_experience`);      // 398-402
+    row[402 + ci] = g(`f_co${ci}_biz_experience`);  // 403-407
+  }
 
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
