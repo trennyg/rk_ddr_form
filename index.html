@@ -1002,6 +1002,7 @@
           <option value="Homemaker">Homemaker</option>
           <option value="Student">Student</option>
           <option value="Unemployed">Unemployed</option>
+          <option value="Income Not Considered">Income Not Considered</option>
         </select>
       </div>
 
@@ -4417,7 +4418,7 @@ function buildItrSection(forceRebuild) {
     const empVal = empSel ? (empSel.value || '') : '';
     const v = empVal.toLowerCase();
     if (v.includes('nri')) return false;
-    if (person.prefix !== 'app' && v === 'income not considered') return false;
+    if (v === 'income not considered') return false;
     return true;
   });
 
