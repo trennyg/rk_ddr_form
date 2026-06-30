@@ -812,7 +812,8 @@
     <div class="card-body">
       <div class="field">
         <label>Bank Name & Branch <span class="req">*</span></label>
-        <input type="text" id="f_bank" placeholder="e.g. HDFC Bank, Andheri Branch">
+        <input type="text" id="f_bank" list="bank_branch_list" placeholder="Type to search branch name" autocomplete="off">
+        <datalist id="bank_branch_list"></datalist>
       </div>
       <div class="field">
         <label>Loan Amount / Product <span class="req">*</span></label>
@@ -6773,6 +6774,18 @@ window.addEventListener('DOMContentLoaded', () => {
   renderDraftList();
   // Sync education collateral toggle to initial select value
   toggleEduCollateral(document.getElementById('f_edu_collateral_status').value);
+  // Populate branch datalist from canonical list
+  fetch('https://api.relentlessais.com/api/branches/canonical')
+    .then(r => r.json())
+    .then(d => {
+      const dl = document.getElementById('bank_branch_list');
+      d.branches.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        dl.appendChild(opt);
+      });
+    })
+    .catch(err => console.error('Failed to load branch list', err));
 });
 </script>
 </body>
