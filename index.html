@@ -1291,8 +1291,8 @@
     <div class="card-body">
       <div class="field-row">
         <div class="field">
-          <label>Executive Name</label>
-          <select id="f_exec_name" onchange="handleExecNameChange(this)">
+          <label>Residence Exec</label>
+          <select id="f_exec_residence" onchange="handleExecNameChange(this)">
             <option value="">Select Executive</option>
             <option>MR. RAJENDRA VARGAONKAR</option>
             <option>MR. RAJNIKANT PALKAR</option>
@@ -1303,8 +1303,47 @@
             <option>MR. ROSHAN THAKUR</option>
             <option>MR. TIRTHRAJ</option>
             <option value="Other">Other</option>
+            <option value="NONE_APPLICANT_PROVIDED">No Exec — Photo Provided by Applicant</option>
           </select>
-          <input type="text" id="f_exec_name_other" placeholder="Type executive name"
+          <input type="text" id="f_exec_residence_other" placeholder="Type executive name"
+            style="margin-top:8px;display:none;">
+        </div>
+        <div class="field">
+          <label>Office/Business Exec</label>
+          <select id="f_exec_office" onchange="handleExecNameChange(this)">
+            <option value="">Select Executive</option>
+            <option>MR. RAJENDRA VARGAONKAR</option>
+            <option>MR. RAJNIKANT PALKAR</option>
+            <option>MR. JAYESH DHAWAL</option>
+            <option>MR. OMKAR PANCHAL</option>
+            <option>MR. VIJAY RAVATE</option>
+            <option>MR. RAVINDRA SHARMA</option>
+            <option>MR. ROSHAN THAKUR</option>
+            <option>MR. TIRTHRAJ</option>
+            <option value="Other">Other</option>
+            <option value="NONE_APPLICANT_PROVIDED">No Exec — Photo Provided by Applicant</option>
+          </select>
+          <input type="text" id="f_exec_office_other" placeholder="Type executive name"
+            style="margin-top:8px;display:none;">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Asset Exec</label>
+          <select id="f_exec_asset" onchange="handleExecNameChange(this)">
+            <option value="">Select Executive</option>
+            <option>MR. RAJENDRA VARGAONKAR</option>
+            <option>MR. RAJNIKANT PALKAR</option>
+            <option>MR. JAYESH DHAWAL</option>
+            <option>MR. OMKAR PANCHAL</option>
+            <option>MR. VIJAY RAVATE</option>
+            <option>MR. RAVINDRA SHARMA</option>
+            <option>MR. ROSHAN THAKUR</option>
+            <option>MR. TIRTHRAJ</option>
+            <option value="Other">Other</option>
+            <option value="NONE_APPLICANT_PROVIDED">No Exec — Photo Provided by Applicant</option>
+          </select>
+          <input type="text" id="f_exec_asset_other" placeholder="Type executive name"
             style="margin-top:8px;display:none;">
         </div>
         <div class="field">
@@ -4319,7 +4358,7 @@ function buildCoAppBlock(n) {
 }
 
 function handleExecNameChange(sel) {
-  var otherInput = document.getElementById('f_exec_name_other');
+  var otherInput = document.getElementById(sel.id + '_other');
   if (!otherInput) return;
   otherInput.style.display = sel.value === 'Other' ? 'block' : 'none';
   if (sel.value !== 'Other') otherInput.value = '';
@@ -5021,7 +5060,9 @@ function buildRow() {
   }
 
   // Field Visit cols 141-150
-  row[141] = (g('f_exec_name') === 'Other' ? g('f_exec_name_other') : g('f_exec_name'));
+  row[141] = (g('f_exec_residence') === 'Other' ? g('f_exec_residence_other') : g('f_exec_residence'));
+  row[408] = (g('f_exec_office') === 'Other' ? g('f_exec_office_other') : g('f_exec_office'));
+  row[409] = (g('f_exec_asset') === 'Other' ? g('f_exec_asset_other') : g('f_exec_asset'));
   row[142] = g('f_visit_dt');
   row[143] = g('f_current_addr');
   row[144] = g('f_perm_addr');
