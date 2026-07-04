@@ -2570,6 +2570,7 @@ function switchTab(n) {
   currentTab = n;
   if (n === 5) buildItrSection();
   if (n === 9) buildUploadSummary();
+  if (n === 10) renderDraftList();
   saveDraft();  // immediate save on every tab switch — not debounced
   window.scrollTo(0, 0);
 }
@@ -5878,8 +5879,12 @@ function scheduleAutosave() {
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(async function() {
     const appName = (document.getElementById('f_app_name') || {}).value || '';
-    await saveDraft(appName.trim());
-    // Silent — no toast
+    const bank    = (document.getElementById('f_bank')     || {}).value || '';
+    const mobile  = (document.getElementById('f_app_mobile') || {}).value || '';
+    const pan     = (document.getElementById('f_app_kyc_pan_no') || {}).value || '';
+    if (appName.trim() || bank.trim() || mobile.trim() || pan.trim()) {
+      await saveDraft(appName.trim());
+    }
   }, 2000);  // 2 seconds — captures OCR results quickly
 }
 
