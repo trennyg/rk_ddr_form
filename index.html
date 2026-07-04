@@ -725,6 +725,25 @@
   </div>
 </div>
 
+<!-- PAN+mobile duplicate case modal -->
+<div class="modal-overlay" id="dup-modal-overlay">
+  <div class="modal">
+    <div class="modal-hdr">Possible Duplicate Case</div>
+    <div class="modal-body">
+      <p style="margin:0;font-size:15px;">A case with the same PAN and mobile already exists this financial year:</p>
+      <div class="extracted-field">
+        <div class="ef-label">Existing case ref</div>
+        <div class="ef-value" id="dup-case-ref-display"></div>
+      </div>
+      <p style="margin:0;font-size:14px;color:var(--muted);">Is this a fresh visit, or a continuation of the existing case?</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="dupModalChoice(false)">Continue that case</button>
+      <button class="btn btn-primary" onclick="dupModalChoice(true)">New visit</button>
+    </div>
+  </div>
+</div>
+
 <!-- Office exec badge (top-right corner) -->
 <div id="exec-badge" onclick="toggleExecMenu()" style="display:none;"></div>
 <div id="exec-badge-menu">
@@ -1891,13 +1910,8 @@
   </div>
   <div class="submit-card">
     <div style="font-size:15px;font-weight:600;margin-bottom:4px;">Submission Type</div>
-    <div style="font-size:14px;color:var(--muted);">Choose whether this is a final submission or an intermediate save.</div>
+    <div style="font-size:14px;color:var(--muted);">All submissions are final and trigger full DDR report generation.</div>
     <div class="submit-type-row">
-      <div class="submit-type-btn" id="btn_intermediate" onclick="setSubmitType('intermediate')">
-        <div class="st-icon">💾</div>
-        <div class="st-title">Save (Intermediate)</div>
-        <div class="st-desc">Data saved. DDR not generated yet.</div>
-      </div>
       <div class="submit-type-btn selected" id="btn_final" onclick="setSubmitType('final')">
         <div class="st-icon">🚀</div>
         <div class="st-title">Final Submit</div>
@@ -2556,6 +2570,7 @@ function switchTab(n) {
   currentTab = n;
   if (n === 5) buildItrSection();
   if (n === 9) buildUploadSummary();
+  saveDraft();  // immediate save on every tab switch — not debounced
   window.scrollTo(0, 0);
 }
 
@@ -4876,7 +4891,6 @@ function buildUploadSummary() {
 // ══════════════════════════════════════════════════════════
 function setSubmitType(type) {
   submitType = type;
-  document.getElementById('btn_intermediate').classList.toggle('selected', type === 'intermediate');
   document.getElementById('btn_final').classList.toggle('selected', type === 'final');
 }
 
@@ -4957,7 +4971,7 @@ function buildRow() {
 
   row[0] = now;
   row[1] = '';
-  row[2] = submitType === 'final' ? 'Yes' : 'No';
+  row[2] = 'Yes';
   row[3] = g('f_bank');
   row[4] = g('f_loan');
 
@@ -5362,6 +5376,12 @@ async function submitForm() {
 
     if (result.error) throw new Error(result.error);
 
+    if (result.status === 'possible_duplicate') {
+      setProgress(0);
+      showDuplicateModal(result.matchedCaseRef, result.matchedSessionId, row);
+      return;
+    }
+
     setProgress(100);
     showStatus('✅ ' + (result.message || 'Form submitted successfully!'), 'success');
     showToast('Submitted!', 'success');
@@ -5373,6 +5393,68 @@ async function submitForm() {
     if (appNameAfterSubmit.trim()) {
       try { await saveDraft(appNameAfterSubmit.trim()); } catch(e) {}
     }
+  } catch(e) {
+    showStatus('❌ Submission failed: ' + e.message, 'error');
+    showToast('Submission failed', 'error');
+  } finally {
+    submitting = false;
+    document.getElementById('submitBtn').disabled = false;
+  }
+}
+
+// ── Duplicate-case modal ─────────────────────────────────────────────────────
+var _dupMatchedCaseRef   = null;
+var _dupMatchedSessionId = null;
+var _dupPendingRow       = null;
+
+function showDuplicateModal(matchedCaseRef, matchedSessionId, pendingRow) {
+  _dupMatchedCaseRef   = matchedCaseRef;
+  _dupMatchedSessionId = matchedSessionId;
+  _dupPendingRow       = pendingRow;
+  document.getElementById('dup-case-ref-display').textContent = matchedCaseRef;
+  document.getElementById('dup-modal-overlay').classList.add('open');
+}
+
+function dupModalChoice(isNewVisit) {
+  document.getElementById('dup-modal-overlay').classList.remove('open');
+  const row       = _dupPendingRow;
+  const sessionId = _dupMatchedSessionId;
+  _dupMatchedCaseRef   = null;
+  _dupMatchedSessionId = null;
+  _dupPendingRow       = null;
+  _refireSubmit(row, isNewVisit ? { confirmedNew: true } : { overrideSessionId: sessionId });
+}
+
+async function _refireSubmit(row, extraFields) {
+  const endpoint = getEndpoint();
+  submitting = true;
+  document.getElementById('submitBtn').disabled = true;
+  setProgress(80);
+  showStatus('Submitting...', 'info');
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(Object.assign({
+        row,
+        files: {},
+        isFinal: true,
+        draftKey: currentDraftKey,
+        case_session_id: currentCaseId,
+        officeExecName: localStorage.getItem('rk_office_exec') || '',
+        formMode: currentFormMode
+      }, extraFields))
+    });
+    setProgress(95);
+    const text = await res.text();
+    let result;
+    try { result = JSON.parse(text); } catch(e) { result = { status: 'ok' }; }
+    if (result.error) throw new Error(result.error);
+    setProgress(100);
+    showStatus('✅ ' + (result.message || 'Form submitted successfully!'), 'success');
+    showToast('Submitted!', 'success');
+    setSubmitType('final');
+    const appName = (document.getElementById('f_app_name') || {}).value || '';
+    if (appName.trim()) { try { await saveDraft(appName.trim()); } catch(e) {} }
   } catch(e) {
     showStatus('❌ Submission failed: ' + e.message, 'error');
     showToast('Submission failed', 'error');
@@ -5796,12 +5878,28 @@ function scheduleAutosave() {
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(async function() {
     const appName = (document.getElementById('f_app_name') || {}).value || '';
-    if (appName.trim()) {
-      await saveDraft(appName.trim());
-      // Silent — no toast
-    }
-  }, 5000);  // 5 seconds — captures OCR results quickly
+    await saveDraft(appName.trim());
+    // Silent — no toast
+  }, 2000);  // 2 seconds — captures OCR results quickly
 }
+
+window.addEventListener('beforeunload', function() {
+  try {
+    var meta = buildDraftMeta();
+    if (meta && meta.key) {
+      var endpoint = getEndpoint();
+      if (endpoint) {
+        navigator.sendBeacon(
+          endpoint,
+          new Blob(
+            [JSON.stringify({ action: 'saveDraft', draft: meta })],
+            { type: 'text/plain' }
+          )
+        );
+      }
+    }
+  } catch(e) { /* best-effort, never throws */ }
+});
 
 async function saveDraftNow() {
   const appName = (document.getElementById('f_app_name') || {}).value || '';
