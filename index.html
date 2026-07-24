@@ -1208,6 +1208,8 @@
     </div>
   </div>
 
+  <div id="extra-offices-container"></div>
+
   <!-- BANK STATEMENT -->
   <div class="card">
     <div class="card-hdr">🏛 Bank Statement</div>
@@ -1653,6 +1655,8 @@
       <div class="file-list" id="fl_property_photos"></div>
     </div>
   </div>
+
+  <div id="extra-properties-container"></div>
 
   <div class="nav-btns">
     <button class="btn btn-secondary" type="button" onclick="switchTab(5)">← ITR / F16</button>
@@ -4304,6 +4308,7 @@ function buildCoAppBlock(n) {
         <div class="file-list" id="fl_${p}_office_photos"></div>
       </div>
     </div>
+    <div id="co${n}-office-container"></div>
     <!-- BANK STMT -->
     <div class="card">
       <div class="card-hdr">🏛 Co-App ${n} — Bank Statement</div>
@@ -5246,6 +5251,68 @@ function buildRow() {
     row[402 + ci] = g(`f_co${ci}_biz_experience`);  // 403-407
   }
 
+  // Read extra offices
+  const extraOfficesOut = [];
+  document.querySelectorAll('.extra-office-block').forEach(block => {
+    const n = parseInt(block.dataset.index) + 2;
+    extraOfficesOut.push({
+      office_addr:        g(`f_app_office${n}_addr`)             || '',
+      nature_of_org:      g(`f_app_office${n}_nature_of_org`)    || '',
+      person_met:         g(`f_app_office${n}_person_met`)        || '',
+      person_met_desig:   g(`f_app_office${n}_person_met_desig`) || '',
+      person_met_contact: g(`f_app_office${n}_person_met_contact`) || '',
+      emp_remarks:        g(`f_app_office${n}_emp_remarks`)       || '',
+      experience:         g(`f_app_office${n}_experience`)        || ''
+    });
+  });
+
+  // Read extra properties
+  const extraPropertiesOut = [];
+  document.querySelectorAll('.extra-property-block').forEach(block => {
+    const n = parseInt(block.dataset.index) + 2;
+    extraPropertiesOut.push({
+      address:             g(`f_prop${n}_address`)             || '',
+      area:                g(`f_prop${n}_area`)                || '',
+      type:                g(`f_prop${n}_type`)                || '',
+      price:               g(`f_prop${n}_price`)               || '',
+      person_met:          g(`f_prop${n}_person_met`)          || '',
+      person_met_contact:  g(`f_prop${n}_person_met_contact`)  || '',
+      person_met_relation: g(`f_prop${n}_person_met_relation`) || '',
+      remarks:             g(`f_prop${n}_remarks`)             || ''
+    });
+  });
+
+  // Read co-app offices (slot 1 + extras)
+  const extraCoOfficesOut = [];
+  for (let ci = 1; ci <= 5; ci++) {
+    const coArr = [];
+    const s1 = {
+      nature_of_org:      g(`f_co${ci}_nature_of_org`)       || '',
+      person_met:         g(`f_co${ci}_person_met`)           || '',
+      person_met_desig:   g(`f_co${ci}_person_met_desig`)     || '',
+      person_met_contact: g(`f_co${ci}_person_met_contact`)   || ''
+    };
+    if (Object.values(s1).some(v => v)) coArr.push(s1);
+    document.querySelectorAll(`.co${ci}-extra-office-block`).forEach(block => {
+      const ei = parseInt(block.dataset.index);
+      const en = ei + 1;
+      coArr.push({
+        nature_of_org:      g(`f_co${ci}_office${en}_nature_of_org`)      || '',
+        person_met:         g(`f_co${ci}_office${en}_person_met`)          || '',
+        person_met_desig:   g(`f_co${ci}_office${en}_person_met_desig`)    || '',
+        person_met_contact: g(`f_co${ci}_office${en}_person_met_contact`)  || ''
+      });
+    });
+    extraCoOfficesOut.push(coArr);
+  }
+
+  // Attach extras to row for submit payload
+  row.extras = {
+    offices:    extraOfficesOut,
+    properties: extraPropertiesOut,
+    co_offices: extraCoOfficesOut
+  };
+
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
     console.log('  itr_app_' + yr + ':', row[151 + ['2425','2526','2627'].indexOf(yr)*3 + 1]);
@@ -5366,7 +5433,8 @@ async function submitForm() {
         draftKey: currentDraftKey,
         case_session_id: currentCaseId,
         officeExecName: localStorage.getItem('rk_office_exec') || '',
-        formMode: currentFormMode
+        formMode: currentFormMode,
+        extras: row.extras || {}
       })
     });
 
@@ -5442,7 +5510,8 @@ async function _refireSubmit(row, extraFields) {
         draftKey: currentDraftKey,
         case_session_id: currentCaseId,
         officeExecName: localStorage.getItem('rk_office_exec') || '',
-        formMode: currentFormMode
+        formMode: currentFormMode,
+        extras: row.extras || {}
       }, extraFields))
     });
     setProgress(95);
@@ -5516,7 +5585,160 @@ function collectFormValues() {
     if (val) vals[id] = val;
   });
   vals['__numCoApps'] = numCoApps;
+
+  // Extras — rebuild structured extras object from DOM extra blocks for draft persistence
+  var _eoVals = [];
+  document.querySelectorAll('.extra-office-block').forEach(function(block) {
+    var n = parseInt(block.dataset.index) + 2;
+    _eoVals.push({
+      office_addr:        (document.getElementById('f_app_office'+n+'_addr')            || {}).value || '',
+      nature_of_org:      (document.getElementById('f_app_office'+n+'_nature_of_org')   || {}).value || '',
+      person_met:         (document.getElementById('f_app_office'+n+'_person_met')       || {}).value || '',
+      person_met_desig:   (document.getElementById('f_app_office'+n+'_person_met_desig')|| {}).value || '',
+      person_met_contact: (document.getElementById('f_app_office'+n+'_person_met_contact')|| {}).value || '',
+      emp_remarks:        (document.getElementById('f_app_office'+n+'_emp_remarks')      || {}).value || '',
+      experience:         (document.getElementById('f_app_office'+n+'_experience')       || {}).value || ''
+    });
+  });
+  var _epVals = [];
+  document.querySelectorAll('.extra-property-block').forEach(function(block) {
+    var n = parseInt(block.dataset.index) + 2;
+    _epVals.push({
+      address:             (document.getElementById('f_prop'+n+'_address')            || {}).value || '',
+      area:                (document.getElementById('f_prop'+n+'_area')               || {}).value || '',
+      type:                (document.getElementById('f_prop'+n+'_type')               || {}).value || '',
+      price:               (document.getElementById('f_prop'+n+'_price')              || {}).value || '',
+      person_met:          (document.getElementById('f_prop'+n+'_person_met')         || {}).value || '',
+      person_met_contact:  (document.getElementById('f_prop'+n+'_person_met_contact') || {}).value || '',
+      person_met_relation: (document.getElementById('f_prop'+n+'_person_met_relation')|| {}).value || '',
+      remarks:             (document.getElementById('f_prop'+n+'_remarks')            || {}).value || ''
+    });
+  });
+  var _ecoVals = [];
+  for (var _ci = 1; _ci <= 5; _ci++) {
+    var _coArr = [];
+    var _s1 = {
+      nature_of_org:      (document.getElementById('f_co'+_ci+'_nature_of_org')      || {}).value || '',
+      person_met:         (document.getElementById('f_co'+_ci+'_person_met')          || {}).value || '',
+      person_met_desig:   (document.getElementById('f_co'+_ci+'_person_met_desig')    || {}).value || '',
+      person_met_contact: (document.getElementById('f_co'+_ci+'_person_met_contact')  || {}).value || ''
+    };
+    if (Object.values(_s1).some(function(v) { return !!v; })) _coArr.push(_s1);
+    (function(ci) {
+      document.querySelectorAll('.co'+ci+'-extra-office-block').forEach(function(block) {
+        var ei = parseInt(block.dataset.index);
+        var en = ei + 1;
+        _coArr.push({
+          nature_of_org:      (document.getElementById('f_co'+ci+'_office'+en+'_nature_of_org')      || {}).value || '',
+          person_met:         (document.getElementById('f_co'+ci+'_office'+en+'_person_met')          || {}).value || '',
+          person_met_desig:   (document.getElementById('f_co'+ci+'_office'+en+'_person_met_desig')    || {}).value || '',
+          person_met_contact: (document.getElementById('f_co'+ci+'_office'+en+'_person_met_contact')  || {}).value || ''
+        });
+      });
+    })(_ci);
+    _ecoVals.push(_coArr);
+  }
+  if (_eoVals.length || _epVals.length || _ecoVals.some(function(a) { return a.length; })) {
+    vals.extras = { offices: _eoVals, properties: _epVals, co_offices: _ecoVals };
+  }
+
   return vals;
+}
+
+// ── Extras render helpers ─────────────────────────────────
+function renderPhotoStrip(photos, label) {
+  if (!photos || !photos.length) return '';
+  const thumbs = photos.map(function(url) {
+    const src = url.startsWith('http') ? url : 'https://intake.rkfinservice.com' + url;
+    return '<img src="' + src + '" style="width:56px;height:56px;object-fit:cover;' +
+           'border-radius:4px;border:1px solid #e2e8f0;" onerror="this.style.display=\'none\'">';
+  }).join('');
+  return '<div style="margin-top:8px">' +
+         '<div style="font-size:12px;color:#64748b;margin-bottom:4px">' + label + '</div>' +
+         '<div style="display:flex;gap:6px;flex-wrap:wrap">' + thumbs + '</div></div>';
+}
+
+function renderExtraOfficeBlock(n, o) {
+  o = o || {};
+  const container = document.getElementById('extra-offices-container');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.className = 'extra-office-block';
+  div.dataset.index = n - 2;
+  div.innerHTML =
+    '<h4 style="margin-top:16px;font-weight:600;color:#1a2d4d">Office ' + n + '</h4>' +
+    '<label>Office / Business Address</label>' +
+    '<textarea id="f_app_office' + n + '_addr" rows="2">' + (o.office_addr || '') + '</textarea>' +
+    '<label>Nature of Organisation</label>' +
+    '<input type="text" id="f_app_office' + n + '_nature_of_org" value="' + (o.nature_of_org || '') + '">' +
+    '<label>Person Met</label>' +
+    '<input type="text" id="f_app_office' + n + '_person_met" value="' + (o.person_met || '') + '">' +
+    '<label>Designation</label>' +
+    '<input type="text" id="f_app_office' + n + '_person_met_desig" value="' + (o.person_met_desig || '') + '">' +
+    '<label>Contact</label>' +
+    '<input type="tel" id="f_app_office' + n + '_person_met_contact" value="' + (o.person_met_contact || '') + '">' +
+    '<label>Remarks</label>' +
+    '<textarea id="f_app_office' + n + '_emp_remarks" rows="2">' + (o.emp_remarks || '') + '</textarea>' +
+    '<label>Years of Experience</label>' +
+    '<input type="text" id="f_app_office' + n + '_experience" value="' + (o.experience || '') + '">' +
+    renderPhotoStrip(o.photos || [], 'Office ' + n + ' Field Photos');
+  container.appendChild(div);
+}
+
+function renderExtraPropBlock(n, p) {
+  p = p || {};
+  const container = document.getElementById('extra-properties-container');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.className = 'extra-property-block';
+  div.dataset.index = n - 2;
+  div.innerHTML =
+    '<h4 style="margin-top:16px;font-weight:600;color:#1a2d4d">Property ' + n + '</h4>' +
+    '<label>Property Address</label>' +
+    '<textarea id="f_prop' + n + '_address" rows="2">' + (p.address || '') + '</textarea>' +
+    '<label>Area</label>' +
+    '<input type="text" id="f_prop' + n + '_area" value="' + (p.area || '') + '">' +
+    '<label>Property Type</label>' +
+    '<input type="text" id="f_prop' + n + '_type" value="' + (p.type || '') + '">' +
+    '<label>Market Value</label>' +
+    '<input type="text" id="f_prop' + n + '_price" value="' + (p.price || '') + '">' +
+    '<label>Person Met</label>' +
+    '<input type="text" id="f_prop' + n + '_person_met" value="' + (p.person_met || '') + '">' +
+    '<label>Contact</label>' +
+    '<input type="tel" id="f_prop' + n + '_person_met_contact" value="' + (p.person_met_contact || '') + '">' +
+    '<label>Relation</label>' +
+    '<input type="text" id="f_prop' + n + '_person_met_relation" value="' + (p.person_met_relation || '') + '">' +
+    '<label>Remarks</label>' +
+    '<textarea id="f_prop' + n + '_remarks" rows="2">' + (p.remarks || '') + '</textarea>' +
+    renderPhotoStrip(p.photos || [], 'Property ' + n + ' Field Photos');
+  container.appendChild(div);
+}
+
+function renderCoAppOfficeBlocks(n, coArr) {
+  coArr = coArr || [];
+  const container = document.getElementById('co' + n + '-office-container');
+  if (!container) return;
+  container.innerHTML = '';
+  coArr.forEach(function(o, ei) {
+    o = o || {};
+    const label = ei === 0 ? 'Co-Applicant ' + n + ' — Office' : 'Co-Applicant ' + n + ' — Office ' + (ei + 1);
+    const prefix = ei === 0 ? 'f_co' + n : 'f_co' + n + '_office' + (ei + 1);
+    const div = document.createElement('div');
+    div.className = ei === 0 ? 'co' + n + '-office-slot1' : 'co' + n + '-extra-office-block';
+    div.dataset.index = ei;
+    div.innerHTML =
+      '<h4 style="margin-top:16px;font-weight:600;color:#1a2d4d">' + label + '</h4>' +
+      '<label>Nature of Organisation</label>' +
+      '<input type="text" id="' + prefix + '_nature_of_org" value="' + (o.nature_of_org || '') + '">' +
+      '<label>Person Met</label>' +
+      '<input type="text" id="' + prefix + '_person_met" value="' + (o.person_met || '') + '">' +
+      '<label>Designation</label>' +
+      '<input type="text" id="' + prefix + '_person_met_desig" value="' + (o.person_met_desig || '') + '">' +
+      '<label>Contact</label>' +
+      '<input type="tel" id="' + prefix + '_person_met_contact" value="' + (o.person_met_contact || '') + '">' +
+      renderPhotoStrip(o.photos || [], label + ' Field Photos');
+    container.appendChild(div);
+  });
 }
 
 // ── Restore form from saved values ───────────────────────
@@ -5628,6 +5850,25 @@ function restoreFormValues(metaOrVals) {
       document.querySelectorAll('.file-list').forEach(function(fl) { fl.innerHTML = ''; });
     }, 600);
   }
+
+  // Render extra office / property / co-app office blocks from extras
+  const extras = vals.extras || {};
+  const eOff = extras.offices || [];
+  const eProp = extras.properties || [];
+  // Clear containers before re-rendering (handles repeated draft loads)
+  const _eoc = document.getElementById('extra-offices-container');
+  if (_eoc) _eoc.innerHTML = '';
+  const _epc = document.getElementById('extra-properties-container');
+  if (_epc) _epc.innerHTML = '';
+
+  eOff.forEach(function(o, i) { renderExtraOfficeBlock(i + 2, o); });
+  eProp.forEach(function(p, i) { renderExtraPropBlock(i + 2, p); });
+
+  (extras.co_offices || []).forEach(function(coArr, ci) {
+    var _cc = document.getElementById('co' + (ci + 1) + '-office-container');
+    if (_cc) _cc.innerHTML = '';
+    renderCoAppOfficeBlocks(ci + 1, coArr);
+  });
 }
 
 // ── Build draft meta object ───────────────────────────────
