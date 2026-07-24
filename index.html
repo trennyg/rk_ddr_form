@@ -793,6 +793,8 @@
             margin:4px 0 4px 8px;">
 </div>
 
+<div id="intake-docs-panel"></div>
+
 <!-- ════ TAB 0 — FORM TYPE SELECTOR ════ -->
 <div class="tab-pane active" id="pane0">
   <div class="card">
@@ -5741,6 +5743,27 @@ function renderCoAppOfficeBlocks(n, coArr) {
   });
 }
 
+function renderIntakeDocs(files) {
+  var panel = document.getElementById('intake-docs-panel');
+  if (!panel) return;
+  if (!files || !files.length) { panel.innerHTML = ''; return; }
+  var endpoint = (getEndpoint() || '').replace(/\/$/, '');
+  var rows = '';
+  files.forEach(function(f) {
+    var suffix = f.stored_path ? f.stored_path.split('/uploads/intake/')[1] : null;
+    var href   = suffix ? endpoint + '/uploads/intake/' + suffix : null;
+    rows += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.12)">' +
+            '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (f.filename || 'File') + '</span>' +
+            (href ? '<a href="' + href + '" target="_blank" rel="noopener" style="color:#fff;border:1px solid rgba(255,255,255,0.5);border-radius:4px;padding:2px 8px;text-decoration:none;font-size:11px;white-space:nowrap">Open</a>' : '') +
+            '</div>';
+  });
+  panel.innerHTML =
+    '<div style="background:#14457b;color:#e8f0fe;border-radius:8px;padding:12px 16px;margin:8px 0 0;font-size:13px">' +
+    '<div style="font-weight:600;margin-bottom:8px">Intake Documents (' + files.length + ')</div>' +
+    rows +
+    '</div>';
+}
+
 // ── Restore form from saved values ───────────────────────
 function restoreFormValues(metaOrVals) {
   // Accept either a full draft meta object or just vals
@@ -6110,6 +6133,7 @@ async function openDraft(key) {
   restoreFormValues(meta);
   toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
   applyFormMode(meta.formMode || 'ddr');
+  renderIntakeDocs(meta.uploadedFiles || []);
   showToast('Loaded: ' + (meta.appName || meta.name), 'success');
   switchTab(1);
 }
