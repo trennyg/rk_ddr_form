@@ -2582,6 +2582,7 @@ function g(id) {
 
 
 function switchTab(n) {
+  if (_restoring) return;
   if (n === 'invoice') {
     document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
     document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -7042,7 +7043,7 @@ async function openDraft(key) {
   setTimeout(function() {
     restoreFormValues(meta);
     toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
-  }, 0);
+  }, 100);
 }
 
 // ── AUTOSAVE ──────────────────────────────────────────────
