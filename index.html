@@ -1295,12 +1295,12 @@
           <select id="f_exec_residence" onchange="handleExecNameChange(this)">
             <option value="">Select Executive</option>
             <option>MR. RAJENDRA VARGAONKAR</option>
-            <option>MR. RAJNIKANT PALKAR</option>
             <option>MR. JAYESH DHAWAL</option>
             <option>MR. OMKAR PANCHAL</option>
             <option>MR. VIJAY RAVATE</option>
             <option>MR. RAVINDRA SHARMA</option>
-            <option>MR. ROSHAN THAKUR</option>
+            <option>MR. ANIKET MHASKE</option>
+            <option>MR. SURESH GUPTA</option>
             <option>MR. TIRTHRAJ</option>
             <option value="Other">Other</option>
             <option value="NONE_APPLICANT_PROVIDED">No Exec — Photo Provided by Applicant</option>
@@ -1313,12 +1313,12 @@
           <select id="f_exec_office" onchange="handleExecNameChange(this)">
             <option value="">Select Executive</option>
             <option>MR. RAJENDRA VARGAONKAR</option>
-            <option>MR. RAJNIKANT PALKAR</option>
             <option>MR. JAYESH DHAWAL</option>
             <option>MR. OMKAR PANCHAL</option>
             <option>MR. VIJAY RAVATE</option>
             <option>MR. RAVINDRA SHARMA</option>
-            <option>MR. ROSHAN THAKUR</option>
+            <option>MR. ANIKET MHASKE</option>
+            <option>MR. SURESH GUPTA</option>
             <option>MR. TIRTHRAJ</option>
             <option value="Other">Other</option>
             <option value="NONE_APPLICANT_PROVIDED">No Exec — Photo Provided by Applicant</option>
@@ -1333,12 +1333,12 @@
           <select id="f_exec_asset" onchange="handleExecNameChange(this)">
             <option value="">Select Executive</option>
             <option>MR. RAJENDRA VARGAONKAR</option>
-            <option>MR. RAJNIKANT PALKAR</option>
             <option>MR. JAYESH DHAWAL</option>
             <option>MR. OMKAR PANCHAL</option>
             <option>MR. VIJAY RAVATE</option>
             <option>MR. RAVINDRA SHARMA</option>
-            <option>MR. ROSHAN THAKUR</option>
+            <option>MR. ANIKET MHASKE</option>
+            <option>MR. SURESH GUPTA</option>
             <option>MR. TIRTHRAJ</option>
             <option value="Other">Other</option>
             <option value="NONE_APPLICANT_PROVIDED">No Exec — Photo Provided by Applicant</option>
@@ -1891,13 +1891,8 @@
   </div>
   <div class="submit-card">
     <div style="font-size:15px;font-weight:600;margin-bottom:4px;">Submission Type</div>
-    <div style="font-size:14px;color:var(--muted);">Choose whether this is a final submission or an intermediate save.</div>
+    <div style="font-size:14px;color:var(--muted);">All submissions are final and trigger full DDR report generation.</div>
     <div class="submit-type-row">
-      <div class="submit-type-btn" id="btn_intermediate" onclick="setSubmitType('intermediate')">
-        <div class="st-icon">💾</div>
-        <div class="st-title">Save (Intermediate)</div>
-        <div class="st-desc">Data saved. DDR not generated yet.</div>
-      </div>
       <div class="submit-type-btn selected" id="btn_final" onclick="setSubmitType('final')">
         <div class="st-icon">🚀</div>
         <div class="st-title">Final Submit</div>
@@ -2556,6 +2551,7 @@ function switchTab(n) {
   currentTab = n;
   if (n === 5) buildItrSection();
   if (n === 9) buildUploadSummary();
+  if (n === 10) renderDraftList();
   window.scrollTo(0, 0);
 }
 
@@ -4876,7 +4872,6 @@ function buildUploadSummary() {
 // ══════════════════════════════════════════════════════════
 function setSubmitType(type) {
   submitType = type;
-  document.getElementById('btn_intermediate').classList.toggle('selected', type === 'intermediate');
   document.getElementById('btn_final').classList.toggle('selected', type === 'final');
 }
 
@@ -5568,6 +5563,15 @@ function buildDraftMeta(draftName) {
 // ── SAVE DRAFT ────────────────────────────────────────────
 // Saves to cloud (Apps Script) AND localStorage as backup
 async function saveDraft(draftName) {
+  try {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    Object.keys(localStorage).filter(k => k.startsWith('rka_draft_')).forEach(function(k) {
+      try {
+        const d = JSON.parse(localStorage.getItem(k));
+        if (new Date(d.savedAt) < cutoff) localStorage.removeItem(k);
+      } catch(e) {}
+    });
+  } catch(e) {}
   const meta = buildDraftMeta(draftName);
 
   // Always save to localStorage as backup
@@ -5802,6 +5806,24 @@ function scheduleAutosave() {
     }
   }, 5000);  // 5 seconds — captures OCR results quickly
 }
+
+window.addEventListener('beforeunload', function() {
+  try {
+    var meta = buildDraftMeta();
+    if (meta && meta.key) {
+      var endpoint = getEndpoint();
+      if (endpoint) {
+        navigator.sendBeacon(
+          endpoint,
+          new Blob(
+            [JSON.stringify({ action: 'saveDraft', draft: meta })],
+            { type: 'text/plain' }
+          )
+        );
+      }
+    }
+  } catch(e) {}
+});
 
 async function saveDraftNow() {
   const appName = (document.getElementById('f_app_name') || {}).value || '';
