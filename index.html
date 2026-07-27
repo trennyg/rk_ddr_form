@@ -1295,12 +1295,12 @@
           <select id="f_exec_residence" onchange="handleExecNameChange(this)">
             <option value="">Select Executive</option>
             <option>MR. RAJENDRA VARGAONKAR</option>
+            <option>MR. RAJNIKANT PALKAR</option>
             <option>MR. JAYESH DHAWAL</option>
             <option>MR. OMKAR PANCHAL</option>
             <option>MR. VIJAY RAVATE</option>
             <option>MR. RAVINDRA SHARMA</option>
-            <option>MR. ANIKET MHASKE</option>
-            <option>MR. SURESH GUPTA</option>
+            <option>MR. ROSHAN THAKUR</option>
             <option>MR. TIRTHRAJ</option>
             <option value="Other">Other</option>
             <option value="NONE_APPLICANT_PROVIDED">No Exec — Photo Provided by Applicant</option>
@@ -1313,12 +1313,12 @@
           <select id="f_exec_office" onchange="handleExecNameChange(this)">
             <option value="">Select Executive</option>
             <option>MR. RAJENDRA VARGAONKAR</option>
+            <option>MR. RAJNIKANT PALKAR</option>
             <option>MR. JAYESH DHAWAL</option>
             <option>MR. OMKAR PANCHAL</option>
             <option>MR. VIJAY RAVATE</option>
             <option>MR. RAVINDRA SHARMA</option>
-            <option>MR. ANIKET MHASKE</option>
-            <option>MR. SURESH GUPTA</option>
+            <option>MR. ROSHAN THAKUR</option>
             <option>MR. TIRTHRAJ</option>
             <option value="Other">Other</option>
             <option value="NONE_APPLICANT_PROVIDED">No Exec — Photo Provided by Applicant</option>
@@ -1333,12 +1333,12 @@
           <select id="f_exec_asset" onchange="handleExecNameChange(this)">
             <option value="">Select Executive</option>
             <option>MR. RAJENDRA VARGAONKAR</option>
+            <option>MR. RAJNIKANT PALKAR</option>
             <option>MR. JAYESH DHAWAL</option>
             <option>MR. OMKAR PANCHAL</option>
             <option>MR. VIJAY RAVATE</option>
             <option>MR. RAVINDRA SHARMA</option>
-            <option>MR. ANIKET MHASKE</option>
-            <option>MR. SURESH GUPTA</option>
+            <option>MR. ROSHAN THAKUR</option>
             <option>MR. TIRTHRAJ</option>
             <option value="Other">Other</option>
             <option value="NONE_APPLICANT_PROVIDED">No Exec — Photo Provided by Applicant</option>
@@ -2297,7 +2297,6 @@ function _newCaseId() {
 }
 let currentCaseId = _newCaseId();
 let numCoApps = 0;
-let _restoring = false; // true while openDraft is restoring — suppresses tab-switch saveDraft
 let _draftDriveFiles = {}; // key -> [{driveUrl, name, mimeType}] — Drive URLs only, no base64
 let _discardedDriveKeys = new Set(); // keys where user chose to discard the Drive file
 
@@ -2557,8 +2556,6 @@ function switchTab(n) {
   currentTab = n;
   if (n === 5) buildItrSection();
   if (n === 9) buildUploadSummary();
-  if (n === 10) renderDraftList();
-  if (!_restoring) saveDraft();
   window.scrollTo(0, 0);
 }
 
@@ -5498,7 +5495,6 @@ function restoreFormValues(metaOrVals) {
       }
     }
     updateInvoicePreview();
-    _restoring = false;
   }, 400);
 
   // Restore Drive-uploaded photos from draft
@@ -5782,7 +5778,6 @@ async function openDraft(key) {
   hardClearForm(false);
   currentCaseId = meta.caseSessionId || _newCaseId();
   currentDraftKey = key;
-  _restoring = true;
   // Restore Drive file URLs from draft
   _draftDriveFiles = (meta.driveFiles && typeof meta.driveFiles === 'object') ? meta.driveFiles : {};
   // Build dynamic sections BEFORE restoring values
@@ -5798,29 +5793,15 @@ async function openDraft(key) {
 // ── AUTOSAVE ──────────────────────────────────────────────
 let autosaveTimer = null;
 function scheduleAutosave() {
-  if (_restoring) return;
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(async function() {
     const appName = (document.getElementById('f_app_name') || {}).value || '';
-    const bank    = (document.getElementById('f_bank')     || {}).value || '';
-    const mobile  = (document.getElementById('f_app_mobile') || {}).value || '';
-    const pan     = (document.getElementById('f_app_kyc_pan_no') || {}).value || '';
-    if (appName.trim() || bank.trim() || mobile.trim() || pan.trim()) {
+    if (appName.trim()) {
       await saveDraft(appName.trim());
+      // Silent — no toast
     }
-  }, 5000);
+  }, 5000);  // 5 seconds — captures OCR results quickly
 }
-window.addEventListener('beforeunload', function() {
-  try {
-    var meta = buildDraftMeta();
-    if (meta && meta.key) {
-      var endpoint = getEndpoint();
-      if (endpoint) {
-        navigator.sendBeacon(endpoint, new Blob([JSON.stringify({ action: 'saveDraft', draft: meta })], { type: 'text/plain' }));
-      }
-    }
-  } catch(e) {}
-});
 
 async function saveDraftNow() {
   const appName = (document.getElementById('f_app_name') || {}).value || '';
@@ -6828,6 +6809,8 @@ window.addEventListener('DOMContentLoaded', () => {
     tiDate.value = today.toISOString().slice(0, 10);
   }
   // Attach autosave listeners
+  document.addEventListener('change', scheduleAutosave);
+  document.addEventListener('input',  scheduleAutosave);
   // Render drafts list on first load
   renderDraftList();
   // Sync education collateral toggle to initial select value
