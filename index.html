@@ -6827,8 +6827,6 @@ window.addEventListener('DOMContentLoaded', () => {
     tiDate.value = today.toISOString().slice(0, 10);
   }
   // Attach autosave listeners
-  document.addEventListener('change', scheduleAutosave);
-  document.addEventListener('input',  scheduleAutosave);
   // Render drafts list on first load
   renderDraftList();
   // Sync education collateral toggle to initial select value
