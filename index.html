@@ -5798,6 +5798,7 @@ async function openDraft(key) {
 // ── AUTOSAVE ──────────────────────────────────────────────
 let autosaveTimer = null;
 function scheduleAutosave() {
+  if (_restoring) return;
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(async function() {
     const appName = (document.getElementById('f_app_name') || {}).value || '';
