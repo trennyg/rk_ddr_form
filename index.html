@@ -2582,7 +2582,6 @@ function g(id) {
 
 
 function switchTab(n) {
-  if (_restoring) return;
   if (n === 'invoice') {
     document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
     document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -2616,7 +2615,7 @@ function switchTab(n) {
   if (n === 5) buildItrSection();
   if (n === 9) buildUploadSummary();
   if (n === 10) renderDraftList();
-  saveDraft();  // immediate save on every tab switch — not debounced
+  if (!_restoring) saveDraft();  // immediate save on every tab switch — not debounced
   window.scrollTo(0, 0);
 }
 
@@ -7036,14 +7035,12 @@ async function openDraft(key) {
   currentDraftKey = key;
   _draftDriveFiles = (meta.driveFiles && typeof meta.driveFiles === 'object') ? meta.driveFiles : {};
   buildItrSection();
+  _restoring = true;
+  restoreFormValues(meta);
+  toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
   applyFormMode(meta.formMode || 'ddr');
   showToast('Loaded: ' + (meta.appName || meta.name), 'success');
-  _restoring = true;
   switchTab(1);
-  setTimeout(function() {
-    restoreFormValues(meta);
-    toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
-  }, 100);
 }
 
 // ── AUTOSAVE ──────────────────────────────────────────────
