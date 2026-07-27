@@ -725,25 +725,6 @@
   </div>
 </div>
 
-<!-- PAN+mobile duplicate case modal -->
-<div class="modal-overlay" id="dup-modal-overlay">
-  <div class="modal">
-    <div class="modal-hdr">Possible Duplicate Case</div>
-    <div class="modal-body">
-      <p style="margin:0;font-size:15px;">A case with the same PAN and mobile already exists this financial year:</p>
-      <div class="extracted-field">
-        <div class="ef-label">Existing case ref</div>
-        <div class="ef-value" id="dup-case-ref-display"></div>
-      </div>
-      <p style="margin:0;font-size:14px;color:var(--muted);">Is this a fresh visit, or a continuation of the existing case?</p>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-secondary" onclick="dupModalChoice(false)">Continue that case</button>
-      <button class="btn btn-primary" onclick="dupModalChoice(true)">New visit</button>
-    </div>
-  </div>
-</div>
-
 <!-- Office exec badge (top-right corner) -->
 <div id="exec-badge" onclick="toggleExecMenu()" style="display:none;"></div>
 <div id="exec-badge-menu">
@@ -1160,13 +1141,6 @@
     </div>
   </div>
 
-  <!-- Extra employers for applicant -->
-  <div id="extra_employers_app"></div>
-  <button type="button" onclick="addExtraEmployer('app')"
-    style="margin-top:10px;background:none;border:1px dashed var(--accent);border-radius:7px;color:var(--accent);font-size:14px;padding:7px 14px;cursor:pointer;width:100%;">
-    + Add Another Employer / Business
-  </button>
-
   <!-- EMPLOYMENT VERIFICATION REMARKS - always visible regardless of employment type -->
   <div class="card">
     <div class="card-hdr">📝 Employment / Business Verification Remarks</div>
@@ -1214,7 +1188,6 @@
       <div class="file-list" id="fl_app_office_photos"></div>
     </div>
   </div>
-  <div id="extra-offices-container"></div>
 
   <!-- BANK STATEMENT -->
   <div class="card">
@@ -1661,14 +1634,6 @@
       <div class="file-list" id="fl_property_photos"></div>
     </div>
   </div>
-  <div id="extra-properties-container"></div>
-
-  <!-- Extra properties for applicant -->
-  <div id="extra_properties_app"></div>
-  <button type="button" onclick="addExtraProperty('app')"
-    style="margin-top:10px;background:none;border:1px dashed var(--accent);border-radius:7px;color:var(--accent);font-size:14px;padding:7px 14px;cursor:pointer;width:100%;">
-    + Add Another Property
-  </button>
 
   <div class="nav-btns">
     <button class="btn btn-secondary" type="button" onclick="switchTab(5)">← ITR / F16</button>
@@ -1746,15 +1711,6 @@
       <div class="file-list" id="fl_car_photos"></div>
     </div>
   </div>
-
-  <div id="extra-cars-container"></div>
-
-  <!-- Extra cars for applicant -->
-  <div id="extra_cars_app"></div>
-  <button type="button" onclick="addExtraCar('app')"
-    style="margin-top:10px;background:none;border:1px dashed var(--accent);border-radius:7px;color:var(--accent);font-size:14px;padding:7px 14px;cursor:pointer;width:100%;">
-    + Add Another Car / Vehicle
-  </button>
 
   <div class="nav-btns">
     <button class="btn btn-secondary" type="button" onclick="switchTab(6)">← Property</button>
@@ -1935,8 +1891,13 @@
   </div>
   <div class="submit-card">
     <div style="font-size:15px;font-weight:600;margin-bottom:4px;">Submission Type</div>
-    <div style="font-size:14px;color:var(--muted);">All submissions are final and trigger full DDR report generation.</div>
+    <div style="font-size:14px;color:var(--muted);">Choose whether this is a final submission or an intermediate save.</div>
     <div class="submit-type-row">
+      <div class="submit-type-btn" id="btn_intermediate" onclick="setSubmitType('intermediate')">
+        <div class="st-icon">💾</div>
+        <div class="st-title">Save (Intermediate)</div>
+        <div class="st-desc">Data saved. DDR not generated yet.</div>
+      </div>
       <div class="submit-type-btn selected" id="btn_final" onclick="setSubmitType('final')">
         <div class="st-icon">🚀</div>
         <div class="st-title">Final Submit</div>
@@ -2327,9 +2288,6 @@ let currentDraftKey = null;
 let _draftsCache = [];
 let _isSyncing = false;
 let pendingOcr = null;    // {key, docType, extracted}
-// When set, next applyOcrData call routes to the extra block instead of primary fields.
-// { blockId, personPrefix, type, idx, docType, key }
-let _extraOcrTarget = null;
 let submitType = 'final';
 let submitting = false;
 function _newCaseId() {
@@ -2342,21 +2300,6 @@ let numCoApps = 0;
 let _restoring = false;
 let _draftDriveFiles = {}; // key -> [{driveUrl, name, mimeType}] — Drive URLs only, no base64
 let _discardedDriveKeys = new Set(); // keys where user chose to discard the Drive file
-
-// extras: additional employers/properties/cars per person beyond the primary one
-const _extras = {
-  app: { employers: [], properties: [], cars: [] },
-  co1: { employers: [], properties: [], cars: [] },
-  co2: { employers: [], properties: [], cars: [] },
-  co3: { employers: [], properties: [], cars: [] },
-  co4: { employers: [], properties: [], cars: [] },
-  co5: { employers: [], properties: [], cars: [] },
-};
-const _extraCounters = {};
-function _nextExtraId(prefix) {
-  _extraCounters[prefix] = (_extraCounters[prefix] || 0) + 1;
-  return prefix + '_' + _extraCounters[prefix];
-}
 
 // Pure-upload slots: no OCR, no Extract button — upload to Drive immediately on file select
 // so photos persist in the draft across devices. OCR slots handle their own upload timing.
@@ -2614,8 +2557,7 @@ function switchTab(n) {
   currentTab = n;
   if (n === 5) buildItrSection();
   if (n === 9) buildUploadSummary();
-  if (n === 10) renderDraftList();
-  if (!_restoring) saveDraft();  // immediate save on every tab switch — not debounced
+  if (!_restoring) saveDraft();
   window.scrollTo(0, 0);
 }
 
@@ -3892,12 +3834,6 @@ async function runOcr(key, docType) {
   }
 }
 
-// Wrapper for OCR on extra blocks — sets routing flag then calls standard runOcr pipeline.
-async function runOcrExtra(key, docType, personPrefix, type, idx, blockId) {
-  _extraOcrTarget = { blockId, personPrefix, type, idx, docType, key };
-  await runOcr(key, docType);
-}
-
 function showOcrModal(docType, data) {
   const title = OCR_TITLES[docType] || 'Extracted Data';
   document.getElementById('ocrSheetTitle').textContent = title;
@@ -3937,16 +3873,6 @@ async function applyOcrData() {
   const key = snap.key;
   const docType = snap.docType;
   const d = snap.extracted;
-
-  // ── Extra-block OCR routing (additive) ──
-  if (_extraOcrTarget) {
-    const tgt = _extraOcrTarget;
-    _extraOcrTarget = null;
-    closeOcrModal();
-    applyExtraOcrData(tgt, d);
-    return;
-  }
-
   console.log('Applying:', docType, 'key:', key, 'data:', JSON.stringify(d).substring(0,200));
 
   // Close sheet first — clear pendingOcr
@@ -4048,84 +3974,6 @@ async function applyOcrData() {
   // Save draft immediately after OCR fills fields
   var _ocrAppName = (document.getElementById('f_app_name') || {}).value || '';
   if (_ocrAppName.trim()) { try { await saveDraft(_ocrAppName.trim()); } catch(e) {} }
-}
-
-// Fills extra block fields from OCR extraction data.
-function applyExtraOcrData(tgt, d) {
-  const { blockId, personPrefix, type, idx, docType } = tgt;
-  const arrayKey = _extraTypeToArrayKey(type);
-
-  const setExtra = (suffix, value) => {
-    const el = document.getElementById(blockId + suffix);
-    if (el && value != null && value !== '') {
-      el.value = value;
-      const fieldKey = _extraFieldSuffixToKey(suffix);
-      if (fieldKey) _saveExtra(personPrefix, arrayKey, idx, fieldKey, value);
-    }
-  };
-  const setExtraDate = (suffix, value) => {
-    setDateVal(blockId + suffix, value);
-  };
-
-  if (docType === 'payslip') {
-    setExtra('_company', d.company);
-    setExtra('_desig', d.designation);
-    setExtra('_empcode', d.empCode);
-    setExtra('_branch', d.branch);
-    const netPay = window._regexNetPay || d.netPay || '';
-    if (netPay) setExtra('_pay', netPay);
-    window._regexNetPay = null;
-    if (d.joining) setExtraDate('_joining', d.joining);
-    if (d.officeAddr) setExtra('_addr', d.officeAddr);
-  } else if (docType === 'biz') {
-    setExtra('_gstno', d.gstNo);
-    setExtra('_udyamno', d.udyamNo);
-    setExtra('_legalname', d.legalName);
-    setExtra('_constitution', d.constitution);
-    setExtra('_desig', d.designation);
-    setExtra('_directors', d.directors);
-    setExtra('_addr', d.address || d.businessAddress);
-    if (d.incorporationDate) setExtraDate('_joining', d.incorporationDate);
-    setExtra('_natureorg', d.natureOfOrg);
-  } else if (docType === 'index2') {
-    setExtra('_addr', d.propAddress || d.propertyAddress || d.address);
-    setExtra('_pur', d.purchaser);
-    setExtra('_sel', d.seller);
-    setExtra('_reg', d.regNo);
-    if (d.regDate) setExtraDate('_rdate', d.regDate);
-    setExtra('_sd', d.stampDuty);
-    setExtra('_area', d.propArea);
-  } else if (docType === 'car') {
-    setExtra('_model', d.model || d.carModel);
-    setExtra('_price', d.price || d.carPrice || d.onRoadPrice);
-    setExtra('_deal', d.dealership || d.dealershipName);
-  }
-
-  showToast('Extracted data applied to ' + (type === 'business' ? 'business' : type === 'salaried' ? 'employer' : docType) + ' block', 'success');
-}
-
-function _extraTypeToArrayKey(type) {
-  if (type === 'salaried' || type === 'business') return 'employers';
-  if (type === 'property') return 'properties';
-  if (type === 'car') return 'cars';
-  return 'employers';
-}
-
-function _extraFieldSuffixToKey(suffix) {
-  const map = {
-    '_company': 'company', '_desig': 'designation', '_empcode': 'emp_code',
-    '_branch': 'branch', '_pay': 'net_pay', '_joining': 'joining',
-    '_addr': 'office_addr', '_gstno': 'gst_no', '_udyamno': 'udyam_no',
-    '_legalname': 'legal_name', '_constitution': 'constitution',
-    '_directors': 'directors', '_natureorg': 'nature_of_org',
-    '_pur': 'purchaser', '_sel': 'seller', '_reg': 'reg_no',
-    '_rdate': 'reg_date', '_sd': 'stamp_duty', '_area': 'prop_area',
-    '_model': 'model', '_price': 'price', '_deal': 'dealership_name',
-    '_pm': 'person_met', '_pmc': 'person_met_contact',
-    '_pmd': 'person_met_desig', '_pmr': 'person_met_relation',
-    '_rem': 'remarks',
-  };
-  return map[suffix] || null;
 }
 
 function setVal(id, val) {
@@ -4397,12 +4245,6 @@ function buildCoAppBlock(n) {
         </div>
       </div>
     </div>
-    <!-- Extra employers for this co-app -->
-    <div id="extra_employers_${p}"></div>
-    <button type="button" onclick="addExtraEmployer('${p}')"
-      style="margin-top:10px;background:none;border:1px dashed var(--accent);border-radius:7px;color:var(--accent);font-size:14px;padding:7px 14px;cursor:pointer;width:100%;">
-      + Add Another Employer / Business
-    </button>
     <!-- EMPLOYMENT REMARKS - always visible -->
     <div class="card">
       <div class="card-hdr">📝 Co-App ${n} — Employment / Business Verification Remarks</div>
@@ -4436,7 +4278,6 @@ function buildCoAppBlock(n) {
         </div>
       </div>
     </div>
-    <div id="co${n}-office-container"></div>
     <div class="card">
       <div class="card-hdr">📸 Co-App ${n} — Office / Business Visit Photos</div>
       <div class="card-body">
@@ -5037,6 +4878,7 @@ function buildUploadSummary() {
 // ══════════════════════════════════════════════════════════
 function setSubmitType(type) {
   submitType = type;
+  document.getElementById('btn_intermediate').classList.toggle('selected', type === 'intermediate');
   document.getElementById('btn_final').classList.toggle('selected', type === 'final');
 }
 
@@ -5117,7 +4959,7 @@ function buildRow() {
 
   row[0] = now;
   row[1] = '';
-  row[2] = 'Yes';
+  row[2] = submitType === 'final' ? 'Yes' : 'No';
   row[3] = g('f_bank');
   row[4] = g('f_loan');
 
@@ -5397,311 +5239,7 @@ function buildRow() {
     console.log('  f16_app_' + yr + ':', row[160 + ['2425','2526','2627'].indexOf(yr)*3 + 1]);
   });
 
-  // Read field-sourced extras from UI and attach to row
-  const extraOfficesOut = [];
-  document.querySelectorAll('.extra-office-block').forEach(block => {
-    const n = parseInt(block.dataset.index) + 2;
-    extraOfficesOut.push({
-      emp_status:         (document.getElementById('f_app_office'+n+'_emp_status') || {}).value || '',
-      company:            (document.getElementById('f_app_office'+n+'_company') || {}).value || '',
-      designation:        (document.getElementById('f_app_office'+n+'_designation') || {}).value || '',
-      emp_code:           (document.getElementById('f_app_office'+n+'_emp_code') || {}).value || '',
-      branch:             (document.getElementById('f_app_office'+n+'_branch') || {}).value || '',
-      net_pay:            (document.getElementById('f_app_office'+n+'_net_pay') || {}).value || '',
-      joining:            (document.getElementById('f_app_office'+n+'_joining') || {}).value || '',
-      gst_no:             (document.getElementById('f_app_office'+n+'_gst_no') || {}).value || '',
-      udyam_no:           (document.getElementById('f_app_office'+n+'_udyam_no') || {}).value || '',
-      gst_legal_name:     (document.getElementById('f_app_office'+n+'_gst_legal_name') || {}).value || '',
-      gst_constitution:   (document.getElementById('f_app_office'+n+'_gst_constitution') || {}).value || '',
-      biz_designation:    (document.getElementById('f_app_office'+n+'_biz_designation') || {}).value || '',
-      biz_net_pay:        (document.getElementById('f_app_office'+n+'_biz_net_pay') || {}).value || '',
-      gst_directors:      (document.getElementById('f_app_office'+n+'_gst_directors') || {}).value || '',
-      gst_address:        (document.getElementById('f_app_office'+n+'_gst_address') || {}).value || '',
-      udyam_ent_type:     (document.getElementById('f_app_office'+n+'_udyam_ent_type') || {}).value || '',
-      biz_joining:        (document.getElementById('f_app_office'+n+'_biz_joining') || {}).value || '',
-      experience:         (document.getElementById('f_app_office'+n+'_experience') || {}).value || '',
-      office_addr:        (document.getElementById('f_app_office'+n+'_addr') || {}).value || '',
-      nature_of_org:      (document.getElementById('f_app_office'+n+'_nature_of_org') || {}).value || '',
-      person_met:         (document.getElementById('f_app_office'+n+'_person_met') || {}).value || '',
-      person_met_desig:   (document.getElementById('f_app_office'+n+'_person_met_desig') || {}).value || '',
-      person_met_contact: (document.getElementById('f_app_office'+n+'_person_met_contact') || {}).value || '',
-      emp_remarks:        (document.getElementById('f_app_office'+n+'_emp_remarks') || {}).value || ''
-    });
-  });
-
-  const extraPropertiesOut = [];
-  document.querySelectorAll('.extra-property-block').forEach(block => {
-    const n = parseInt(block.dataset.index) + 2;
-    extraPropertiesOut.push({
-      address:             (document.getElementById('f_prop'+n+'_address') || {}).value || '',
-      area:                (document.getElementById('f_prop'+n+'_area') || {}).value || '',
-      type:                (document.getElementById('f_prop'+n+'_type') || {}).value || '',
-      price:               (document.getElementById('f_prop'+n+'_price') || {}).value || '',
-      person_met:          (document.getElementById('f_prop'+n+'_person_met') || {}).value || '',
-      person_met_contact:  (document.getElementById('f_prop'+n+'_person_met_contact') || {}).value || '',
-      person_met_relation: (document.getElementById('f_prop'+n+'_person_met_relation') || {}).value || '',
-      remarks:             (document.getElementById('f_prop'+n+'_remarks') || {}).value || '',
-      purchaser:           (document.getElementById('f_prop'+n+'_purchaser') || {}).value || '',
-      seller:              (document.getElementById('f_prop'+n+'_seller') || {}).value || '',
-      house_ref:           (document.getElementById('f_prop'+n+'_house_ref') || {}).value || '',
-      unit_type:           (document.getElementById('f_prop'+n+'_unit_type') || {}).value || '',
-      noc:                 (document.getElementById('f_prop'+n+'_noc') || {}).value || '',
-      reg_no:              (document.getElementById('f_prop'+n+'_reg_no') || {}).value || '',
-      reg_date:            (document.getElementById('f_prop'+n+'_reg_date') || {}).value || '',
-      stamp_duty:          (document.getElementById('f_prop'+n+'_stamp_duty') || {}).value || '',
-      reg_fee:             (document.getElementById('f_prop'+n+'_reg_fee') || {}).value || '',
-      ready_reckoner:      (document.getElementById('f_prop'+n+'_ready_reckoner') || {}).value || '',
-      index2_date:         (document.getElementById('f_prop'+n+'_index2_date') || {}).value || '',
-      ownership_doc:       (document.getElementById('f_prop'+n+'_ownership_doc') || {}).value || '',
-      index2_provided:     (document.getElementById('f_prop'+n+'_index2_provided') || {}).value || ''
-    });
-  });
-
-  const extraCoOfficesOut = [];
-  for (let ci = 1; ci <= 5; ci++) {
-    const coArr = [];
-    const s1 = {
-      nature_of_org:      (document.getElementById('f_co'+ci+'_nature_of_org') || {}).value || '',
-      person_met:         (document.getElementById('f_co'+ci+'_person_met') || {}).value || '',
-      person_met_desig:   (document.getElementById('f_co'+ci+'_person_met_desig') || {}).value || '',
-      person_met_contact: (document.getElementById('f_co'+ci+'_person_met_contact') || {}).value || ''
-    };
-    if (Object.values(s1).some(v => v)) coArr.push(s1);
-    document.querySelectorAll('.co'+ci+'-extra-office-block').forEach(block => {
-      const ei = parseInt(block.dataset.index);
-      const n = ei + 2;
-      coArr.push({
-        emp_status:         (document.getElementById('f_co'+ci+'_office'+n+'_emp_status') || {}).value || '',
-        company:            (document.getElementById('f_co'+ci+'_office'+n+'_company') || {}).value || '',
-        designation:        (document.getElementById('f_co'+ci+'_office'+n+'_designation') || {}).value || '',
-        emp_code:           (document.getElementById('f_co'+ci+'_office'+n+'_emp_code') || {}).value || '',
-        branch:             (document.getElementById('f_co'+ci+'_office'+n+'_branch') || {}).value || '',
-        net_pay:            (document.getElementById('f_co'+ci+'_office'+n+'_net_pay') || {}).value || '',
-        joining:            (document.getElementById('f_co'+ci+'_office'+n+'_joining') || {}).value || '',
-        gst_no:             (document.getElementById('f_co'+ci+'_office'+n+'_gst_no') || {}).value || '',
-        udyam_no:           (document.getElementById('f_co'+ci+'_office'+n+'_udyam_no') || {}).value || '',
-        gst_legal_name:     (document.getElementById('f_co'+ci+'_office'+n+'_gst_legal_name') || {}).value || '',
-        gst_constitution:   (document.getElementById('f_co'+ci+'_office'+n+'_gst_constitution') || {}).value || '',
-        biz_designation:    (document.getElementById('f_co'+ci+'_office'+n+'_biz_designation') || {}).value || '',
-        biz_net_pay:        (document.getElementById('f_co'+ci+'_office'+n+'_biz_net_pay') || {}).value || '',
-        gst_directors:      (document.getElementById('f_co'+ci+'_office'+n+'_gst_directors') || {}).value || '',
-        gst_address:        (document.getElementById('f_co'+ci+'_office'+n+'_gst_address') || {}).value || '',
-        udyam_ent_type:     (document.getElementById('f_co'+ci+'_office'+n+'_udyam_ent_type') || {}).value || '',
-        biz_joining:        (document.getElementById('f_co'+ci+'_office'+n+'_biz_joining') || {}).value || '',
-        experience:         (document.getElementById('f_co'+ci+'_office'+n+'_experience') || {}).value || '',
-        office_addr:        (document.getElementById('f_co'+ci+'_office'+n+'_addr') || {}).value || '',
-        nature_of_org:      (document.getElementById('f_co'+ci+'_office'+n+'_nature_of_org') || {}).value || '',
-        person_met:         (document.getElementById('f_co'+ci+'_office'+n+'_person_met') || {}).value || '',
-        person_met_desig:   (document.getElementById('f_co'+ci+'_office'+n+'_person_met_desig') || {}).value || '',
-        person_met_contact: (document.getElementById('f_co'+ci+'_office'+n+'_person_met_contact') || {}).value || '',
-        emp_remarks:        (document.getElementById('f_co'+ci+'_office'+n+'_emp_remarks') || {}).value || ''
-      });
-    });
-    extraCoOfficesOut.push(coArr);
-  }
-
-  const extraCarsOut = [];
-  document.querySelectorAll('.extra-car-block').forEach(block => {
-    const n = parseInt(block.dataset.index) + 2;
-    extraCarsOut.push({
-      model:              (document.getElementById('f_car'+n+'_model') || {}).value || '',
-      price:              (document.getElementById('f_car'+n+'_price') || {}).value || '',
-      dealership_name:    (document.getElementById('f_car'+n+'_dealership_name') || {}).value || '',
-      dealership_addr:    (document.getElementById('f_car'+n+'_dealership_addr') || {}).value || '',
-      dealership_contact: (document.getElementById('f_car'+n+'_dealership_contact') || {}).value || '',
-      exec_name:          (document.getElementById('f_car'+n+'_exec_name') || {}).value || '',
-      remarks:            (document.getElementById('f_car'+n+'_remarks') || {}).value || ''
-    });
-  });
-
-  row.extras = {
-    offices:    extraOfficesOut,
-    properties: extraPropertiesOut,
-    co_offices: extraCoOfficesOut,
-    cars:       extraCarsOut
-  };
-
   return row;
-}
-
-// ── Extras helpers ────────────────────────────────────────────────────────────
-
-function _saveExtra(personPrefix, type, idx, field, value) {
-  if (!_extras[personPrefix]) return;
-  if (!_extras[personPrefix][type]) return;
-  if (!_extras[personPrefix][type][idx]) _extras[personPrefix][type][idx] = {};
-  _extras[personPrefix][type][idx][field] = value;
-}
-
-function removeExtra(extraId, personPrefix, type, idx) {
-  const el = document.getElementById(extraId);
-  if (el) el.remove();
-  if (_extras[personPrefix] && _extras[personPrefix][type] && _extras[personPrefix][type][idx]) {
-    _extras[personPrefix][type][idx]._removed = true;
-  }
-}
-
-function collectExtras() {
-  const result = {};
-  for (const [person, types] of Object.entries(_extras)) {
-    const personResult = {};
-    for (const [type, items] of Object.entries(types)) {
-      const clean = items.filter(item =>
-        item && !item._removed &&
-        Object.keys(item).some(k => k !== '_removed' && item[k])
-      );
-      clean.forEach((item) => {
-        if (item.index2_photo_key) {
-          const files = uploadedFiles[item.index2_photo_key];
-          if (files && files.length > 0) item.index2_files = '__FILE__' + item.index2_photo_key;
-        }
-        if (item.quotation_photo_key) {
-          const files = uploadedFiles[item.quotation_photo_key];
-          if (files && files.length > 0) item.quotation_files = '__FILE__' + item.quotation_photo_key;
-        }
-      });
-      if (clean.length > 0) personResult[type] = clean;
-    }
-    if (Object.keys(personResult).length > 0) result[person] = personResult;
-  }
-  return result;
-}
-
-function addExtraEmployer(personPrefix) {
-  const blockId = _nextExtraId(personPrefix + '_emp');
-  const idx = _extras[personPrefix].employers.length;
-  _extras[personPrefix].employers.push({ type: '' });
-  const container = document.getElementById('extra_employers_' + personPrefix);
-  if (!container) return;
-  const empNum = idx + 2;
-  const div = document.createElement('div');
-  div.id = blockId;
-  div.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:12px;position:relative;';
-  div.innerHTML =
-    '<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em;">Additional Employment ' + empNum + '</div>'
-    + '<button onclick="removeExtra(\'' + blockId + '\',\'' + personPrefix + '\',\'employers\',' + idx + ')" style="position:absolute;top:10px;right:10px;background:none;border:none;color:var(--accent2);cursor:pointer;font-size:20px;line-height:1;">×</button>'
-    + '<div class="field"><label>Type</label>'
-    + '<select id="' + blockId + '_type" onchange="_extraEmpTypeChange(\'' + blockId + '\',\'' + personPrefix + '\',' + idx + ')">'
-    + '<option value="">Select type</option>'
-    + '<option value="salaried">Salaried / Job</option>'
-    + '<option value="business">Business / Self Employed</option>'
-    + '</select></div>'
-    + '<div id="' + blockId + '_fields"></div>';
-  container.appendChild(div);
-}
-
-function _extraEmpTypeChange(blockId, personPrefix, idx) {
-  const typeSel = document.getElementById(blockId + '_type');
-  const type = typeSel ? typeSel.value : '';
-  _saveExtra(personPrefix, 'employers', idx, 'type', type);
-  const fieldsDiv = document.getElementById(blockId + '_fields');
-  if (!fieldsDiv) return;
-  if (type === 'salaried') {
-    fieldsDiv.innerHTML = _buildExtraSalariedFields(blockId, personPrefix, idx);
-  } else if (type === 'business') {
-    fieldsDiv.innerHTML = _buildExtraBizFields(blockId, personPrefix, idx);
-  } else {
-    fieldsDiv.innerHTML = '';
-  }
-}
-
-function _buildExtraSalariedFields(blockId, personPrefix, idx) {
-  const payslipKey = blockId + '_payslip';
-  return ''
-    + '<div class="card" style="border-color:#3a5a8a;"><div class="card-hdr" style="background:#12192a;color:#7ab4f0;font-size:12px;">Payslip Upload</div><div class="card-body">'
-    + '<div class="upload-zone" id="uz_' + payslipKey + '"><input type="file" id="fu_' + payslipKey + '" accept="image/jpeg,image/png,image/heic,image/heif,image/webp,application/pdf" multiple onchange="handleFileSelect(\'' + payslipKey + '\', this.files)" onclick="event.stopPropagation()"><div class="uz-icon">📄</div><div class="uz-text">Upload Payslip</div></div>'
-    + '<div class="file-list" id="fl_' + payslipKey + '"></div>'
-    + '<button class="ocr-btn" id="ocr_' + payslipKey + '" onclick="runOcrExtra(\'' + payslipKey + '\',\'payslip\',\'' + personPrefix + '\',\'salaried\',' + idx + ',\'' + blockId + '\')" disabled><span>✨ Extract</span></button>'
-    + '</div></div>'
-    + '<div class="field"><label>Company Name</label><input type="text" id="' + blockId + '_company" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'company\',this.value)"></div>'
-    + '<div class="field"><label>Designation</label><input type="text" id="' + blockId + '_desig" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'designation\',this.value)"></div>'
-    + '<div class="field-row"><div class="field"><label>Employee Code</label><input type="text" id="' + blockId + '_empcode" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'emp_code\',this.value)"></div>'
-    + '<div class="field"><label>Branch</label><input type="text" id="' + blockId + '_branch" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'branch\',this.value)"></div></div>'
-    + '<div class="field-row"><div class="field"><label>Net Monthly Pay</label><input type="text" id="' + blockId + '_pay" placeholder="₹ Amount" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'net_pay\',this.value)"></div>'
-    + '<div class="field"><label>Date of Joining</label><input type="date" id="' + blockId + '_joining" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'joining\',this.value)"></div></div>'
-    + '<div class="field"><label>Office Address</label><textarea id="' + blockId + '_addr" rows="2" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'office_addr\',this.value)"></textarea></div>'
-    + '<div class="field"><label>Person Met at Office</label><input type="text" id="' + blockId + '_pm" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'person_met\',this.value)"></div>'
-    + '<div class="field-row"><div class="field"><label>Person Met Contact</label><input type="tel" id="' + blockId + '_pmc" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'person_met_contact\',this.value)"></div>'
-    + '<div class="field"><label>Person Met Designation</label><input type="text" id="' + blockId + '_pmd" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'person_met_desig\',this.value)"></div></div>'
-    + '<div class="field"><label>Verification Remarks</label><textarea id="' + blockId + '_rem" rows="2" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'remarks\',this.value)"></textarea></div>';
-}
-
-function _buildExtraBizFields(blockId, personPrefix, idx) {
-  const bizKey = blockId + '_bizcert';
-  return ''
-    + '<div class="card" style="border-color:#3a5a8a;"><div class="card-hdr" style="background:#12192a;color:#7ab4f0;font-size:12px;">GST / Udyam Certificate Upload</div><div class="card-body">'
-    + '<div class="upload-zone" id="uz_' + bizKey + '"><input type="file" id="fu_' + bizKey + '" accept="image/jpeg,image/png,image/heic,image/heif,image/webp,application/pdf" multiple onchange="handleFileSelect(\'' + bizKey + '\', this.files)" onclick="event.stopPropagation()"><div class="uz-icon">📄</div><div class="uz-text">Upload GST / Udyam</div></div>'
-    + '<div class="file-list" id="fl_' + bizKey + '"></div>'
-    + '<button class="ocr-btn" id="ocr_' + bizKey + '" onclick="runOcrExtra(\'' + bizKey + '\',\'biz\',\'' + personPrefix + '\',\'business\',' + idx + ',\'' + blockId + '\')" disabled><span>✨ Extract</span></button>'
-    + '</div></div>'
-    + '<div class="field-row"><div class="field"><label>GST Number</label><input type="text" id="' + blockId + '_gstno" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'gst_no\',this.value)"></div>'
-    + '<div class="field"><label>Udyam Number</label><input type="text" id="' + blockId + '_udyamno" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'udyam_no\',this.value)"></div></div>'
-    + '<div class="field"><label>Legal Business Name</label><input type="text" id="' + blockId + '_legalname" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'legal_name\',this.value)"></div>'
-    + '<div class="field-row"><div class="field"><label>Constitution</label><input type="text" id="' + blockId + '_constitution" placeholder="Proprietorship / Partnership / Pvt Ltd" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'constitution\',this.value)"></div>'
-    + '<div class="field"><label>Designation / Role</label><input type="text" id="' + blockId + '_desig" placeholder="Proprietor / Director" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'designation\',this.value)"></div></div>'
-    + '<div class="field"><label>Directors / Partners</label><input type="text" id="' + blockId + '_directors" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'directors\',this.value)"></div>'
-    + '<div class="field-row"><div class="field"><label>Net Monthly Income</label><input type="text" id="' + blockId + '_pay" placeholder="₹ Amount" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'net_pay\',this.value)"></div>'
-    + '<div class="field"><label>Date of Incorporation</label><input type="date" id="' + blockId + '_joining" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'joining\',this.value)"></div></div>'
-    + '<div class="field"><label>Business / Registered Address</label><textarea id="' + blockId + '_addr" rows="2" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'office_addr\',this.value)"></textarea></div>'
-    + '<div class="field"><label>Nature of Organisation</label><input type="text" id="' + blockId + '_natureorg" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'nature_of_org\',this.value)"></div>'
-    + '<div class="field"><label>Person Met</label><input type="text" id="' + blockId + '_pm" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'person_met\',this.value)"></div>'
-    + '<div class="field-row"><div class="field"><label>Person Met Contact</label><input type="tel" id="' + blockId + '_pmc" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'person_met_contact\',this.value)"></div>'
-    + '<div class="field"><label>Person Met Designation</label><input type="text" id="' + blockId + '_pmd" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'person_met_desig\',this.value)"></div></div>'
-    + '<div class="field"><label>Verification Remarks</label><textarea id="' + blockId + '_rem" rows="2" oninput="_saveExtra(\'' + personPrefix + '\',\'employers\',' + idx + ',\'remarks\',this.value)"></textarea></div>';
-}
-
-function addExtraProperty(personPrefix) {
-  const blockId = _nextExtraId(personPrefix + '_prop');
-  const idx = _extras[personPrefix].properties.length;
-  _extras[personPrefix].properties.push({});
-  const container = document.getElementById('extra_properties_' + personPrefix);
-  if (!container) return;
-  const propNum = idx + 2;
-  const photoKey = blockId + '_idx2';
-  const div = document.createElement('div');
-  div.id = blockId;
-  div.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:12px;position:relative;';
-  div.innerHTML =
-    '<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em;">Property ' + propNum + '</div>'
-    + '<button onclick="removeExtra(\'' + blockId + '\',\'' + personPrefix + '\',\'properties\',' + idx + ')" style="position:absolute;top:10px;right:10px;background:none;border:none;color:var(--accent2);cursor:pointer;font-size:20px;line-height:1;">×</button>'
-    + '<div class="field"><label>Property Address</label><textarea id="' + blockId + '_addr" rows="2" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'address\',this.value)"></textarea></div>'
-    + '<div class="card" style="margin-top:10px;border-color:#3a5a8a;"><div class="card-hdr" style="background:#12192a;color:#7ab4f0;font-size:12px;">Index II Upload</div><div class="card-body"><div class="upload-zone" id="uz_' + photoKey + '"><input type="file" id="fu_' + photoKey + '" accept="image/jpeg,image/png,image/heic,image/heif,image/webp,application/pdf" multiple onchange="handleFileSelect(\'' + photoKey + '\', this.files)" onclick="event.stopPropagation()"><div class="uz-icon">📋</div><div class="uz-text">Upload Index II</div></div><div class="file-list" id="fl_' + photoKey + '"></div>'
-    + '<button class="ocr-btn" id="ocr_' + photoKey + '" onclick="runOcrExtra(\'' + photoKey + '\',\'index2\',\'' + personPrefix + '\',\'property\',' + idx + ',\'' + blockId + '\')" disabled><span>✨ Extract</span></button>'
-    + '</div></div>'
-    + '<div class="field-row"><div class="field"><label>Purchaser</label><input type="text" id="' + blockId + '_pur" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'purchaser\',this.value)"></div><div class="field"><label>Seller</label><input type="text" id="' + blockId + '_sel" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'seller\',this.value)"></div></div>'
-    + '<div class="field-row"><div class="field"><label>Reg. Number</label><input type="text" id="' + blockId + '_reg" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'reg_no\',this.value)"></div><div class="field"><label>Reg. Date</label><input type="date" id="' + blockId + '_rdate" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'reg_date\',this.value)"></div></div>'
-    + '<div class="field-row"><div class="field"><label>Stamp Duty (₹)</label><input type="text" id="' + blockId + '_sd" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'stamp_duty\',this.value)"></div><div class="field"><label>Property Area</label><input type="text" id="' + blockId + '_area" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'prop_area\',this.value)"></div></div>'
-    + '<div class="field"><label>Person Met at Property</label><input type="text" id="' + blockId + '_pm" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'person_met\',this.value)"></div>'
-    + '<div class="field-row"><div class="field"><label>Person Met Contact</label><input type="tel" id="' + blockId + '_pmc" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'person_met_contact\',this.value)"></div><div class="field"><label>Person Met Relation</label><input type="text" id="' + blockId + '_pmr" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'person_met_relation\',this.value)"></div></div>'
-    + '<div class="field"><label>Property Remarks</label><textarea id="' + blockId + '_rem" rows="2" oninput="_saveExtra(\'' + personPrefix + '\',\'properties\',' + idx + ',\'remarks\',this.value)"></textarea></div>';
-  _saveExtra(personPrefix, 'properties', idx, 'index2_photo_key', photoKey);
-  container.appendChild(div);
-}
-
-function addExtraCar(personPrefix) {
-  const blockId = _nextExtraId(personPrefix + '_car');
-  const idx = _extras[personPrefix].cars.length;
-  _extras[personPrefix].cars.push({});
-  const container = document.getElementById('extra_cars_' + personPrefix);
-  if (!container) return;
-  const carNum = idx + 2;
-  const photoKey = blockId + '_quot';
-  const div = document.createElement('div');
-  div.id = blockId;
-  div.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:12px;position:relative;';
-  div.innerHTML =
-    '<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em;">Car / Vehicle ' + carNum + '</div>'
-    + '<button onclick="removeExtra(\'' + blockId + '\',\'' + personPrefix + '\',\'cars\',' + idx + ')" style="position:absolute;top:10px;right:10px;background:none;border:none;color:var(--accent2);cursor:pointer;font-size:20px;line-height:1;">×</button>'
-    + '<div class="card" style="margin-top:0;margin-bottom:10px;border-color:#3a5a8a;"><div class="card-hdr" style="background:#12192a;color:#7ab4f0;font-size:12px;">Car Quotation</div><div class="card-body"><div class="upload-zone" id="uz_' + photoKey + '"><input type="file" id="fu_' + photoKey + '" accept="image/jpeg,image/png,image/heic,image/heif,image/webp,application/pdf" multiple onchange="handleFileSelect(\'' + photoKey + '\', this.files)" onclick="event.stopPropagation()"><div class="uz-icon">📋</div><div class="uz-text">Upload Car Quotation</div></div><div class="file-list" id="fl_' + photoKey + '"></div>'
-    + '<button class="ocr-btn" id="ocr_' + photoKey + '" onclick="runOcrExtra(\'' + photoKey + '\',\'car\',\'' + personPrefix + '\',\'car\',' + idx + ',\'' + blockId + '\')" disabled><span>✨ Extract</span></button>'
-    + '</div></div>'
-    + '<div class="field-row"><div class="field"><label>Car Model</label><input type="text" id="' + blockId + '_model" placeholder="e.g. Hyundai Creta SX" oninput="_saveExtra(\'' + personPrefix + '\',\'cars\',' + idx + ',\'model\',this.value)"></div><div class="field"><label>On-Road Price</label><input type="text" id="' + blockId + '_price" placeholder="₹ Amount" oninput="_saveExtra(\'' + personPrefix + '\',\'cars\',' + idx + ',\'price\',this.value)"></div></div>'
-    + '<div class="field"><label>Dealership Name</label><input type="text" id="' + blockId + '_deal" oninput="_saveExtra(\'' + personPrefix + '\',\'cars\',' + idx + ',\'dealership_name\',this.value)"></div>'
-    + '<div class="field"><label>Dealership Address</label><textarea id="' + blockId + '_daddr" rows="2" oninput="_saveExtra(\'' + personPrefix + '\',\'cars\',' + idx + ',\'dealership_addr\',this.value)"></textarea></div>'
-    + '<div class="field-row"><div class="field"><label>Dealership Contact</label><input type="tel" id="' + blockId + '_dc" oninput="_saveExtra(\'' + personPrefix + '\',\'cars\',' + idx + ',\'dealership_contact\',this.value)"></div><div class="field"><label>Sales Executive</label><input type="text" id="' + blockId + '_se" oninput="_saveExtra(\'' + personPrefix + '\',\'cars\',' + idx + ',\'exec_name\',this.value)"></div></div>'
-    + '<div class="field"><label>Verification Remarks</label><textarea id="' + blockId + '_rem" rows="2" oninput="_saveExtra(\'' + personPrefix + '\',\'cars\',' + idx + ',\'remarks\',this.value)"></textarea></div>';
-  _saveExtra(personPrefix, 'cars', idx, 'quotation_photo_key', photoKey);
-  container.appendChild(div);
 }
 
 async function submitForm() {
@@ -5799,10 +5337,6 @@ async function submitForm() {
     setProgress(70);
     showStatus('Submitting form data...', 'info');
 
-    // Collect extras (Phase 1 — logged to console; ignored by server until Phase 2)
-    const extras = collectExtras();
-    console.log('[extras] collected:', JSON.stringify(extras).substring(0, 200));
-
     // ── STEP 2: Submit text row (no files — all already uploaded) ──────────
     console.log('Submitting ITR values:');
     ['2425','2526','2627'].forEach(function(yr) {
@@ -5814,7 +5348,6 @@ async function submitForm() {
       method: 'POST',
       body: JSON.stringify({
         row,
-        extras: row.extras || {},
         files: {},  // empty — all files already uploaded above
         isFinal: submitType === 'final',
         draftKey: currentDraftKey,
@@ -5831,12 +5364,6 @@ async function submitForm() {
 
     if (result.error) throw new Error(result.error);
 
-    if (result.status === 'possible_duplicate') {
-      setProgress(0);
-      showDuplicateModal(result.matchedCaseRef, result.matchedSessionId, row);
-      return;
-    }
-
     setProgress(100);
     showStatus('✅ ' + (result.message || 'Form submitted successfully!'), 'success');
     showToast('Submitted!', 'success');
@@ -5848,69 +5375,6 @@ async function submitForm() {
     if (appNameAfterSubmit.trim()) {
       try { await saveDraft(appNameAfterSubmit.trim()); } catch(e) {}
     }
-  } catch(e) {
-    showStatus('❌ Submission failed: ' + e.message, 'error');
-    showToast('Submission failed', 'error');
-  } finally {
-    submitting = false;
-    document.getElementById('submitBtn').disabled = false;
-  }
-}
-
-// ── Duplicate-case modal ─────────────────────────────────────────────────────
-var _dupMatchedCaseRef   = null;
-var _dupMatchedSessionId = null;
-var _dupPendingRow       = null;
-
-function showDuplicateModal(matchedCaseRef, matchedSessionId, pendingRow) {
-  _dupMatchedCaseRef   = matchedCaseRef;
-  _dupMatchedSessionId = matchedSessionId;
-  _dupPendingRow       = pendingRow;
-  document.getElementById('dup-case-ref-display').textContent = matchedCaseRef;
-  document.getElementById('dup-modal-overlay').classList.add('open');
-}
-
-function dupModalChoice(isNewVisit) {
-  document.getElementById('dup-modal-overlay').classList.remove('open');
-  const row       = _dupPendingRow;
-  const sessionId = _dupMatchedSessionId;
-  _dupMatchedCaseRef   = null;
-  _dupMatchedSessionId = null;
-  _dupPendingRow       = null;
-  _refireSubmit(row, isNewVisit ? { confirmedNew: true } : { overrideSessionId: sessionId });
-}
-
-async function _refireSubmit(row, extraFields) {
-  const endpoint = getEndpoint();
-  submitting = true;
-  document.getElementById('submitBtn').disabled = true;
-  setProgress(80);
-  showStatus('Submitting...', 'info');
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(Object.assign({
-        row,
-        extras: row.extras || {},
-        files: {},
-        isFinal: true,
-        draftKey: currentDraftKey,
-        case_session_id: currentCaseId,
-        officeExecName: localStorage.getItem('rk_office_exec') || '',
-        formMode: currentFormMode
-      }, extraFields))
-    });
-    setProgress(95);
-    const text = await res.text();
-    let result;
-    try { result = JSON.parse(text); } catch(e) { result = { status: 'ok' }; }
-    if (result.error) throw new Error(result.error);
-    setProgress(100);
-    showStatus('✅ ' + (result.message || 'Form submitted successfully!'), 'success');
-    showToast('Submitted!', 'success');
-    setSubmitType('final');
-    const appName = (document.getElementById('f_app_name') || {}).value || '';
-    if (appName.trim()) { try { await saveDraft(appName.trim()); } catch(e) {} }
   } catch(e) {
     showStatus('❌ Submission failed: ' + e.message, 'error');
     showToast('Submission failed', 'error');
@@ -5974,692 +5438,6 @@ function collectFormValues() {
   return vals;
 }
 
-function renderPhotoStrip(photos, label) {
-  if (!photos || !photos.length) return '';
-  const base = 'https://intake.rkfinservice.com';
-  const thumbs = photos.map(url => {
-    const src = url.startsWith('http') ? url : base + url;
-    return `<img src="${src}" style="width:56px;height:56px;object-fit:cover;
-            border-radius:4px;border:1px solid #e2e8f0;"
-            onerror="this.style.display='none'">`;
-  }).join('');
-  return `<div style="margin-top:8px">
-    <div style="font-size:12px;color:var(--text-muted,#64748b);margin-bottom:4px">${label}</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">${thumbs}</div>
-  </div>`;
-}
-
-function renderExtraOfficeBlock(n, o) {
-  o = o || {};
-  const container = document.getElementById('extra-offices-container');
-  if (!container) return;
-  const div = document.createElement('div');
-  div.className = 'extra-office-block';
-  div.dataset.index = n - 2;
-
-  const empOpts = ['Salaried','Salaried (NRI)','Business Owner','Self Employed',
-    'Retired','Homemaker','Student','Unemployed','Income Not Considered'];
-  const empOptHtml = empOpts.map(v =>
-    `<option value="${v}"${o.emp_status === v ? ' selected' : ''}>${v}</option>`
-  ).join('');
-
-  const isSal = ['Salaried','Salaried (NRI)'].includes(o.emp_status);
-  const isBiz = ['Business Owner','Self Employed'].includes(o.emp_status);
-
-  const gstConstOpts = ['Proprietorship','Partnership','Private Limited Company',
-    'Public Limited Company','LLP','Trust','Other'];
-  const gstConstHtml = gstConstOpts.map(v =>
-    `<option${o.gst_constitution === v ? ' selected' : ''}>${v}</option>`
-  ).join('');
-
-  div.innerHTML = `
-    <div class="card">
-      <div class="card-hdr">💼 Office ${n} — Employment Details</div>
-      <div class="card-body">
-        <div class="field">
-          <label>Employment Status</label>
-          <select id="f_app_office${n}_emp_status"
-            onchange="(function(sel){var b=sel.closest('.extra-office-block');b.querySelector('.extra-sal-fields').style.display=['Salaried','Salaried (NRI)'].includes(sel.value)?'':'none';b.querySelector('.extra-biz-fields').style.display=['Business Owner','Self Employed'].includes(sel.value)?'':'none';})(this)">
-            <option value="">Select</option>${empOptHtml}
-          </select>
-        </div>
-
-        <div class="extra-sal-fields" style="display:${isSal ? '' : 'none'}">
-          <div class="upload-zone" id="uz_app_office${n}_payslip">
-            <input type="file" id="fu_app_office${n}_payslip" accept="image/*,.pdf" multiple
-              onchange="handleFileSelect('app_office${n}_payslip', this.files)" onclick="event.stopPropagation()">
-            <div class="uz-icon">📋</div>
-            <div class="uz-text">Upload Payslip / Salary Certificate</div>
-            <div class="uz-hint">JPG, PNG or PDF</div>
-          </div>
-          <div class="file-list" id="fl_app_office${n}_payslip"></div>
-          <button class="ocr-btn" id="ocr_app_office${n}_payslip"
-            onclick="runOcr('app_office${n}_payslip','payslip')" disabled>
-            <span>✨ Extract from Payslip</span>
-          </button>
-          <div class="field-row">
-            <div class="field"><label>Employer / Company</label>
-              <input type="text" id="f_app_office${n}_company" value="${o.company || ''}"></div>
-            <div class="field"><label>Designation</label>
-              <input type="text" id="f_app_office${n}_designation" value="${o.designation || ''}"></div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Employee Code</label>
-              <input type="text" id="f_app_office${n}_emp_code" value="${o.emp_code || ''}"></div>
-            <div class="field"><label>Branch / Location</label>
-              <input type="text" id="f_app_office${n}_branch" value="${o.branch || ''}"></div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Net Monthly Pay</label>
-              <input type="text" id="f_app_office${n}_net_pay" value="${o.net_pay || ''}"></div>
-            <div class="field"><label>Date of Joining</label>
-              <input type="date" id="f_app_office${n}_joining" value="${o.joining || ''}"></div>
-          </div>
-        </div>
-
-        <div class="extra-biz-fields" style="display:${isBiz ? '' : 'none'}">
-          <div class="upload-zone" id="uz_app_office${n}_biz_cert">
-            <input type="file" id="fu_app_office${n}_biz_cert" accept="image/*,.pdf" multiple
-              onchange="handleFileSelect('app_office${n}_biz_cert', this.files)" onclick="event.stopPropagation()">
-            <div class="uz-icon">📜</div>
-            <div class="uz-text">Upload GST / Udyam Certificate</div>
-            <div class="uz-hint">JPG, PNG or PDF</div>
-          </div>
-          <div class="file-list" id="fl_app_office${n}_biz_cert"></div>
-          <button class="ocr-btn" id="ocr_app_office${n}_biz_cert"
-            onclick="runOcr('app_office${n}_biz_cert','biz')" disabled>
-            <span>✨ Extract from Certificate</span>
-          </button>
-          <div class="field-row">
-            <div class="field"><label>GST Number</label>
-              <input type="text" id="f_app_office${n}_gst_no" value="${o.gst_no || ''}" style="font-family:'DM Mono',monospace"></div>
-            <div class="field"><label>Udyam Number</label>
-              <input type="text" id="f_app_office${n}_udyam_no" value="${o.udyam_no || ''}" style="font-family:'DM Mono',monospace"></div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Legal Name of Business</label>
-              <input type="text" id="f_app_office${n}_gst_legal_name" value="${o.gst_legal_name || ''}"></div>
-            <div class="field"><label>Organisation Type</label>
-              <select id="f_app_office${n}_gst_constitution">
-                <option value="">Select</option>${gstConstHtml}
-              </select>
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Designation / Role</label>
-              <input type="text" id="f_app_office${n}_biz_designation" value="${o.biz_designation || ''}"></div>
-            <div class="field"><label>Net Monthly Income</label>
-              <input type="text" id="f_app_office${n}_biz_net_pay" value="${o.biz_net_pay || ''}"></div>
-          </div>
-          <div class="field"><label>Directors / Partners Names</label>
-            <input type="text" id="f_app_office${n}_gst_directors" value="${o.gst_directors || ''}"></div>
-          <div class="field"><label>Legal / Registered Address</label>
-            <textarea id="f_app_office${n}_gst_address" rows="2">${o.gst_address || ''}</textarea></div>
-          <div class="field-row">
-            <div class="field"><label>Enterprise Type (Udyam)</label>
-              <select id="f_app_office${n}_udyam_ent_type">
-                <option value="">Select</option>
-                <option${o.udyam_ent_type==='Micro'?' selected':''}>Micro</option>
-                <option${o.udyam_ent_type==='Small'?' selected':''}>Small</option>
-                <option${o.udyam_ent_type==='Medium'?' selected':''}>Medium</option>
-              </select>
-            </div>
-            <div class="field"><label>Date of Incorporation</label>
-              <input type="date" id="f_app_office${n}_biz_joining" value="${o.biz_joining || ''}"></div>
-          </div>
-        </div>
-
-        <div class="field"><label>Years of Experience / Business</label>
-          <input type="text" id="f_app_office${n}_experience" value="${o.experience || ''}"></div>
-        <div class="field"><label>Office / Business Address</label>
-          <textarea id="f_app_office${n}_addr" rows="2">${o.office_addr || ''}</textarea></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-hdr">📝 Employment / Business Verification Remarks</div>
-      <div class="card-body">
-        <div class="field">
-          <textarea id="f_app_office${n}_emp_remarks" rows="2" placeholder="Verification remarks…">${o.emp_remarks || ''}</textarea>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-hdr">🤝 Person Met at Office / Business</div>
-      <div class="card-body">
-        <div class="field"><label>Nature of Organisation</label>
-          <input type="text" id="f_app_office${n}_nature_of_org" value="${o.nature_of_org || ''}"
-            placeholder="e.g. Private Limited, Proprietorship, Government, MNC…"></div>
-        <div class="field-row">
-          <div class="field"><label>Person Met</label>
-            <input type="text" id="f_app_office${n}_person_met" value="${o.person_met || ''}"></div>
-          <div class="field"><label>Designation</label>
-            <input type="text" id="f_app_office${n}_person_met_desig" value="${o.person_met_desig || ''}"></div>
-        </div>
-        <div class="field"><label>Person Met Contact</label>
-          <input type="tel" id="f_app_office${n}_person_met_contact" value="${o.person_met_contact || ''}"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-hdr">📸 Office ${n} Visit Photos</div>
-      <div class="card-body">
-        ${renderPhotoStrip(o.photos || [], 'Office ' + n + ' Field Photos')}
-        <div class="upload-zone" id="uz_app_office${n}_photos">
-          <input type="file" id="fu_app_office${n}_photos" accept="image/*" multiple
-            onchange="handleFileSelect('app_office${n}_photos', this.files)" onclick="event.stopPropagation()">
-          <div class="uz-icon">📸</div>
-          <div class="uz-text">Upload Office ${n} Visit Photos</div>
-          <div class="uz-hint">Photos taken at the office / business premises</div>
-        </div>
-        <div class="file-list" id="fl_app_office${n}_photos"></div>
-      </div>
-    </div>`;
-
-  container.appendChild(div);
-
-  // Trigger show/hide for pre-populated emp_status
-  const sel = div.querySelector('select[id^="f_app_office"]');
-  if (sel && sel.value) sel.dispatchEvent(new Event('change'));
-}
-
-function renderExtraPropBlock(n, p) {
-  p = p || {};
-  const container = document.getElementById('extra-properties-container');
-  if (!container) return;
-  const div = document.createElement('div');
-  div.className = 'extra-property-block';
-  div.dataset.index = n - 2;
-  div.innerHTML = `
-    <!-- Index II Upload -->
-    <div class="card" style="border-color:#3a5a8a;">
-      <div class="card-hdr" style="background:#12192a;color:#7ab4f0;">
-        📄 Property ${n} — Upload Index II (Auto-fills all fields below)
-      </div>
-      <div class="card-body">
-        <p class="hint" style="margin-bottom:10px;">Upload the Index II document first. It will auto-extract property address, purchaser, seller, area, registration details — even if the document is in <strong style="color:var(--accent)">Marathi</strong> (translated to English automatically).</p>
-        <div class="upload-zone" id="uz_index2_${n}">
-          <input type="file" id="fu_index2_${n}" accept="image/*,.pdf" multiple
-            onchange="handleFileSelect('index2_${n}', this.files)"
-            onclick="event.stopPropagation()">
-          <div class="uz-icon">📋</div>
-          <div class="uz-text">Upload Index II Document</div>
-          <div class="uz-hint">JPG, PNG or PDF — Marathi documents fully supported</div>
-        </div>
-        <div class="file-list" id="fl_index2_${n}"></div>
-        <button class="ocr-btn" id="ocr_index2_${n}"
-          onclick="runOcr('index2_${n}','index2')" disabled style="margin-top:8px">
-          <span>✨ Extract &amp; Translate Index II</span>
-        </button>
-        <div class="field" style="margin-top:12px">
-          <label>Was Index II provided by the bank?</label>
-          <select id="f_prop${n}_index2_provided">
-            <option value="">Select</option>
-            <option value="yes" ${p.index2_provided === 'yes' ? 'selected' : ''}>Yes — Provided</option>
-            <option value="no" ${p.index2_provided === 'no' ? 'selected' : ''}>No — Not Provided by Bank</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Property Details -->
-    <div class="card">
-      <div class="card-hdr">🏢 Property ${n} Details (Auto-filled or type manually)</div>
-      <div class="card-body">
-        <div class="field">
-          <label>Property Address</label>
-          <textarea id="f_prop${n}_address" rows="2"
-            placeholder="Auto-filled from Index II or type here">${p.address || ''}</textarea>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Purchaser Name</label>
-            <input type="text" id="f_prop${n}_purchaser" placeholder="Buyer name"
-              value="${p.purchaser || ''}">
-          </div>
-          <div class="field">
-            <label>Seller Name</label>
-            <input type="text" id="f_prop${n}_seller" placeholder="Seller / vendor name"
-              value="${p.seller || ''}">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>House Ref / Survey / CTS No.</label>
-            <input type="text" id="f_prop${n}_house_ref" placeholder="Survey / CTS number"
-              value="${p.house_ref || ''}">
-          </div>
-          <div class="field">
-            <label>Property Area</label>
-            <input type="text" id="f_prop${n}_area" placeholder="e.g. 650 sq ft"
-              value="${p.area || ''}">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Property Type</label>
-            <input type="text" id="f_prop${n}_type"
-              placeholder="e.g. Residential Flat, Shop, Plot..."
-              value="${p.type || ''}">
-          </div>
-          <div class="field">
-            <label>Unit Type</label>
-            <input type="text" id="f_prop${n}_unit_type" placeholder="e.g. 2 BHK, Studio, Shop..."
-              value="${p.unit_type || ''}">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Property Price / Market Value</label>
-            <input type="text" id="f_prop${n}_price" placeholder="₹ Market value"
-              value="${p.price || ''}">
-          </div>
-          <div class="field">
-            <label>NOC Issued</label>
-            <select id="f_prop${n}_noc">
-              <option value="">Select</option>
-              <option ${p.noc === 'Yes' ? 'selected' : ''}>Yes</option>
-              <option ${p.noc === 'No' ? 'selected' : ''}>No</option>
-              <option ${p.noc === 'N/A' ? 'selected' : ''}>N/A</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Registration Details -->
-    <div class="card">
-      <div class="card-hdr">🗂 Property ${n} — Registration Details</div>
-      <div class="card-body">
-        <div class="field-row">
-          <div class="field">
-            <label>Registration Number</label>
-            <input type="text" id="f_prop${n}_reg_no" placeholder="Reg. / Doc. number"
-              value="${p.reg_no || ''}">
-          </div>
-          <div class="field">
-            <label>Registration Date</label>
-            <input type="date" id="f_prop${n}_reg_date" value="${p.reg_date || ''}">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Stamp Duty Paid (₹)</label>
-            <input type="text" id="f_prop${n}_stamp_duty" placeholder="Amount"
-              value="${p.stamp_duty || ''}">
-          </div>
-          <div class="field">
-            <label>Registration Fee Paid (₹)</label>
-            <input type="text" id="f_prop${n}_reg_fee" placeholder="Amount"
-              value="${p.reg_fee || ''}">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Ready Reckoner Rate (₹)</label>
-            <input type="text" id="f_prop${n}_ready_reckoner" placeholder="Rate"
-              value="${p.ready_reckoner || ''}">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Index II Date</label>
-            <input type="date" id="f_prop${n}_index2_date" value="${p.index2_date || ''}">
-          </div>
-        </div>
-        <div class="field">
-          <label>Ownership Document</label>
-          <select id="f_prop${n}_ownership_doc">
-            <option value="">Select</option>
-            <option ${p.ownership_doc === 'Sale Deed' ? 'selected' : ''}>Sale Deed</option>
-            <option ${p.ownership_doc === 'Agreement to Sale' ? 'selected' : ''}>Agreement to Sale</option>
-            <option ${p.ownership_doc === 'Gift Deed' ? 'selected' : ''}>Gift Deed</option>
-            <option ${p.ownership_doc === 'Will' ? 'selected' : ''}>Will</option>
-            <option ${p.ownership_doc === 'Other' ? 'selected' : ''}>Other</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Verification Remarks -->
-    <div class="card">
-      <div class="card-hdr">📝 Property ${n} Verification Remarks</div>
-      <div class="card-body">
-        <div class="field">
-          <label>Remarks / Observations</label>
-          <textarea id="f_prop${n}_remarks" rows="3"
-            placeholder="Enter property verification remarks, observations, or notes...">${p.remarks || ''}</textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- Person Met -->
-    <div class="card">
-      <div class="card-hdr">🤝 Person Met at Property ${n}</div>
-      <div class="card-body">
-        <div class="field-row">
-          <div class="field">
-            <label>Person Met</label>
-            <input type="text" id="f_prop${n}_person_met" placeholder="Name of person met"
-              value="${p.person_met || ''}">
-          </div>
-          <div class="field">
-            <label>Person Met Contact</label>
-            <input type="tel" id="f_prop${n}_person_met_contact" placeholder="10-digit mobile"
-              value="${p.person_met_contact || ''}">
-          </div>
-        </div>
-        <div class="field">
-          <label>Person Met Relation</label>
-          <input type="text" id="f_prop${n}_person_met_relation"
-            placeholder="e.g. Owner, Caretaker, Tenant, Neighbour"
-            value="${p.person_met_relation || ''}">
-        </div>
-      </div>
-    </div>
-
-    <!-- Photos -->
-    <div class="card">
-      <div class="card-hdr">📸 Property ${n} / Asset Visit Photos</div>
-      <div class="card-body">
-        ${p.photos && p.photos.length ? renderPhotoStrip(p.photos, 'Property ' + n + ' Field Photos') : ''}
-        <div class="upload-zone" id="uz_property${n}_photos">
-          <input type="file" id="fu_property${n}_photos" accept="image/*" multiple
-            onchange="handleFileSelect('property${n}_photos', this.files)"
-            onclick="event.stopPropagation()">
-          <div class="uz-icon">📸</div>
-          <div class="uz-text">Upload Property ${n} Visit Photos</div>
-          <div class="uz-hint">Photos taken at the property site</div>
-        </div>
-        <div class="file-list" id="fl_property${n}_photos"></div>
-      </div>
-    </div>
-  `;
-  container.appendChild(div);
-}
-
-function renderExtraCarBlock(n, c) {
-  c = c || {};
-  const container = document.getElementById('extra-cars-container');
-  if (!container) return;
-  const div = document.createElement('div');
-  div.className = 'extra-car-block';
-  div.dataset.index = n - 2;
-  div.innerHTML = `
-    <!-- Vehicle Details -->
-    <div class="card">
-      <div class="card-hdr">🚗 Car ${n} / Vehicle Details</div>
-      <div class="card-body">
-        <div class="upload-zone" id="uz_car${n}_quotation">
-          <input type="file" id="fu_car${n}_quotation" accept="image/*,.pdf" multiple
-            onchange="handleFileSelect('car${n}_quotation', this.files)"
-            onclick="event.stopPropagation()">
-          <div class="uz-icon">📋</div>
-          <div class="uz-text">Upload Car ${n} Quotation / Proforma Invoice</div>
-          <div class="uz-hint">JPG, PNG or PDF</div>
-        </div>
-        <div class="file-list" id="fl_car${n}_quotation"></div>
-        <button class="ocr-btn" id="ocr_car${n}_quotation"
-          onclick="runOcr('car${n}_quotation','car')" disabled>
-          <span>✨ Extract Quotation Details</span>
-        </button>
-        <div class="field-row">
-          <div class="field">
-            <label>Car Model</label>
-            <input type="text" id="f_car${n}_model"
-              placeholder="e.g. Hyundai Creta SX"
-              value="${c.model || ''}">
-          </div>
-          <div class="field">
-            <label>Car Price (On-Road)</label>
-            <input type="text" id="f_car${n}_price"
-              placeholder="₹ On-road price"
-              value="${c.price || ''}">
-          </div>
-        </div>
-        <div class="field">
-          <label>Dealership Name</label>
-          <input type="text" id="f_car${n}_dealership_name"
-            placeholder="Showroom / dealership name"
-            value="${c.dealership_name || ''}">
-        </div>
-        <div class="field">
-          <label>Dealership Address</label>
-          <textarea id="f_car${n}_dealership_addr"
-            placeholder="Full dealership address" rows="2">${c.dealership_addr || ''}</textarea>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Dealership Contact</label>
-            <input type="tel" id="f_car${n}_dealership_contact"
-              placeholder="Phone number"
-              value="${c.dealership_contact || ''}">
-          </div>
-          <div class="field">
-            <label>Sales Executive Name</label>
-            <input type="text" id="f_car${n}_exec_name"
-              placeholder="Executive name"
-              value="${c.exec_name || ''}">
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Verification Remarks -->
-    <div class="card">
-      <div class="card-hdr">📝 Car ${n} Loan Verification Remarks</div>
-      <div class="card-body">
-        <div class="field">
-          <label>Verification Remarks</label>
-          <textarea id="f_car${n}_remarks" rows="3"
-            placeholder="e.g. Contacted dealership and confirmed proforma invoice. Sales executive verified. Quotation found satisfactory.">${c.remarks || ''}</textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- Photos -->
-    <div class="card">
-      <div class="card-hdr">📸 Car ${n} / Dealership Visit Photos</div>
-      <div class="card-body">
-        ${c.photos && c.photos.length ? renderPhotoStrip(c.photos, 'Car ' + n + ' Field Photos') : ''}
-        <div class="upload-zone" id="uz_car${n}_photos">
-          <input type="file" id="fu_car${n}_photos" accept="image/*" multiple
-            onchange="handleFileSelect('car${n}_photos', this.files)"
-            onclick="event.stopPropagation()">
-          <div class="uz-icon">📸</div>
-          <div class="uz-text">Upload Car ${n} / Dealership Visit Photos</div>
-          <div class="uz-hint">Photos taken at the dealership</div>
-        </div>
-        <div class="file-list" id="fl_car${n}_photos"></div>
-      </div>
-    </div>
-  `;
-  container.appendChild(div);
-}
-
-function renderCoAppOfficeBlocks(n, coArr) {
-  coArr = coArr || [];
-  const container = document.getElementById('co' + n + '-office-container');
-  if (!container) return;
-  container.innerHTML = '';
-  coArr.forEach((o, ei) => {
-    o = o || {};
-    const slotNum = ei + 2;
-    const label = 'Co-Applicant ' + n + ' — Office ' + slotNum;
-    const prefix = 'f_co' + n + '_office' + slotNum;
-
-    const empOpts = ['Salaried','Salaried (NRI)','Business Owner','Self Employed',
-      'Retired','Homemaker','Student','Unemployed','Income Not Considered'];
-    const empOptHtml = empOpts.map(v =>
-      `<option value="${v}"${o.emp_status === v ? ' selected' : ''}>${v}</option>`
-    ).join('');
-
-    const isSal = ['Salaried','Salaried (NRI)'].includes(o.emp_status);
-    const isBiz = ['Business Owner','Self Employed'].includes(o.emp_status);
-
-    const gstConstOpts = ['Proprietorship','Partnership','Private Limited Company',
-      'Public Limited Company','LLP','Trust','Other'];
-    const gstConstHtml = gstConstOpts.map(v =>
-      `<option${o.gst_constitution === v ? ' selected' : ''}>${v}</option>`
-    ).join('');
-
-    const div = document.createElement('div');
-    div.className = 'co' + n + '-extra-office-block';
-    div.dataset.index = ei;
-    div.innerHTML = `
-      <div class="card">
-        <div class="card-hdr">💼 ${label} — Employment Details</div>
-        <div class="card-body">
-          <div class="field">
-            <label>Employment Status</label>
-            <select id="${prefix}_emp_status"
-              onchange="(function(sel){var b=sel.closest('.co${n}-extra-office-block');b.querySelector('.co-extra-sal-fields').style.display=['Salaried','Salaried (NRI)'].includes(sel.value)?'':'none';b.querySelector('.co-extra-biz-fields').style.display=['Business Owner','Self Employed'].includes(sel.value)?'':'none';})(this)">
-              <option value="">Select</option>${empOptHtml}
-            </select>
-          </div>
-
-          <div class="co-extra-sal-fields" style="display:${isSal ? '' : 'none'}">
-            <div class="upload-zone" id="uz_co${n}_office${slotNum}_payslip">
-              <input type="file" id="fu_co${n}_office${slotNum}_payslip" accept="image/*,.pdf" multiple
-                onchange="handleFileSelect('co${n}_office${slotNum}_payslip', this.files)" onclick="event.stopPropagation()">
-              <div class="uz-icon">📋</div>
-              <div class="uz-text">Upload Payslip / Salary Certificate</div>
-              <div class="uz-hint">JPG, PNG or PDF</div>
-            </div>
-            <div class="file-list" id="fl_co${n}_office${slotNum}_payslip"></div>
-            <button class="ocr-btn" id="ocr_co${n}_office${slotNum}_payslip"
-              onclick="runOcr('co${n}_office${slotNum}_payslip','payslip')" disabled>
-              <span>✨ Extract from Payslip</span>
-            </button>
-            <div class="field-row">
-              <div class="field"><label>Employer / Company</label>
-                <input type="text" id="${prefix}_company" value="${o.company || ''}"></div>
-              <div class="field"><label>Designation</label>
-                <input type="text" id="${prefix}_designation" value="${o.designation || ''}"></div>
-            </div>
-            <div class="field-row">
-              <div class="field"><label>Employee Code</label>
-                <input type="text" id="${prefix}_emp_code" value="${o.emp_code || ''}"></div>
-              <div class="field"><label>Branch / Location</label>
-                <input type="text" id="${prefix}_branch" value="${o.branch || ''}"></div>
-            </div>
-            <div class="field-row">
-              <div class="field"><label>Net Monthly Pay</label>
-                <input type="text" id="${prefix}_net_pay" value="${o.net_pay || ''}"></div>
-              <div class="field"><label>Date of Joining</label>
-                <input type="date" id="${prefix}_joining" value="${o.joining || ''}"></div>
-            </div>
-          </div>
-
-          <div class="co-extra-biz-fields" style="display:${isBiz ? '' : 'none'}">
-            <div class="upload-zone" id="uz_co${n}_office${slotNum}_biz_cert">
-              <input type="file" id="fu_co${n}_office${slotNum}_biz_cert" accept="image/*,.pdf" multiple
-                onchange="handleFileSelect('co${n}_office${slotNum}_biz_cert', this.files)" onclick="event.stopPropagation()">
-              <div class="uz-icon">📜</div>
-              <div class="uz-text">Upload GST / Udyam Certificate</div>
-              <div class="uz-hint">JPG, PNG or PDF</div>
-            </div>
-            <div class="file-list" id="fl_co${n}_office${slotNum}_biz_cert"></div>
-            <button class="ocr-btn" id="ocr_co${n}_office${slotNum}_biz_cert"
-              onclick="runOcr('co${n}_office${slotNum}_biz_cert','biz')" disabled>
-              <span>✨ Extract from Certificate</span>
-            </button>
-            <div class="field-row">
-              <div class="field"><label>GST Number</label>
-                <input type="text" id="${prefix}_gst_no" value="${o.gst_no || ''}" style="font-family:'DM Mono',monospace"></div>
-              <div class="field"><label>Udyam Number</label>
-                <input type="text" id="${prefix}_udyam_no" value="${o.udyam_no || ''}" style="font-family:'DM Mono',monospace"></div>
-            </div>
-            <div class="field-row">
-              <div class="field"><label>Legal Name of Business</label>
-                <input type="text" id="${prefix}_gst_legal_name" value="${o.gst_legal_name || ''}"></div>
-              <div class="field"><label>Organisation Type</label>
-                <select id="${prefix}_gst_constitution">
-                  <option value="">Select</option>${gstConstHtml}
-                </select>
-              </div>
-            </div>
-            <div class="field-row">
-              <div class="field"><label>Designation / Role</label>
-                <input type="text" id="${prefix}_biz_designation" value="${o.biz_designation || ''}"></div>
-              <div class="field"><label>Net Monthly Income</label>
-                <input type="text" id="${prefix}_biz_net_pay" value="${o.biz_net_pay || ''}"></div>
-            </div>
-            <div class="field"><label>Directors / Partners Names</label>
-              <input type="text" id="${prefix}_gst_directors" value="${o.gst_directors || ''}"></div>
-            <div class="field"><label>Legal / Registered Address</label>
-              <textarea id="${prefix}_gst_address" rows="2">${o.gst_address || ''}</textarea></div>
-            <div class="field-row">
-              <div class="field"><label>Enterprise Type (Udyam)</label>
-                <select id="${prefix}_udyam_ent_type">
-                  <option value="">Select</option>
-                  <option${o.udyam_ent_type==='Micro'?' selected':''}>Micro</option>
-                  <option${o.udyam_ent_type==='Small'?' selected':''}>Small</option>
-                  <option${o.udyam_ent_type==='Medium'?' selected':''}>Medium</option>
-                </select>
-              </div>
-              <div class="field"><label>Date of Incorporation</label>
-                <input type="date" id="${prefix}_biz_joining" value="${o.biz_joining || ''}"></div>
-            </div>
-          </div>
-
-          <div class="field"><label>Years of Experience / Business</label>
-            <input type="text" id="${prefix}_experience" value="${o.experience || ''}"></div>
-          <div class="field"><label>Office / Business Address</label>
-            <textarea id="${prefix}_addr" rows="2">${o.office_addr || ''}</textarea></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-hdr">📝 ${label} — Verification Remarks</div>
-        <div class="card-body">
-          <div class="field">
-            <textarea id="${prefix}_emp_remarks" rows="2" placeholder="Verification remarks…">${o.emp_remarks || ''}</textarea>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-hdr">🤝 ${label} — Person Met</div>
-        <div class="card-body">
-          <div class="field"><label>Nature of Organisation</label>
-            <input type="text" id="${prefix}_nature_of_org" value="${o.nature_of_org || ''}"
-              placeholder="e.g. Private Limited, Proprietorship, Government, MNC…"></div>
-          <div class="field-row">
-            <div class="field"><label>Person Met</label>
-              <input type="text" id="${prefix}_person_met" value="${o.person_met || ''}"></div>
-            <div class="field"><label>Designation</label>
-              <input type="text" id="${prefix}_person_met_desig" value="${o.person_met_desig || ''}"></div>
-          </div>
-          <div class="field"><label>Person Met Contact</label>
-            <input type="tel" id="${prefix}_person_met_contact" value="${o.person_met_contact || ''}"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-hdr">📸 ${label} — Visit Photos</div>
-        <div class="card-body">
-          ${renderPhotoStrip(o.photos || [], label + ' Field Photos')}
-          <div class="upload-zone" id="uz_co${n}_office${slotNum}_photos">
-            <input type="file" id="fu_co${n}_office${slotNum}_photos" accept="image/*" multiple
-              onchange="handleFileSelect('co${n}_office${slotNum}_photos', this.files)" onclick="event.stopPropagation()">
-            <div class="uz-icon">📸</div>
-            <div class="uz-text">Upload ${label} Visit Photos</div>
-            <div class="uz-hint">Photos taken at the office / business premises</div>
-          </div>
-          <div class="file-list" id="fl_co${n}_office${slotNum}_photos"></div>
-        </div>
-      </div>
-    `;
-    container.appendChild(div);
-
-    // Trigger show/hide for pre-populated emp_status
-    const sel = div.querySelector('select[id$="_emp_status"]');
-    if (sel && sel.value) sel.dispatchEvent(new Event('change'));
-  });
-}
-
 // ── Restore form from saved values ───────────────────────
 function restoreFormValues(metaOrVals) {
   // Accept either a full draft meta object or just vals
@@ -6684,22 +5462,6 @@ function restoreFormValues(metaOrVals) {
     el.value = val;
     if (el.tagName === 'SELECT') el.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  // Render field-sourced extras from server auto-draft
-  const oc = document.getElementById('extra-offices-container');
-  if (oc) oc.innerHTML = '';
-  const pc = document.getElementById('extra-properties-container');
-  if (pc) pc.innerHTML = '';
-  const cc = document.getElementById('extra-cars-container');
-  if (cc) cc.innerHTML = '';
-  const extras = vals.extras || {};
-  const extraOffices = extras.offices || [];
-  extraOffices.forEach((o, i) => renderExtraOfficeBlock(i + 2, o));
-  const extraProps = extras.properties || [];
-  extraProps.forEach((p, i) => renderExtraPropBlock(i + 2, p));
-  const extraCoOff = extras.co_offices || [];
-  extraCoOff.forEach((coArr, ci) => renderCoAppOfficeBlocks(ci + 1, coArr));
-  const extraCars = extras.cars || [];
-  extraCars.forEach((c, i) => renderExtraCarBlock(i + 2, c));
   // Second pass after 400ms - re-fire all SELECTs AND re-set all text fields
   // This ensures dependent show/hide sections are visible and values are correct
   setTimeout(function() {
@@ -6709,20 +5471,13 @@ function restoreFormValues(metaOrVals) {
         el.dispatchEvent(new Event('change', { bubbles: true }));
       }
     });
-    // Re-set all text/textarea values unconditionally — handlers may have
-    // overwritten them during the SELECT re-fire pass above
+    // Re-set all text/textarea values in case dependent sections were
+    // hidden during first pass and fields didn't exist yet
     Object.entries(vals).forEach(function([id, val]) {
       if (id.startsWith('__') || !val) return;
       const el = document.getElementById(id);
       if (!el || el.type === 'file' || el.tagName === 'SELECT') return;
-      el.value = val;
-    });
-    // Silently re-set SELECT values that handlers may have changed
-    Object.entries(vals).forEach(function([id, val]) {
-      if (id.startsWith('__') || !val) return;
-      const el = document.getElementById(id);
-      if (!el || el.tagName !== 'SELECT') return;
-      if (el.value !== val) el.value = val;
+      if (!el.value) el.value = val; // only set if still empty
     });
     // Re-restore ITR fields from store
     restoreItrFieldsFromStore();
@@ -6816,8 +5571,6 @@ function buildDraftMeta(draftName) {
 // ── SAVE DRAFT ────────────────────────────────────────────
 // Saves to cloud (Apps Script) AND localStorage as backup
 async function saveDraft(draftName) {
-  if (_restoring) return null;
-  if (currentDraftKey && currentDraftKey.startsWith('intake_') && !draftName) return null;
   const meta = buildDraftMeta(draftName);
 
   // Always save to localStorage as backup
@@ -7007,8 +5760,9 @@ function filterDrafts(query) {
 }
 
 async function openDraft(key) {
-  let cloudMeta = null;
-  let localMeta = null;
+  _restoring = true;
+  // Cloud wins — ensures all devices see the same version
+  let meta = null;
   const endpoint = getEndpoint();
   if (endpoint) {
     try {
@@ -7017,24 +5771,21 @@ async function openDraft(key) {
         body: JSON.stringify({ action: 'getDraft', key: key })
       });
       const data = await res.json();
-      if (data.draft) cloudMeta = data.draft;
+      if (data.draft) meta = data.draft;
     } catch(e) {}
   }
-  try { localMeta = JSON.parse(localStorage.getItem('rka_draft_' + key)); } catch(e) {}
-  // Pick the newer of cloud vs local — never discard a more recent local save
-  let meta = null;
-  if (cloudMeta && localMeta) {
-    meta = new Date(cloudMeta.savedAt) >= new Date(localMeta.savedAt) ? cloudMeta : localMeta;
-  } else {
-    meta = cloudMeta || localMeta;
+  if (!meta) {
+    try { meta = JSON.parse(localStorage.getItem('rka_draft_' + key)); } catch(e) {}
   }
   if (!meta) { showToast('Draft not found', 'error'); return; }
   if (!confirm('Load "' + (meta.appName || meta.name) + '"? Unsaved data will be replaced.')) return;
   hardClearForm(false);
   currentCaseId = meta.caseSessionId || _newCaseId();
   currentDraftKey = key;
+  // Restore Drive file URLs from draft
   _draftDriveFiles = (meta.driveFiles && typeof meta.driveFiles === 'object') ? meta.driveFiles : {};
-  _restoring = true;
+  // Build dynamic sections BEFORE restoring values
+  // so all field IDs (esp. ITR fields) exist in DOM
   buildItrSection();
   restoreFormValues(meta);
   toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
@@ -7048,18 +5799,16 @@ let autosaveTimer = null;
 function scheduleAutosave() {
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(async function() {
-    if (currentDraftKey && currentDraftKey.startsWith('intake_')) return;
     const appName = (document.getElementById('f_app_name') || {}).value || '';
-    const bank    = (document.getElementById('f_bank')     || {}).value || '';
-    const mobile  = (document.getElementById('f_app_mobile') || {}).value || '';
-    const pan     = (document.getElementById('f_app_kyc_pan_no') || {}).value || '';
-    if (appName.trim() || bank.trim() || mobile.trim() || pan.trim()) {
+    if (appName.trim()) {
       await saveDraft(appName.trim());
+      // Silent — no toast
     }
-  }, 2000);  // 2 seconds — captures OCR results quickly
+  }, 5000);  // 5 seconds — captures OCR results quickly
 }
 
 window.addEventListener('beforeunload', function() {
+  if (_restoring) return;
   try {
     var meta = buildDraftMeta();
     if (meta && meta.key) {
@@ -7074,7 +5823,7 @@ window.addEventListener('beforeunload', function() {
         );
       }
     }
-  } catch(e) { /* best-effort, never throws */ }
+  } catch(e) {}
 });
 
 async function saveDraftNow() {
@@ -8090,7 +6839,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Sync education collateral toggle to initial select value
   toggleEduCollateral(document.getElementById('f_edu_collateral_status').value);
   // Populate branch datalist from canonical list
-  fetch('https://intake.rkfinservice.com/api/branches/canonical')
+  fetch('https://api.relentlessais.com/api/branches/canonical')
     .then(r => r.json())
     .then(d => {
       const dl = document.getElementById('bank_branch_list');
