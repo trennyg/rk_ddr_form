@@ -7035,12 +7035,14 @@ async function openDraft(key) {
   currentDraftKey = key;
   _draftDriveFiles = (meta.driveFiles && typeof meta.driveFiles === 'object') ? meta.driveFiles : {};
   buildItrSection();
-  _restoring = true;
-  restoreFormValues(meta);
-  toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
   applyFormMode(meta.formMode || 'ddr');
   showToast('Loaded: ' + (meta.appName || meta.name), 'success');
+  _restoring = true;
   switchTab(1);
+  setTimeout(function() {
+    restoreFormValues(meta);
+    toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
+  }, 0);
 }
 
 // ── AUTOSAVE ──────────────────────────────────────────────
