@@ -5807,7 +5807,7 @@ function scheduleAutosave() {
     if (appName.trim() || bank.trim() || mobile.trim() || pan.trim()) {
       await saveDraft(appName.trim());
     }
-  }, 2000);
+  }, 5000);
 }
 window.addEventListener('beforeunload', function() {
   try {
