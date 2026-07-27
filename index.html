@@ -7034,8 +7034,8 @@ async function openDraft(key) {
   currentCaseId = meta.caseSessionId || _newCaseId();
   currentDraftKey = key;
   _draftDriveFiles = (meta.driveFiles && typeof meta.driveFiles === 'object') ? meta.driveFiles : {};
-  buildItrSection();
   _restoring = true;
+  buildItrSection();
   restoreFormValues(meta);
   toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
   applyFormMode(meta.formMode || 'ddr');
