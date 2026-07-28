@@ -5807,24 +5807,6 @@ function scheduleAutosave() {
   }, 5000);  // 5 seconds — captures OCR results quickly
 }
 
-window.addEventListener('beforeunload', function() {
-  try {
-    var meta = buildDraftMeta();
-    if (meta && meta.key) {
-      var endpoint = getEndpoint();
-      if (endpoint) {
-        navigator.sendBeacon(
-          endpoint,
-          new Blob(
-            [JSON.stringify({ action: 'saveDraft', draft: meta })],
-            { type: 'text/plain' }
-          )
-        );
-      }
-    }
-  } catch(e) {}
-});
-
 async function saveDraftNow() {
   const appName = (document.getElementById('f_app_name') || {}).value || '';
   const name = await saveDraft(appName.trim() || ('Draft ' + new Date().toLocaleTimeString('en-IN')));
