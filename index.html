@@ -5575,6 +5575,8 @@ function restoreFormValues(metaOrVals) {
       }
       updateInvoicePreview();
     } finally {
+      if (autosaveTimer) clearTimeout(autosaveTimer);
+      autosaveTimer = null;
       _restoring = false;
     }
   }, 400);
@@ -5866,6 +5868,7 @@ async function openDraft(key) {
   }
   if (!meta) { showToast('Draft not found', 'error'); return; }
   if (!confirm('Load "' + (meta.appName || meta.name) + '"? Unsaved data will be replaced.')) return;
+  _restoring = true;
   hardClearForm(false);
   currentCaseId = meta.caseSessionId || _newCaseId();
   currentDraftKey = key;
@@ -5874,7 +5877,6 @@ async function openDraft(key) {
   // Build dynamic sections BEFORE restoring values
   // so all field IDs (esp. ITR fields) exist in DOM
   buildItrSection();
-  _restoring = true;
   restoreFormValues(meta);
   toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
   applyFormMode(meta.formMode || 'ddr');
