@@ -2570,6 +2570,7 @@ function switchTab(n) {
   if (n === 9) buildUploadSummary();
   if (n === 10) renderDraftList();
   window.scrollTo(0, 0);
+  if (!_restoring) scheduleAutosave();
 }
 
 function toggleEduCollateral(val) {
@@ -5539,38 +5540,42 @@ function restoreFormValues(metaOrVals) {
   // Second pass after 400ms - re-fire all SELECTs AND re-set all text fields
   // This ensures dependent show/hide sections are visible and values are correct
   setTimeout(function() {
-    // Re-fire all SELECTs to show/hide dependent sections
-    document.querySelectorAll('select').forEach(function(el) {
-      if (el.id && el.value) {
-        el.dispatchEvent(new Event('change', { bubbles: true }));
+    try {
+      // Re-fire all SELECTs to show/hide dependent sections
+      document.querySelectorAll('select').forEach(function(el) {
+        if (el.id && el.value) {
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+      // Re-set all text/textarea values in case dependent sections were
+      // hidden during first pass and fields didn't exist yet
+      Object.entries(vals).forEach(function([id, val]) {
+        if (id.startsWith('__') || !val) return;
+        const el = document.getElementById(id);
+        if (!el || el.type === 'file' || el.tagName === 'SELECT') return;
+        if (!el.value) el.value = val; // only set if still empty
+      });
+      // Re-restore ITR fields from store
+      restoreItrFieldsFromStore();
+      // Re-apply GST toggle state from restored value
+      var gstVal = document.getElementById('f_inv_gst_enabled');
+      var gstFields = document.getElementById('inv_gst_fields');
+      var gstToggleBtn = document.getElementById('inv_gst_toggle');
+      var gstOffLabel  = document.getElementById('inv_gst_off_label');
+      if (gstVal && gstFields) {
+        var isOn = gstVal.value === 'true';
+        gstFields.style.display = isOn ? '' : 'none';
+        if (gstOffLabel) gstOffLabel.style.display = isOn ? 'none' : '';
+        if (gstToggleBtn) {
+          gstToggleBtn.style.background = isOn ? 'var(--accent)' : 'var(--surface2)';
+          gstToggleBtn.style.color = isOn ? '#000' : 'var(--text)';
+          gstToggleBtn.textContent = isOn ? 'GST: ON' : 'GST: OFF';
+        }
       }
-    });
-    // Re-set all text/textarea values in case dependent sections were
-    // hidden during first pass and fields didn't exist yet
-    Object.entries(vals).forEach(function([id, val]) {
-      if (id.startsWith('__') || !val) return;
-      const el = document.getElementById(id);
-      if (!el || el.type === 'file' || el.tagName === 'SELECT') return;
-      if (!el.value) el.value = val; // only set if still empty
-    });
-    // Re-restore ITR fields from store
-    restoreItrFieldsFromStore();
-    // Re-apply GST toggle state from restored value
-    var gstVal = document.getElementById('f_inv_gst_enabled');
-    var gstFields = document.getElementById('inv_gst_fields');
-    var gstToggleBtn = document.getElementById('inv_gst_toggle');
-    var gstOffLabel  = document.getElementById('inv_gst_off_label');
-    if (gstVal && gstFields) {
-      var isOn = gstVal.value === 'true';
-      gstFields.style.display = isOn ? '' : 'none';
-      if (gstOffLabel) gstOffLabel.style.display = isOn ? 'none' : '';
-      if (gstToggleBtn) {
-        gstToggleBtn.style.background = isOn ? 'var(--accent)' : 'var(--surface2)';
-        gstToggleBtn.style.color = isOn ? '#000' : 'var(--text)';
-        gstToggleBtn.textContent = isOn ? 'GST: ON' : 'GST: OFF';
-      }
+      updateInvoicePreview();
+    } finally {
+      _restoring = false;
     }
-    updateInvoicePreview();
   }, 400);
 
   // Restore Drive-uploaded photos from draft
@@ -5868,6 +5873,7 @@ async function openDraft(key) {
   // Build dynamic sections BEFORE restoring values
   // so all field IDs (esp. ITR fields) exist in DOM
   buildItrSection();
+  _restoring = true;
   restoreFormValues(meta);
   toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
   applyFormMode(meta.formMode || 'ddr');
@@ -5876,16 +5882,20 @@ async function openDraft(key) {
 }
 
 // ── AUTOSAVE ──────────────────────────────────────────────
+let _restoring = false;
 let autosaveTimer = null;
 function scheduleAutosave() {
+  if (_restoring) return;
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(async function() {
+    if (_restoring) return;
+    console.log('AUTOSAVE FIRED', Date.now());
     const appName = (document.getElementById('f_app_name') || {}).value || '';
     if (appName.trim()) {
       await saveDraft(appName.trim());
       // Silent — no toast
     }
-  }, 5000);  // 5 seconds — captures OCR results quickly
+  }, 1000);  // 1 second — guarded by _restoring flag
 }
 
 async function saveDraftNow() {
