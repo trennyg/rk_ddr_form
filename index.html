@@ -2570,7 +2570,7 @@ function switchTab(n) {
   if (n === 9) buildUploadSummary();
   if (n === 10) renderDraftList();
   window.scrollTo(0, 0);
-  if (!_restoring) scheduleAutosave();
+  if (!_restoring && ((document.getElementById('f_app_name') || {}).value || '').trim()) scheduleAutosave();
 }
 
 function toggleEduCollateral(val) {
