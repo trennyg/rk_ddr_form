@@ -4448,6 +4448,7 @@ function buildCoResRemarks() {
 // ITR / FORM 16 SECTION (dynamic)
 // ══════════════════════════════════════════════════════════
 function buildItrSection(forceRebuild) {
+  console.log('BUILD_ITR', Date.now(), '_restoring=', typeof _restoring !== 'undefined' ? _restoring : 'undef');
   const container = document.getElementById('itrContainer');
   // Only rebuild if container is empty OR forceRebuild is true
   // This preserves filled values when switching tabs
