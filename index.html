@@ -3070,10 +3070,33 @@ function renderPreviewPanel() {
         dImgHtml = '<img src="data:' + (df.mimeType || 'image/jpeg') + ';base64,' + df.base64 + '" alt="' + dPageLabel + '" loading="lazy">';
       } else {
         var fileId = extractDriveFileId(df.driveUrl);
-        var thumbSrc = fileId ? 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w800' : '';
-        dImgHtml = thumbSrc
-          ? '<img src="' + thumbSrc + '" alt="' + dPageLabel + '" loading="lazy" onerror="this.style.opacity=\'0.3\'">'
-          : '<div class="pp-img-placeholder">Preview not available</div>';
+        if (fileId) {
+          dImgHtml = '<img src="https://drive.google.com/thumbnail?id=' + fileId + '&sz=w800" alt="' + dPageLabel + '" loading="lazy" onerror="this.style.opacity=\'0.3\'">';
+        } else if (df.driveUrl && df.driveUrl.includes('/uploads/intake/')) {
+          dImgHtml = '<div class="pp-img-placeholder">Preview not available</div>';
+          if (!df._fetching) {
+            df._fetching = true;
+            (async function(dfRef) {
+              var ep = getEndpoint();
+              if (!ep) { dfRef._fetching = false; return; }
+              try {
+                var pr = await fetch(ep, {
+                  method: 'POST',
+                  body: JSON.stringify({ action: 'fetchDriveFile', url: dfRef.driveUrl })
+                });
+                var pd = await pr.json();
+                if (!pd.base64) { dfRef._fetching = false; return; }
+                dfRef.base64   = pd.base64;
+                dfRef.mimeType = pd.mimeType || dfRef.mimeType || 'image/jpeg';
+                renderPreviewPanel();
+              } catch(e) {
+                dfRef._fetching = false;
+              }
+            })(df);
+          }
+        } else {
+          dImgHtml = '<div class="pp-img-placeholder">Preview not available</div>';
+        }
       }
       html += '<div class="pp-slot">'
         + '<div class="pp-slot-label">' + dPageLabel + ' <span class="pp-draft-badge">Draft</span></div>'
