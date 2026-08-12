@@ -5896,44 +5896,6 @@ async function openDraft(key) {
   currentDraftKey = key;
   // Restore Drive file URLs from draft
   _draftDriveFiles = (meta.driveFiles && typeof meta.driveFiles === 'object') ? meta.driveFiles : {};
-  // Explode any PDF entries in _draftDriveFiles into per-page images in uploadedFiles
-  // so Extract uses Cloud Vision per page instead of handing raw PDF bytes to Vision.
-  // uploadedFiles is {} here (hardClearForm reset it). Handles both drive.google.com
-  // and /uploads/intake/ URLs via the existing fetchDriveFile proxy.
-  const _ep = getEndpoint();
-  if (_ep) {
-    for (const _slot of Object.keys(_draftDriveFiles)) {
-      const _entries = _draftDriveFiles[_slot];
-      for (let _ei = _entries.length - 1; _ei >= 0; _ei--) {
-        const _entry = _entries[_ei];
-        if (_entry.mimeType !== 'application/pdf') continue;
-        try {
-          const _pr = await fetch(_ep, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'fetchDriveFile', url: _entry.driveUrl })
-          });
-          const _pd = await _pr.json();
-          if (!_pd.base64) {
-            console.warn('[openDraft] fetchDriveFile returned no base64 for', _slot, _entry.driveUrl);
-            continue;
-          }
-          const _bytes = Uint8Array.from(atob(_pd.base64), function(c) { return c.charCodeAt(0); });
-          const _blob = new Blob([_bytes], { type: 'application/pdf' });
-          const _file = new File([_blob], _entry.name, { type: 'application/pdf' });
-          const _isBankStmt = _slot === 'app_bank_stmt' || _slot.endsWith('_bank_stmt');
-          const _pages = await pdfToImages(_file, _isBankStmt ? 1 : 0);
-          if (!uploadedFiles[_slot]) uploadedFiles[_slot] = [];
-          _pages.forEach(function(p, idx) {
-            uploadedFiles[_slot].push({ file: null, base64: p.base64, mimeType: 'image/png', name: _entry.name + ' (page ' + (idx + 1) + ')' });
-          });
-          _entries.splice(_ei, 1);
-          if (_entries.length === 0) delete _draftDriveFiles[_slot];
-        } catch(_e) {
-          console.warn('[openDraft] PDF explode failed for', _slot, _entry.driveUrl, _e.message);
-        }
-      }
-    }
-  }
   // Build dynamic sections BEFORE restoring values
   // so all field IDs (esp. ITR fields) exist in DOM
   buildItrSection();
