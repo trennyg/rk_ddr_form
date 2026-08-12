@@ -5896,35 +5896,6 @@ async function openDraft(key) {
   currentDraftKey = key;
   // Restore Drive file URLs from draft
   _draftDriveFiles = (meta.driveFiles && typeof meta.driveFiles === 'object') ? meta.driveFiles : {};
-  // Explode intake-origin PDFs into per-page images so OCR/preview match the drop-path.
-  const _ep = getEndpoint();
-  if (_ep) {
-    for (const _k of Object.keys(_draftDriveFiles)) {
-      const _arr = _draftDriveFiles[_k] || [];
-      const _out = [];
-      for (const _e of _arr) {
-        if (_e && !_e.base64 && (_e.mimeType === 'application/pdf' || /\.pdf$/i.test(_e.name || ''))) {
-          try {
-            const _r = await fetch(_ep, { method: 'POST', body: JSON.stringify({ action: 'fetchDriveFile', url: _e.driveUrl }) });
-            const _d = await _r.json();
-            if (!_d || !_d.base64) { _out.push(_e); continue; }
-            const _bin = atob(_d.base64);
-            const _u8 = new Uint8Array(_bin.length);
-            for (let _i = 0; _i < _bin.length; _i++) _u8[_i] = _bin.charCodeAt(_i);
-            const _file = new File([_u8], _e.name || 'doc.pdf', { type: 'application/pdf' });
-            const _cap = (_k === 'app_bank_stmt' || _k.endsWith('_bank_stmt')) ? 1 : 0;
-            const _pages = await pdfToImages(_file, _cap);
-            if (!_pages || !_pages.length) { _out.push(_e); continue; }
-            const _base = (_e.name || 'doc').replace(/\.pdf$/i, '');
-            _pages.forEach((_p, _idx) => _out.push({ file: null, driveUrl: _e.driveUrl, base64: _p.base64, mimeType: 'image/png', name: _base + ' (page ' + (_idx + 1) + ')' }));
-          } catch (_err) { console.warn('[intake-pdf-explode] skip', _e && _e.name, _err && _err.message); _out.push(_e); }
-        } else {
-          _out.push(_e);
-        }
-      }
-      _draftDriveFiles[_k] = _out;
-    }
-  }
   // Build dynamic sections BEFORE restoring values
   // so all field IDs (esp. ITR fields) exist in DOM
   buildItrSection();
