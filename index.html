@@ -6013,7 +6013,7 @@ async function openDraft(key) {
   buildItrSection();
   restoreFormValues(meta);
   toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
-  applyFormMode(meta.formMode || 'ddr');
+  applyFormMode(meta.formMode || (meta.vals && meta.vals.formMode) || 'ddr');
   showToast('Loaded: ' + (meta.appName || meta.name), 'success');
   switchTab(1);
 }
