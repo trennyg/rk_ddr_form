@@ -3917,7 +3917,16 @@ async function applyOcrData() {
   const prefix = key.startsWith('co') ? key.split('_')[0] : 'app';
 
   if (docType === 'pan') {
-    if (d.name) setVal(`f_${prefix}_name`, d.name);
+    if (d.name) forceSetVal(`f_${prefix}_name`, d.name);
+    // PAN authoritative → sync corrected name to intake_cases (queue + my-visits), fire-and-forget
+    var _idm = d.name ? /^intake_(\d+)$/.exec(currentDraftKey || '') : null;
+    if (_idm) {
+      fetch(getEndpoint() + '/api/intake/' + _idm[1] + '/set-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefix: prefix, name: d.name })
+      }).catch(function(){});
+    }
     if (d.dob)  setDateVal(`f_${prefix}_dob`, d.dob);
   } else if (docType === 'payslip') {
     if (d.company)     setVal(`f_${prefix}_company`, d.company);
