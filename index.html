@@ -3043,6 +3043,16 @@ function getSlotLabel(key) {
   return key.replace(/_/g,' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
 }
 
+// Windows Chrome also reports canShare({files}) === true, which would hijack desktop
+// downloads into the OS share sheet. Gate the share path on an actual mobile device;
+// desktop (no userAgentData.mobile, non-mobile UA) always falls through to a direct download.
+function isMobileDevice() {
+  if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+    return navigator.userAgentData.mobile;
+  }
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+}
+
 async function downloadFile(key, index, isDrive) {
   var fileObj = isDrive
     ? (_draftDriveFiles[key] && _draftDriveFiles[key][index])
@@ -3089,7 +3099,7 @@ async function downloadFile(key, index, isDrive) {
   // Phone: native share sheet → "Save Image" / "Save to Photos"
   try {
     var shareFile = new File([blob], filename, { type: mimeType });
-    if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+    if (isMobileDevice() && navigator.canShare && navigator.canShare({ files: [shareFile] })) {
       await navigator.share({ files: [shareFile] });
       return;
     }
