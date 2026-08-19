@@ -1406,11 +1406,13 @@
         </div>
         <div class="field">
           <label>Residence Type</label>
-          <select id="f_residence_type">
+          <select id="f_residence_type" onchange="handleExecNameChange(this)">
             <option value="">Select</option>
             <option>Owned</option><option>Rented</option><option>Company Provided</option>
             <option>Family Owned</option><option>PG / Hostel</option>
+            <option value="Other">Other</option>
           </select>
+          <input type="text" id="f_residence_type_other" placeholder="Type residence type" style="margin-top:8px;display:none;">
         </div>
       </div>
       <div class="field-row">
@@ -5215,7 +5217,7 @@ function buildRow() {
   row[143] = g('f_current_addr');
   row[144] = g('f_perm_addr');
   row[145] = g('f_duration_stay');
-  row[146] = g('f_residence_type');
+  row[146] = (g('f_residence_type') === 'Other' ? g('f_residence_type_other') : g('f_residence_type'));
   row[147] = g('f_society_name');
   row[148] = '';
   row[149] = g('f_locality_type');
