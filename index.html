@@ -2901,6 +2901,7 @@ async function uploadFilesToDriveForDraft(key) {
     // Skip if already uploaded (same name already in driveFiles for this key)
     const alreadyUploaded = _draftDriveFiles[key].some(function(d) { return d.name === f.name; });
     if (alreadyUploaded) continue;
+    _uploadsInFlight++;
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -2924,7 +2925,7 @@ async function uploadFilesToDriveForDraft(key) {
       }
     } catch(e) {
       console.warn('Draft photo Drive upload failed for', key, f.name, e.message);
-    }
+    } finally { _uploadsInFlight--; }
   }
 }
 
@@ -6029,6 +6030,10 @@ async function openDraft(key) {
   restoreFormValues(meta);
   toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
   applyFormMode(meta.formMode || (meta.vals && meta.vals.formMode) || 'ddr');
+  _baselineRebuildSeq = (typeof meta.rebuildSeq === 'number') ? meta.rebuildSeq : null;
+  _foreignPending = false;
+  hideForeignModal();
+  startForeignPoll();
   showToast('Loaded: ' + (meta.appName || meta.name), 'success');
   switchTab(1);
 }
@@ -6036,18 +6041,136 @@ async function openDraft(key) {
 // ── AUTOSAVE ──────────────────────────────────────────────
 let _restoring = false;
 let _loadedVals = null;   // snapshot of vals when the current draft finished loading
+let _baselineRebuildSeq = null;
+let _foreignPending      = false;
+let _foreignPollTimer    = null;
+let _uploadsInFlight      = 0;
 let autosaveTimer = null;
 function scheduleAutosave() {
   if (_restoring) return;
+  if (_foreignPending) return;
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(async function() {
     if (_restoring) return;
+    if (_foreignPending) return;
     const appName = (document.getElementById('f_app_name') || {}).value || '';
     if (appName.trim()) {
       await saveDraft(appName.trim());
       // Silent — no toast
     }
   }, 1000);  // 1 second — guarded by _restoring flag
+}
+
+function startForeignPoll() {
+  stopForeignPoll();
+  if (!currentDraftKey || !/^intake_\d+$/.test(currentDraftKey)) return;
+  _foreignPollTimer = setInterval(checkForeignChange, 7000);
+}
+function stopForeignPoll() {
+  if (_foreignPollTimer) clearInterval(_foreignPollTimer);
+  _foreignPollTimer = null;
+}
+
+async function checkForeignChange() {
+  if (_foreignPending) return;
+  if (!currentDraftKey || !/^intake_\d+$/.test(currentDraftKey)) return;
+  if (_baselineRebuildSeq === null) return;
+  let cloudSeq = null;
+  try {
+    const res = await fetch(getEndpoint(), {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getDraft', key: currentDraftKey })
+    });
+    const data = await res.json();
+    cloudSeq = (data && data.draft) ? data.draft.rebuildSeq : null;
+  } catch(e) { return; }              // never modal on a failed/absent fetch
+  if (typeof cloudSeq !== 'number') return;
+  if (cloudSeq > _baselineRebuildSeq) onForeignChangeDetected();
+}
+
+async function onForeignChangeDetected() {
+  if (_foreignPending) return;
+  _foreignPending = true;             // freezes autosave immediately
+  showForeignModal(false);            // blocks edits, Load disabled
+  await waitForUploads();
+  try {
+    const nm = (document.getElementById('f_app_name') || {}).value || '';
+    if (nm.trim()) await saveDraft(nm.trim());   // flush: dirty-set keeps office edits, guard restores field data
+  } catch(e) {}
+  setForeignModalReady();             // enable Load
+}
+
+async function waitForUploads() {
+  const start = Date.now();
+  while (_uploadsInFlight > 0 && Date.now() - start < 20000) {
+    await new Promise(r => setTimeout(r, 200));
+  }
+}
+
+function showForeignModal(isReady) {
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  let ov = document.getElementById('foreign_change_overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'foreign_change_overlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    ov.innerHTML =
+      '<div style="max-width:440px;width:100%;background:var(--bg,#fff);border:1px solid var(--border,#ccc);border-radius:12px;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,0.3);">'
+      + '<div style="font-size:18px;font-weight:700;color:var(--text,#111);margin-bottom:10px;">New data submitted for this case</div>'
+      + '<div id="foreign_change_msg" style="font-size:14px;color:var(--muted,#555);line-height:1.5;margin-bottom:18px;">A field executive or intake submission updated this case. Saving your current changes first…</div>'
+      + '<button id="foreign_change_load" disabled style="width:100%;background:var(--surface2,#ccc);border:none;border-radius:8px;color:var(--muted,#666);font-size:15px;font-weight:600;padding:12px;cursor:not-allowed;">Securing your changes…</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+  }
+  if (isReady) setForeignModalReady();
+}
+function setForeignModalReady() {
+  const msg = document.getElementById('foreign_change_msg');
+  const btn = document.getElementById('foreign_change_load');
+  if (msg) msg.textContent = 'Your changes are saved. Tap Load to bring in the new data — nothing you entered will be lost.';
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = 'Load new data';
+    btn.style.background = 'var(--accent,#0a7)';
+    btn.style.color = '#000';
+    btn.style.cursor = 'pointer';
+    btn.onclick = loadForeignChange;
+  }
+}
+function hideForeignModal() {
+  const ov = document.getElementById('foreign_change_overlay');
+  if (ov) ov.remove();
+}
+
+// Restore sequence mirrors openDraft from `_restoring = true` through `applyFormMode(...)`.
+async function loadForeignChange() {
+  const key = currentDraftKey;
+  let meta = null;
+  try {
+    const res = await fetch(getEndpoint(), {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getDraft', key: key })
+    });
+    const data = await res.json();
+    if (data.draft) meta = data.draft;
+  } catch(e) {}
+  if (!meta) { showToast('Could not load new data — try again', 'error'); return; }  // leave modal up
+  // Replicate openDraft's restore block verbatim (no confirm, no 'Loaded:' toast, no switchTab):
+  _restoring = true;
+  hardClearForm(false);
+  currentCaseId = meta.caseSessionId || _newCaseId();
+  currentDraftKey = key;
+  _draftDriveFiles = (meta.driveFiles && typeof meta.driveFiles === 'object') ? meta.driveFiles : {};
+  buildItrSection();
+  restoreFormValues(meta);
+  toggleEduCollateral((document.getElementById('f_edu_collateral_status') || {}).value || 'no');
+  applyFormMode(meta.formMode || (meta.vals && meta.vals.formMode) || 'ddr');
+  // End replicated block.
+  _baselineRebuildSeq = (typeof meta.rebuildSeq === 'number') ? meta.rebuildSeq : _baselineRebuildSeq;
+  _foreignPending = false;
+  hideForeignModal();
+  startForeignPoll();
+  showToast('Loaded new data', 'success');
 }
 
 async function saveDraftNow() {
@@ -6069,6 +6192,10 @@ function hardClearForm(confirm_first) {
   numCoApps = 0;
   currentDraftKey = null;
   _loadedVals = null;
+  stopForeignPoll();
+  hideForeignModal();
+  _foreignPending = false;
+  _baselineRebuildSeq = null;
   document.getElementById('coAppContainer').innerHTML = '';
   document.querySelectorAll('.coapp-tab:not(.add-btn)').forEach(function(t) { t.remove(); });
   document.querySelectorAll('.file-list').forEach(function(fl) { fl.innerHTML = ''; });
@@ -7062,6 +7189,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Attach autosave listeners
   document.addEventListener('change', scheduleAutosave);
   document.addEventListener('input',  scheduleAutosave);
+  window.addEventListener('focus', checkForeignChange);
   // Render drafts list on first load
   renderDraftList();
   // Sync education collateral toggle to initial select value
