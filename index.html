@@ -5714,6 +5714,7 @@ function restoreFormValues(metaOrVals) {
       if (autosaveTimer) clearTimeout(autosaveTimer);
       autosaveTimer = null;
       _restoring = false;
+      _loadedVals = collectFormValues();   // baseline for dirty-tracking (restore is fully done here)
     }
   }, 400);
 
@@ -5774,15 +5775,27 @@ function buildDraftMeta(draftName) {
   const key     = currentDraftKey || ('draft_' + Date.now());
   currentDraftKey = key;
   draftName = draftName || appName.trim() || ('Draft ' + new Date().toLocaleString('en-IN'));
-  return {
+  const vals = collectFormValues();
+  const meta = {
     key, name: draftName,
     appName: appName.trim(), bank: bank.trim(),
     savedAt: new Date().toISOString(),
     caseSessionId: currentCaseId,
     formMode: currentFormMode,
-    vals: collectFormValues(),
+    vals: vals,
     driveFiles: Object.assign({}, _draftDriveFiles)  // Drive URLs only (no base64)
   };
+  if (_loadedVals !== null) {
+    const dirtyKeys = [];
+    for (const k of Object.keys(vals)) {
+      const cur = String(vals[k] == null ? '' : vals[k]);
+      if (cur.trim() !== '' && cur !== String(_loadedVals[k] == null ? '' : _loadedVals[k])) {
+        dirtyKeys.push(k);
+      }
+    }
+    meta.dirtyKeys = dirtyKeys;
+  }
+  return meta;
 }
 
 // ── SAVE DRAFT ────────────────────────────────────────────
@@ -6022,6 +6035,7 @@ async function openDraft(key) {
 
 // ── AUTOSAVE ──────────────────────────────────────────────
 let _restoring = false;
+let _loadedVals = null;   // snapshot of vals when the current draft finished loading
 let autosaveTimer = null;
 function scheduleAutosave() {
   if (_restoring) return;
@@ -6054,6 +6068,7 @@ function hardClearForm(confirm_first) {
   _discardedDriveKeys = new Set();
   numCoApps = 0;
   currentDraftKey = null;
+  _loadedVals = null;
   document.getElementById('coAppContainer').innerHTML = '';
   document.querySelectorAll('.coapp-tab:not(.add-btn)').forEach(function(t) { t.remove(); });
   document.querySelectorAll('.file-list').forEach(function(fl) { fl.innerHTML = ''; });
