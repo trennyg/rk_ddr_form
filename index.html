@@ -1449,6 +1449,23 @@
           <input type="text" id="f_res_unit_type" placeholder="e.g. 1 BHK, 2 BHK, Studio, Row House">
         </div>
       </div>
+      <div class="field-row">
+        <div class="field">
+          <label>No. of Floors</label>
+          <input type="text" id="f_res_floors" placeholder="e.g. 2, G+1">
+        </div>
+        <div class="field">
+          <label>No. of Family Members</label>
+          <input type="text" id="f_res_family" placeholder="e.g. 4">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>No. of Dependents</label>
+          <input type="text" id="f_res_dependents" placeholder="e.g. 2">
+        </div>
+        <div class="field"></div>
+      </div>
       <div class="field">
         <label>Field Visit Notes & Observations</label>
         <textarea id="f_field_notes" placeholder="Nameplate visible, condition of residence, access, observations..." rows="3"></textarea>
@@ -4272,43 +4289,92 @@ function buildCoAppBlock(n) {
             <option value="Different">Different Address</option>
           </select>
         </div>
-        <div class="field" style="margin-top:8px">
-          <label>Address</label>
-          <textarea id="f_${p}_address" rows="2" placeholder="Same as applicant or enter different address"></textarea>
-        </div>
-        <div class="field" style="margin-top:8px">
-          <label>Current Address Verification Remarks</label>
-          <textarea id="f_${p}_res_remarks" rows="2" placeholder="e.g. Residence verified at the stated address. Nameplate confirmed. Verification found satisfactory."></textarea>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>PERSON MET</label>
-            <input type="text" id="f_${p}_res_person_met" placeholder="Name of person met">
+        <div id="${p}_res_detail_wrap" style="display:none">
+          <div class="field" style="margin-top:8px">
+            <label>Address</label>
+            <textarea id="f_${p}_address" rows="2" placeholder="Enter co-applicant's address"></textarea>
           </div>
-          <div class="field">
-            <label>PERSON MET CONTACT</label>
-            <input type="tel" id="f_${p}_res_person_met_contact" placeholder="Contact number">
+          <div class="field-row">
+            <div class="field">
+              <label>Residence Type</label>
+              <select id="f_${p}_res_residence_type" onchange="handleExecNameChange(this)">
+                <option value="">Select</option>
+                <option>Owned</option><option>Rented</option><option>Company Provided</option>
+                <option>Family Owned</option><option>PG / Hostel</option>
+                <option value="Other">Other</option>
+              </select>
+              <input type="text" id="f_${p}_res_residence_type_other" placeholder="Type residence type" style="margin-top:8px;display:none;">
+            </div>
+            <div class="field">
+              <label>Duration of Stay</label>
+              <input type="text" id="f_${p}_res_duration_stay" placeholder="e.g. 5 years">
+            </div>
           </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>PERSON MET RELATION</label>
-            <input type="text" id="f_${p}_res_person_met_relation" placeholder="e.g. Self, Spouse, Parent">
+          <div class="field-row">
+            <div class="field">
+              <label>Society / Building Name</label>
+              <input type="text" id="f_${p}_res_society_name" placeholder="Building name">
+            </div>
+            <div class="field">
+              <label>Locality Type</label>
+              <select id="f_${p}_res_locality_type">
+                <option value="">Select</option>
+                <option>Urban</option><option>Semi-Urban</option><option>Rural</option>
+                <option>Metropolitan</option><option>Commercial Area</option>
+              </select>
+            </div>
           </div>
-          <div class="field">
-            <label>RESIDENCE UNIT TYPE</label>
-            <input type="text" id="f_${p}_res_unit_type" placeholder="e.g. 1 BHK, 2 BHK, Studio">
+          <div class="field-row">
+            <div class="field">
+              <label>No. of Floors</label>
+              <input type="text" id="f_${p}_res_floors" placeholder="e.g. 2, G+1">
+            </div>
+            <div class="field">
+              <label>No. of Family Members</label>
+              <input type="text" id="f_${p}_res_family" placeholder="e.g. 4">
+            </div>
           </div>
-        </div>
-        <div class="field" id="${p}_res_photos_wrap" style="display:none;margin-top:8px">
-          <label>Residence Visit Photos</label>
-          <div class="upload-zone" id="uz_${p}_res_photos">
-            <input type="file" id="fu_${p}_res_photos" accept="image/*" multiple onchange="handleFileSelect('${p}_res_photos', this.files)" onclick="event.stopPropagation()">
-            <div class="uz-icon">📸</div>
-            <div class="uz-text">Upload Residence Visit Photos</div>
-            <div class="uz-hint">Only if co-applicant resides at a different address</div>
+          <div class="field-row">
+            <div class="field">
+              <label>No. of Dependents</label>
+              <input type="text" id="f_${p}_res_dependents" placeholder="e.g. 2">
+            </div>
+            <div class="field"></div>
           </div>
-          <div class="file-list" id="fl_${p}_res_photos"></div>
+          <div class="field-row">
+            <div class="field">
+              <label>PERSON MET</label>
+              <input type="text" id="f_${p}_res_person_met" placeholder="Name of person met">
+            </div>
+            <div class="field">
+              <label>PERSON MET CONTACT</label>
+              <input type="tel" id="f_${p}_res_person_met_contact" placeholder="Contact number">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>PERSON MET RELATION</label>
+              <input type="text" id="f_${p}_res_person_met_relation" placeholder="e.g. Self, Spouse, Parent">
+            </div>
+            <div class="field">
+              <label>RESIDENCE UNIT TYPE</label>
+              <input type="text" id="f_${p}_res_unit_type" placeholder="e.g. 1 BHK, 2 BHK, Studio">
+            </div>
+          </div>
+          <div class="field" style="margin-top:8px">
+            <label>Current Address Verification Remarks</label>
+            <textarea id="f_${p}_res_remarks" rows="2" placeholder="e.g. Residence verified at the stated address. Nameplate confirmed. Verification found satisfactory."></textarea>
+          </div>
+          <div class="field" id="${p}_res_photos_wrap" style="margin-top:8px">
+            <label>Residence Visit Photos</label>
+            <div class="upload-zone" id="uz_${p}_res_photos">
+              <input type="file" id="fu_${p}_res_photos" accept="image/*" multiple onchange="handleFileSelect('${p}_res_photos', this.files)" onclick="event.stopPropagation()">
+              <div class="uz-icon">📸</div>
+              <div class="uz-text">Upload Residence Visit Photos</div>
+              <div class="uz-hint">Photos taken at the residence</div>
+            </div>
+            <div class="file-list" id="fl_${p}_res_photos"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -4521,20 +4587,22 @@ function handleCoResidenceChange(n) {
   var sel = document.getElementById('f_' + p + '_residence');
   var addrField = document.getElementById('f_' + p + '_address');
   if (!sel || !addrField) return;
-  var photoWrap = document.getElementById(p + '_res_photos_wrap');
-  if (sel.value === 'Same as Applicant') {
+  var detailWrap = document.getElementById(p + '_res_detail_wrap');
+  if (sel.value === 'Different') {
+    if (detailWrap) detailWrap.style.display = '';
+    addrField.style.opacity = '1';
+    addrField.readOnly = false;
+    if (addrField.value === (document.getElementById('f_current_addr') || {}).value) { addrField.value = ''; }
+  } else if (sel.value === 'Same as Applicant') {
+    if (detailWrap) detailWrap.style.display = 'none';
     var appAddr = document.getElementById('f_current_addr');
     addrField.value = appAddr ? appAddr.value : '';
     addrField.style.opacity = '0.6';
     addrField.readOnly = true;
-    if (photoWrap) photoWrap.style.display = 'none';
     if (uploadedFiles[p + '_res_photos']) { delete uploadedFiles[p + '_res_photos']; renderFileList(p + '_res_photos'); }
   } else {
-    addrField.style.opacity = '1';
-    addrField.readOnly = false;
-    if (addrField.value === (document.getElementById('f_current_addr') || {}).value) { addrField.value = ''; }
-    if (photoWrap) photoWrap.style.display = (sel.value === 'Different') ? '' : 'none';
-    if (sel.value !== 'Different' && uploadedFiles[p + '_res_photos']) { delete uploadedFiles[p + '_res_photos']; renderFileList(p + '_res_photos'); }
+    if (detailWrap) detailWrap.style.display = 'none';
+    if (uploadedFiles[p + '_res_photos']) { delete uploadedFiles[p + '_res_photos']; renderFileList(p + '_res_photos'); }
   }
 }
 
