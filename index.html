@@ -5381,6 +5381,25 @@ function buildRow() {
     row[397 + ci] = g(`f_co${ci}_experience`);      // 398-402
     row[402 + ci] = g(`f_co${ci}_biz_experience`);  // 403-407
   }
+  // Residence occupancy — applicant (410-412) + co-apps (413-427)
+  row[410] = g('f_res_floors');
+  row[411] = g('f_res_family');
+  row[412] = g('f_res_dependents');
+  for (let ci = 1; ci <= 5; ci++) {
+    row[412 + ci] = g(`f_co${ci}_res_floors`);      // 413-417
+    row[417 + ci] = g(`f_co${ci}_res_family`);      // 418-422
+    row[422 + ci] = g(`f_co${ci}_res_dependents`);  // 423-427
+  }
+  // Co-app residence parity fields previously dropped (428-452)
+  for (let ci = 1; ci <= 5; ci++) {
+    row[427 + ci] = (g(`f_co${ci}_res_residence_type`) === 'Other'
+      ? g(`f_co${ci}_res_residence_type_other`)
+      : g(`f_co${ci}_res_residence_type`));         // 428-432
+    row[432 + ci] = g(`f_co${ci}_res_duration_stay`); // 433-437
+    row[437 + ci] = g(`f_co${ci}_res_society_name`);  // 438-442
+    row[442 + ci] = g(`f_co${ci}_res_locality_type`); // 443-447
+    row[447 + ci] = g(`f_co${ci}_res_visit_dt`);      // 448-452
+  }
 
   console.log('Submitting ITR values:');
   ['2425','2526','2627'].forEach(function(yr) {
