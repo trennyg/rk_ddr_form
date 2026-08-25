@@ -246,6 +246,16 @@
     cursor: pointer; transition: opacity 0.15s;
     width: fit-content;
   }
+  .cam-btn {
+    display: flex; align-items: center; gap: 6px;
+    width: fit-content; margin: 8px 0 0;
+    background: transparent; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 7px;
+    padding: 8px 14px; font-size: 14px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    min-height: 40px; touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
   .ocr-btn:hover { opacity: 0.85; }
   .ocr-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .ocr-btn.loading { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
@@ -4238,6 +4248,11 @@ function showCoApp(n) {
   if (tab) tab.classList.add('active');
 }
 
+function camCap(slot) {
+  return '<button type="button" class="cam-btn" onclick="document.getElementById(\'fu_' + slot + '_cam\').click()">📷 Take Photo</button>' +
+         '<input type="file" id="fu_' + slot + '_cam" accept="image/*" capture="environment" style="display:none" onchange="handleFileSelect(\'' + slot + '\', this.files)">';
+}
+
 function buildCoAppBlock(n) {
   var p = 'co' + n;
   var container = document.getElementById('coAppContainer');
@@ -4254,6 +4269,7 @@ function buildCoAppBlock(n) {
           <div class="uz-icon">📄</div>
           <div class="uz-text">Upload PAN Card</div>
         </div>
+        ${camCap(p + '_pan')}
         <div class="file-list" id="fl_${p}_pan"></div>
         <button class="ocr-btn" id="ocr_${p}_pan" onclick="runOcr('${p}_pan','pan')" disabled>
           <span>✨ Extract from PAN</span>
@@ -4402,6 +4418,7 @@ function buildCoAppBlock(n) {
               <input type="file" id="fu_${p}_payslip" accept="image/*,.pdf" multiple onchange="handleFileSelect('${p}_payslip', this.files)" onclick="event.stopPropagation()">
               <div class="uz-icon">📋</div><div class="uz-text">Upload Payslip</div>
             </div>
+            ${camCap(p + '_payslip')}
             <div class="file-list" id="fl_${p}_payslip"></div>
             <button class="ocr-btn" id="ocr_${p}_payslip" onclick="runOcr('${p}_payslip','payslip')" disabled>
               <span>✨ Extract from Payslip</span>
@@ -4430,6 +4447,7 @@ function buildCoAppBlock(n) {
             <input type="file" id="fu_${p}_biz_cert" accept="image/*,.pdf" multiple onchange="handleFileSelect('${p}_biz_cert', this.files)" onclick="event.stopPropagation()">
             <div class="uz-icon">📜</div><div class="uz-text">Upload GST / Udyam Certificate</div>
           </div>
+          ${camCap(p + '_biz_cert')}
           <div class="file-list" id="fl_${p}_biz_cert"></div>
           <button class="ocr-btn" id="ocr_${p}_biz_cert" onclick="runOcr('${p}_biz_cert','biz')" disabled><span>✨ Extract</span></button>
           <div class="field-row">
@@ -4514,6 +4532,7 @@ function buildCoAppBlock(n) {
           <input type="file" id="fu_${p}_bank_stmt" accept="image/*,.pdf" multiple onchange="handleFileSelect('${p}_bank_stmt', this.files)" onclick="event.stopPropagation()">
           <div class="uz-icon">📊</div><div class="uz-text">Upload Bank Statement</div>
         </div>
+        ${camCap(p + '_bank_stmt')}
         <div class="file-list" id="fl_${p}_bank_stmt"></div>
         <button class="ocr-btn" id="ocr_${p}_bank_stmt" onclick="runOcr('${p}_bank_stmt','bank')" disabled>
           <span>✨ Extract Bank Details</span>
@@ -4540,6 +4559,7 @@ function buildCoAppBlock(n) {
             <input type="file" id="fu_${p}_kyc_pan" accept="image/*,.pdf" onchange="handleFileSelect('${p}_kyc_pan', this.files)" onclick="event.stopPropagation()">
             <div class="uz-icon">🪪</div><div class="uz-text">Upload KYC PAN</div>
           </div>
+          ${camCap(p + '_kyc_pan')}
           <div class="file-list" id="fl_${p}_kyc_pan"></div>
           <button class="ocr-btn" id="ocr_${p}_kyc_pan" onclick="runOcr('${p}_kyc_pan','kyc_pan')" disabled style="margin-top:6px"><span>✨ Extract PAN No.</span></button>
           <input type="text" id="f_${p}_kyc_pan_no" placeholder="PAN Number" style="margin-top:6px;font-family:'DM Mono',monospace;letter-spacing:0.1em">
@@ -4550,6 +4570,7 @@ function buildCoAppBlock(n) {
             <input type="file" id="fu_${p}_kyc_aadhar" accept="image/*,.pdf" multiple onchange="handleFileSelect('${p}_kyc_aadhar', this.files)" onclick="event.stopPropagation()">
             <div class="uz-icon">🪪</div><div class="uz-text">Upload KYC Aadhar</div>
           </div>
+          ${camCap(p + '_kyc_aadhar')}
           <div class="file-list" id="fl_${p}_kyc_aadhar"></div>
           <button class="ocr-btn" id="ocr_${p}_kyc_aadhar" onclick="runOcr('${p}_kyc_aadhar','kyc_aadhar')" disabled style="margin-top:6px"><span>✨ Extract Aadhar No.</span></button>
           <input type="text" id="f_${p}_kyc_aadhar_no" placeholder="Aadhar Number" style="margin-top:6px;font-family:'DM Mono',monospace;letter-spacing:0.1em">
@@ -4701,6 +4722,7 @@ function buildItrSection(forceRebuild) {
                 <input type="file" id="fu_itr_${person.prefix}_${shortYr}" accept="image/*,.pdf" multiple onchange="handleFileSelect('itr_${person.prefix}_${shortYr}', this.files)" onclick="event.stopPropagation()">
                 <div class="uz-icon">📄</div><div class="uz-text">Upload ITR</div>
               </div>
+              ${camCap('itr_' + person.prefix + '_' + shortYr)}
               <div class="file-list" id="fl_itr_${person.prefix}_${shortYr}"></div>
               <button class="ocr-btn" id="ocr_itr_${person.prefix}_${shortYr}" onclick="runItrOcr('${person.prefix}','${shortYr}','itr')" disabled style="margin-top:6px">
                 <span>✨ Extract ITR</span>
@@ -4716,6 +4738,7 @@ function buildItrSection(forceRebuild) {
                 <input type="file" id="fu_f16_${person.prefix}_${shortYr}" accept="image/*,.pdf" multiple onchange="handleFileSelect('f16_${person.prefix}_${shortYr}', this.files)" onclick="event.stopPropagation()">
                 <div class="uz-icon">📄</div><div class="uz-text">Upload Form 16</div>
               </div>
+              ${camCap('f16_' + person.prefix + '_' + shortYr)}
               <div class="file-list" id="fl_f16_${person.prefix}_${shortYr}"></div>
               <button class="ocr-btn" id="ocr_f16_${person.prefix}_${shortYr}" onclick="runItrOcr('${person.prefix}','${shortYr}','f16')" disabled style="margin-top:6px">
                 <span>✨ Extract F16</span>
@@ -7241,6 +7264,12 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('exec-id-overlay').style.display = 'flex';
   }
   updateExecBadge();
+
+  // Camera capture for static document slots (visit-photo slots excluded by design)
+  ['app_pan','app_payslip','app_biz_cert','app_bank_stmt','app_kyc_pan','app_kyc_aadhar','index2','car_quotation','edu_fee_receipt','edu_ssc','edu_hsc','edu_grad','edu_admission'].forEach(function(s) {
+    var z = document.getElementById('uz_' + s);
+    if (z && !document.getElementById('fu_' + s + '_cam')) z.insertAdjacentHTML('afterend', camCap(s));
+  });
 
   // OCR sheet buttons wired fresh inside showOcrModal() each call
 
