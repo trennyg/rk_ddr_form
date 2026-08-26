@@ -4062,10 +4062,10 @@ async function applyOcrData() {
     }
     if (d.dob)  setDateVal(`f_${prefix}_dob`, d.dob);
   } else if (docType === 'payslip') {
-    if (d.company)     setVal(`f_${prefix}_company`, d.company);
-    if (d.designation) setVal(`f_${prefix}_designation`, d.designation);
-    if (d.empCode)     setVal(`f_${prefix}_emp_code`, d.empCode);
-    if (d.branch)      setVal(`f_${prefix}_branch`, d.branch);
+    if (d.company)     forceSetVal(`f_${prefix}_company`, d.company);
+    if (d.designation) forceSetVal(`f_${prefix}_designation`, d.designation);
+    if (d.empCode)     forceSetVal(`f_${prefix}_emp_code`, d.empCode);
+    if (d.branch)      forceSetVal(`f_${prefix}_branch`, d.branch);
     const finalNetPay = window._regexNetPay || d.netPay || '';
     if (finalNetPay) forceSetVal(`f_${prefix}_net_pay`, finalNetPay);
     window._regexNetPay = null;
@@ -4077,9 +4077,9 @@ async function applyOcrData() {
       if (_w) _w.style.display = (_oa && !_oa.value.trim()) ? 'block' : 'none';
     }
   } else if (docType === 'bank') {
-    if (d.bankName)    setVal(`f_${prefix}_bank_name`, d.bankName);
-    if (d.branchName)  setVal(`f_${prefix}_bank_branch`, d.branchName);
-    if (d.accountNo)   setVal(`f_${prefix}_account_no`, d.accountNo);
+    if (d.bankName)    forceSetVal(`f_${prefix}_bank_name`, d.bankName);
+    if (d.branchName)  forceSetVal(`f_${prefix}_bank_branch`, d.branchName);
+    if (d.accountNo)   forceSetVal(`f_${prefix}_account_no`, d.accountNo);
     if (d.accountType) setSelectVal(`f_${prefix}_account_type`, d.accountType);
   } else if (docType === 'biz') {
     // Force employment status to Business Owner so biz fields become visible
@@ -4118,9 +4118,9 @@ async function applyOcrData() {
     if (d.legalName)    forceSetVal(`f_${prefix}_company`, d.legalName);
     if (d.designation)  forceSetVal(`f_${prefix}_designation`, d.designation);
   } else if (docType === 'kyc_pan') {
-    if (d.pan) setVal(`f_${prefix}_kyc_pan_no`, d.pan);
+    if (d.pan) forceSetVal(`f_${prefix}_kyc_pan_no`, d.pan);
   } else if (docType === 'kyc_aadhar') {
-    if (d.aadhar) setVal(`f_${prefix}_kyc_aadhar_no`, d.aadhar);
+    if (d.aadhar) forceSetVal(`f_${prefix}_kyc_aadhar_no`, d.aadhar);
   } else if (docType === 'index2') {
     // forceSetVal — always overwrite with OCR result
     if (d.deedType)      setSelectVal('f_ownership_doc', d.deedType);
