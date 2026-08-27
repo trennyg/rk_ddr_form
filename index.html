@@ -6202,12 +6202,17 @@ async function showOfficeGate() {
   }
 
   var pendingHtml = stacks.pending.map(function(d) {
-    var n = (d.pendingDocs || []).length;
-    var origin = /^intake_/.test(d.key || '') ? 'Field intake' : 'Office';
-    var when = _gateWhen(d.savedAt);
+    // Pending holds two shapes: drafts (pendingDocs, has key) and intake cases (pending_docs, has id, no key).
+    var isIntakeCase = !d.key && d.id != null;
+    var gkey = isIntakeCase ? ('intake_' + d.id) : d.key;
+    var docs = Array.isArray(d.pendingDocs) ? d.pendingDocs
+             : (Array.isArray(d.pending_docs) ? d.pending_docs : []);
+    var n = docs.length;
+    var origin = (isIntakeCase || /^intake_/.test(d.key || '')) ? 'Field intake' : 'Office';
+    var when = _gateWhen(d.savedAt || d.createdAt);
     var sub = _gateOr(d.bank, '—') + ' · ' + n + ' document' + (n === 1 ? '' : 's') + ' pending'
       + ' · ' + origin + (when ? ' · ' + when : '');
-    return row(d.key, d.appName || d.name || 'Unnamed', sub, '');
+    return row(gkey, d.appName || d.name || 'Unnamed', sub, '');
   }).join('');
 
   var submittedHtml = stacks.submitted.map(function(c) {
