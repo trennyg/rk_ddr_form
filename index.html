@@ -6117,24 +6117,33 @@ function buildOfficeGateStacks(drafts, cases) {
   drafts = Array.isArray(drafts) ? drafts : [];
   cases  = Array.isArray(cases)  ? cases  : [];
 
-  // 1. Pending = any draft carrying at least one pending doc.
+  // 1. Pending = any draft carrying at least one pending doc...
   const pending = drafts.filter(function(d) {
     return d && Array.isArray(d.pendingDocs) && d.pendingDocs.length > 0;
   });
 
-  // Intake ids already claimed by Pending. Office-origin holds (draft_<ts>) have none.
+  // Intake ids already represented in Pending by a draft — so we don't add them twice.
   const pendingIntakeIds = new Set();
   pending.forEach(function(d) {
     const m = /^intake_(\d+)$/.exec(d.key || '');
     if (m) pendingIntakeIds.add(m[1]);
   });
 
-  // 2. Drop intake cases already in Pending, then 3. bucket the rest by status.
+  // ...plus any intake case carrying pending_docs (its data lives on the intake row,
+  // not a draft). Skip ones a draft already put in Pending, to avoid a duplicate.
+  cases.forEach(function(c) {
+    if (!c) return;
+    if (!Array.isArray(c.pending_docs) || c.pending_docs.length === 0) return;
+    if (pendingIntakeIds.has(String(c.id))) return;   // already in Pending via its draft
+    pending.push(c);
+  });
+
+  // 2. Bucket every intake case by status ("both": a pending case still shows in its
+  //    status stack as well as in Pending).
   const submitted = [];
   const awaiting  = [];
   cases.forEach(function(c) {
     if (!c) return;
-    if (pendingIntakeIds.has(String(c.id))) return;   // Pending wins the ladder
     if (c.status === 'field_complete') submitted.push(c);
     else if (c.status === 'pending' || c.status === 'field_assigned') awaiting.push(c);
   });
