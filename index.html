@@ -6010,7 +6010,13 @@ async function saveDraft(draftName) {
   const meta = buildDraftMeta(draftName);
 
   // Always save to localStorage as backup
-  localStorage.setItem('rka_draft_' + meta.key, JSON.stringify(meta));
+  try {
+    localStorage.setItem('rka_draft_' + meta.key, JSON.stringify(meta));
+  } catch (e) {
+    // localStorage full (QuotaExceededError) or unavailable — local backup is
+    // best-effort; must NOT abort the authoritative cloud save below.
+    console.warn('localStorage backup skipped:', e && e.message);
+  }
   _updateLocalIndex(meta);
 
   // Update cache immediately so draft list shows correct data without re-fetch
@@ -6112,7 +6118,13 @@ function _updateLocalIndex(meta, deleteKey) {
     if (exists > -1) index[exists] = summary;
     else index.push(summary);
   }
-  localStorage.setItem('rka_draft_index', JSON.stringify(index));
+  try {
+    localStorage.setItem('rka_draft_index', JSON.stringify(index));
+  } catch (e) {
+    // localStorage full/unavailable — index backup is best-effort, must not
+    // abort the caller (saveDraft) before its cloud save.
+    console.warn('localStorage index update skipped:', e && e.message);
+  }
 }
 function _rebuildLocalIndex(drafts) {
   const index = drafts.map(function(d) {
