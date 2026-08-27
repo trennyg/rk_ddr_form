@@ -6212,7 +6212,7 @@ async function showOfficeGate() {
     var loc = _gateOr(c.bank, '—') + (c.branch ? ' · ' + _gateEsc(c.branch) : '');
     var when = _gateWhen(c.createdAt);
     var sub = loc + (when ? ' · ' + when : '');
-    var assigned = (c.status === 'field_assigned' && c.execName);
+    var assigned = !!c.execName;
     var tag = '<div style="margin-top:6px;"><span style="display:inline-block;font-size:12px;'
       + 'padding:2px 9px;border-radius:999px;'
       + (assigned
