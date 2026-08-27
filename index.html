@@ -4194,6 +4194,64 @@ function setDateVal(id, val) {
 const NON_WORKING = ['retired','homemaker','student','unemployed','income not considered'];
 const BIZ_STATUSES = ['business owner','self employed'];
 
+// ══════════════════════════════════════════════════════════
+// PENDING-DOCS — office marks a document "to be requested".
+// A non-empty set holds the case (no report) and triggers the
+// missing-docs email. Intake-origin drafts only.
+// ══════════════════════════════════════════════════════════
+let _pendingDocs = new Set();   // session source of truth for pending ticks
+
+function _pendingSlotOf(inp) {
+  var oc = inp.getAttribute('onchange') || '';
+  var m = oc.match(/handleFileSelect\('([^']+)'/);
+  return m ? m[1] : null;
+}
+function isPendingEligibleSlot(slot) {
+  if (!slot || slot === 'combined_pdf') return false;
+  if (/_photos$/.test(slot)) return false;   // field-visit photos, not office-chased docs
+  if (/_kyc_pan$/.test(slot)) return false;   // duplicate PAN mirror; tick lives on the primary <p>_pan
+  return true;
+}
+function derivePendingDocs() {
+  return Array.from(_pendingDocs).sort();   // sorted → stable string across saves (dirty-key safe)
+}
+function togglePendingDoc(slot, checked) {
+  if (checked) _pendingDocs.add(slot); else _pendingDocs.delete(slot);
+  scheduleAutosave();
+}
+function injectPendingCheckboxes() {
+  var intakeOrigin = /^intake_\d+$/.test(currentDraftKey || '');
+  var seen = {};
+  document.querySelectorAll('input[type="file"]').forEach(function(inp) {
+    var slot = _pendingSlotOf(inp);
+    if (!slot || seen[slot]) return;
+    seen[slot] = 1;
+    var uz = document.getElementById('uz_' + slot);
+    if (!uz || !uz.parentNode) return;
+    var wrap = uz.parentNode.querySelector('.pending-check[data-slot="' + slot + '"]');
+    if (!intakeOrigin || !isPendingEligibleSlot(slot)) {
+      if (wrap) wrap.remove();   // office draft or ineligible slot → no checkbox
+      return;
+    }
+    if (wrap) {
+      var ex = wrap.querySelector('input[type="checkbox"]');
+      if (ex) ex.checked = _pendingDocs.has(slot);
+      return;
+    }
+    var lbl = document.createElement('label');
+    lbl.className = 'pending-check';
+    lbl.setAttribute('data-slot', slot);
+    lbl.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--text);opacity:0.85;cursor:pointer;';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = _pendingDocs.has(slot);
+    cb.onchange = function() { togglePendingDoc(slot, cb.checked); };
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(' ⏳ Pending — request from client'));
+    uz.parentNode.insertBefore(lbl, uz.nextSibling);
+  });
+}
+
 function handleEmpStatusChange(prefix) {
   const sel = document.getElementById(`f_${prefix}_emp_status`);
   const val = sel ? sel.value.toLowerCase() : '';
@@ -4639,6 +4697,9 @@ function removeCoApp(n) {
   if (remaining.length > 0) {
     remaining[remaining.length-1].style.display = 'block';
   }
+  var _pdRe = new RegExp('(^|_)co' + n + '_');   // drop this co-app's pending ticks (incl. itr_/f16_)
+  Array.from(_pendingDocs).forEach(function(k){ if (_pdRe.test(k)) _pendingDocs.delete(k); });
+  injectPendingCheckboxes();
   showToast(`Co-App ${n} removed`, 'success');
   scheduleAutosave();
 }
@@ -4774,6 +4835,7 @@ function buildItrSection(forceRebuild) {
     }
   }
   _activatePrefilledSlots(itrKeys);
+  injectPendingCheckboxes();   // ITR/F16 slots were just rebuilt — re-add + re-check their pending boxes
   scheduleAutosave();
 }
 
@@ -5612,7 +5674,8 @@ async function submitForm() {
         draftKey: currentDraftKey,
         case_session_id: currentCaseId,
         officeExecName: localStorage.getItem('rk_office_exec') || '',
-        formMode: currentFormMode
+        formMode: currentFormMode,
+        pending_docs: derivePendingDocs()
       })
     });
 
@@ -5625,6 +5688,15 @@ async function submitForm() {
     if (result.status === 'possible_duplicate') {
       setProgress(0);
       showDuplicateModal(result.matchedCaseRef, result.matchedSessionId, row);
+      return;
+    }
+    if (result.status === 'pending') {
+      setProgress(100);
+      const _pn = derivePendingDocs().length;
+      showStatus('⏳ Case held — ' + _pn + ' document(s) pending. Email sent to office.', 'info');
+      showToast('Case held — pending docs', 'info');
+      const _an = (document.getElementById('f_app_name') || {}).value || '';
+      if (_an.trim()) { try { await saveDraft(_an.trim()); } catch(e) {} }
       return;
     }
     setProgress(100);
@@ -5684,7 +5756,8 @@ async function _refireSubmit(row, extraFields) {
         draftKey: currentDraftKey,
         case_session_id: currentCaseId,
         officeExecName: localStorage.getItem('rk_office_exec') || '',
-        formMode: currentFormMode
+        formMode: currentFormMode,
+        pending_docs: derivePendingDocs()
       }, extraFields))
     });
     setProgress(95);
@@ -5692,6 +5765,15 @@ async function _refireSubmit(row, extraFields) {
     let result;
     try { result = JSON.parse(text); } catch(e) { result = { status: 'ok' }; }
     if (result.error) throw new Error(result.error);
+    if (result.status === 'pending') {
+      setProgress(100);
+      const _pn = derivePendingDocs().length;
+      showStatus('⏳ Case held — ' + _pn + ' document(s) pending. Email sent to office.', 'info');
+      showToast('Case held — pending docs', 'info');
+      const _an = (document.getElementById('f_app_name') || {}).value || '';
+      if (_an.trim()) { try { await saveDraft(_an.trim()); } catch(e) {} }
+      return;
+    }
     setProgress(100);
     showStatus('✅ ' + (result.message || 'Form submitted successfully!'), 'success');
     showToast('Submitted!', 'success');
@@ -5758,6 +5840,7 @@ function collectFormValues() {
     if (val) vals[id] = val;
   });
   vals['__numCoApps'] = numCoApps;
+  vals['pending_docs'] = derivePendingDocs();
   return vals;
 }
 
@@ -5821,6 +5904,9 @@ function restoreFormValues(metaOrVals) {
         }
       }
       updateInvoicePreview();
+      // pending-docs: seed the session set from the restored draft, then render the ticks
+      _pendingDocs = new Set(Array.isArray(vals.pending_docs) ? vals.pending_docs : []);
+      injectPendingCheckboxes();
     } finally {
       if (autosaveTimer) clearTimeout(autosaveTimer);
       autosaveTimer = null;
@@ -6302,6 +6388,8 @@ function hardClearForm(confirm_first) {
   numCoApps = 0;
   currentDraftKey = null;
   _loadedVals = null;
+  _pendingDocs = new Set();
+  injectPendingCheckboxes();   // currentDraftKey is now null → strips any pending checkboxes
   stopForeignPoll();
   hideForeignModal();
   _foreignPending = false;
