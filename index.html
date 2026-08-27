@@ -6088,6 +6088,173 @@ async function fetchDrafts() {
   return localDrafts;
 }
 
+// ---- FETCH INTAKE QUEUE (office gate) ----
+// Mirrors fetchDrafts' bare-POST style. Returns the intake cases
+// array from getIntakeQueue, or [] on any failure so the gate
+// degrades gracefully (the two intake stacks just render empty).
+async function fetchIntakeQueue() {
+  const endpoint = getEndpoint();
+  if (!endpoint) return [];
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getIntakeQueue' })
+    });
+    const data = await res.json();
+    if (data && data.ok && Array.isArray(data.cases)) return data.cases;
+    return [];
+  } catch (e) {
+    console.warn('Intake queue fetch failed:', e && e.message);
+    return [];
+  }
+}
+
+// ---- OFFICE GATE: ladder + dedup ----
+// Pure function. Takes the two fetched lists (drafts, cases) and returns three
+// stacks, each case appearing exactly once. Ladder: Pending > Submitted > Awaiting.
+// Generated / bank-cancelled cases are already excluded by the backend query.
+function buildOfficeGateStacks(drafts, cases) {
+  drafts = Array.isArray(drafts) ? drafts : [];
+  cases  = Array.isArray(cases)  ? cases  : [];
+
+  // 1. Pending = any draft carrying at least one pending doc.
+  const pending = drafts.filter(function(d) {
+    return d && Array.isArray(d.pendingDocs) && d.pendingDocs.length > 0;
+  });
+
+  // Intake ids already claimed by Pending. Office-origin holds (draft_<ts>) have none.
+  const pendingIntakeIds = new Set();
+  pending.forEach(function(d) {
+    const m = /^intake_(\d+)$/.exec(d.key || '');
+    if (m) pendingIntakeIds.add(m[1]);
+  });
+
+  // 2. Drop intake cases already in Pending, then 3. bucket the rest by status.
+  const submitted = [];
+  const awaiting  = [];
+  cases.forEach(function(c) {
+    if (!c) return;
+    if (pendingIntakeIds.has(String(c.id))) return;   // Pending wins the ladder
+    if (c.status === 'field_complete') submitted.push(c);
+    else if (c.status === 'pending' || c.status === 'field_assigned') awaiting.push(c);
+  });
+
+  // 4. Newest first: drafts by savedAt, cases by createdAt.
+  const byTime = function(field) {
+    return function(a, b) {
+      return new Date(b[field] || 0).getTime() - new Date(a[field] || 0).getTime();
+    };
+  };
+  pending.sort(byTime('savedAt'));
+  submitted.sort(byTime('createdAt'));
+  awaiting.sort(byTime('createdAt'));
+
+  return { pending: pending, submitted: submitted, awaiting: awaiting };
+}
+
+// ---- OFFICE GATE: render + show / dismiss ----
+// Full-screen landing layer listing cases that need action, grouped
+// Pending / Submitted / Awaiting. Self-contained: builds its own overlay,
+// fetches both lists, renders, removes itself on dismiss or on tapping a
+// row. Mounted from DOMContentLoaded. z-index sits above the exec badge
+// (9000) but below the first-device identity overlay (9999).
+function _gateEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+function _gateOr(s, fallback) { return (s == null || s === '') ? fallback : _gateEsc(s); }
+function _gateWhen(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { day:'numeric', month:'short' })
+    + ', ' + d.toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' });
+}
+
+function hideOfficeGate() {
+  var el = document.getElementById('office-gate-overlay');
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+
+async function showOfficeGate() {
+  var drafts = [], cases = [];
+  try { drafts = await fetchDrafts(); }     catch (e) {}
+  try { cases  = await fetchIntakeQueue(); } catch (e) {}
+  var stacks = buildOfficeGateStacks(drafts, cases);
+
+  function row(key, title, sub, tag) {
+    return '<div class="gate-row" data-gkey="' + _gateEsc(key) + '" '
+      + 'style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;'
+      + 'padding:12px 14px;margin-bottom:8px;cursor:pointer;touch-action:manipulation;">'
+      + '<div style="font-size:15px;font-weight:600;color:var(--text);">' + _gateEsc(title) + '</div>'
+      + '<div style="font-size:13px;color:var(--muted);margin-top:3px;">' + sub + '</div>'
+      + (tag || '') + '</div>';
+  }
+
+  var pendingHtml = stacks.pending.map(function(d) {
+    var n = (d.pendingDocs || []).length;
+    var origin = /^intake_/.test(d.key || '') ? 'Field intake' : 'Office';
+    var when = _gateWhen(d.savedAt);
+    var sub = _gateOr(d.bank, '—') + ' · ' + n + ' document' + (n === 1 ? '' : 's') + ' pending'
+      + ' · ' + origin + (when ? ' · ' + when : '');
+    return row(d.key, d.appName || d.name || 'Unnamed', sub, '');
+  }).join('');
+
+  var submittedHtml = stacks.submitted.map(function(c) {
+    var loc = _gateOr(c.bank, '—') + (c.branch ? ' · ' + _gateEsc(c.branch) : '');
+    var when = _gateWhen(c.createdAt);
+    var sub = loc + (c.execName ? ' · ' + _gateEsc(c.execName) : '') + (when ? ' · ' + when : '');
+    return row('intake_' + c.id, c.appName || 'Unnamed', sub, '');
+  }).join('');
+
+  var awaitingHtml = stacks.awaiting.map(function(c) {
+    var loc = _gateOr(c.bank, '—') + (c.branch ? ' · ' + _gateEsc(c.branch) : '');
+    var when = _gateWhen(c.createdAt);
+    var sub = loc + (when ? ' · ' + when : '');
+    var assigned = (c.status === 'field_assigned' && c.execName);
+    var tag = '<div style="margin-top:6px;"><span style="display:inline-block;font-size:12px;'
+      + 'padding:2px 9px;border-radius:999px;'
+      + (assigned
+          ? 'border:1px solid var(--accent);color:var(--accent);">Assigned to ' + _gateEsc(c.execName)
+          : 'border:1px solid var(--border);color:var(--muted);">Unassigned')
+      + '</span></div>';
+    return row('intake_' + c.id, c.appName || 'Unnamed', sub, tag);
+  }).join('');
+
+  function section(title, count, html) {
+    return '<div style="margin-bottom:18px;">'
+      + '<div style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;'
+      + 'color:var(--muted);margin-bottom:8px;">' + _gateEsc(title) + ' (' + count + ')</div>'
+      + (html || '<div style="font-size:13px;color:var(--muted);padding:2px;">Nothing here.</div>')
+      + '</div>';
+  }
+
+  hideOfficeGate();
+  var ov = document.createElement('div');
+  ov.id = 'office-gate-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9500;background:var(--bg);'
+    + 'overflow-y:auto;-webkit-overflow-scrolling:touch;';
+  ov.innerHTML =
+      '<div style="max-width:640px;margin:0 auto;padding:22px 16px 40px;">'
+    +   '<div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px;">Cases needing action</div>'
+    +   '<div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Tap a case to resume it, or start a blank form below.</div>'
+    +   section('Pending — missing documents',      stacks.pending.length,   pendingHtml)
+    +   section('Submitted — ready to make report', stacks.submitted.length, submittedHtml)
+    +   section('Awaiting field visit',                  stacks.awaiting.length,  awaitingHtml)
+    +   '<button id="gate-dismiss" style="width:100%;margin-top:6px;background:var(--accent);border:none;'
+    +     'border-radius:9px;color:#000;font-size:15px;font-weight:700;padding:13px;cursor:pointer;'
+    +     'touch-action:manipulation;">+  Start a blank form</button>'
+    + '</div>';
+  document.body.appendChild(ov);
+
+  ov.addEventListener('click', function(e) {
+    if (e.target.closest('#gate-dismiss')) { hideOfficeGate(); return; }
+    var r = e.target.closest('.gate-row');
+    if (r) { var key = r.getAttribute('data-gkey'); hideOfficeGate(); openDraft(key); }
+  });
+}
+
 // ── DELETE DRAFT ──────────────────────────────────────────
 async function deleteDraft(key) {
   if (!confirm('Delete this draft?')) return;
@@ -7409,6 +7576,8 @@ window.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('focus', checkForeignChange);
   // Render drafts list on first load
   renderDraftList();
+  // Show the office gate (cases needing action) over the blank form
+  showOfficeGate();
   // Sync education collateral toggle to initial select value
   toggleEduCollateral(document.getElementById('f_edu_collateral_status').value);
   // Populate branch datalist from canonical list
