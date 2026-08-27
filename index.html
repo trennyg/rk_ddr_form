@@ -4220,7 +4220,7 @@ function togglePendingDoc(slot, checked) {
   scheduleAutosave();
 }
 function injectPendingCheckboxes() {
-  var intakeOrigin = /^intake_\d+$/.test(currentDraftKey || '');
+  var hasDraft = !!(currentDraftKey || '').trim();
   var seen = {};
   document.querySelectorAll('input[type="file"]').forEach(function(inp) {
     var slot = _pendingSlotOf(inp);
@@ -4229,8 +4229,8 @@ function injectPendingCheckboxes() {
     var uz = document.getElementById('uz_' + slot);
     if (!uz || !uz.parentNode) return;
     var wrap = uz.parentNode.querySelector('.pending-check[data-slot="' + slot + '"]');
-    if (!intakeOrigin || !isPendingEligibleSlot(slot)) {
-      if (wrap) wrap.remove();   // office draft or ineligible slot → no checkbox
+    if (!hasDraft || !isPendingEligibleSlot(slot)) {
+      if (wrap) wrap.remove();   // no draft yet, or ineligible slot → no checkbox
       return;
     }
     if (wrap) {
@@ -5971,6 +5971,7 @@ function buildDraftMeta(draftName) {
   const bank    = (document.getElementById('f_bank')     || {}).value || '';
   const key     = currentDraftKey || ('draft_' + Date.now());
   currentDraftKey = key;
+  injectPendingCheckboxes();   // office draft now has a key → render its pending checkboxes
   draftName = draftName || appName.trim() || ('Draft ' + new Date().toLocaleString('en-IN'));
   const vals = collectFormValues();
   const meta = {
