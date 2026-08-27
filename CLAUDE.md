@@ -9,6 +9,8 @@ Read this file at the start of every session before making any changes.
 
 Mobile web form for R.K. Associates field executives. Executives fill out applicant details, upload photos, and submit for DDR report generation. Single-file SPA — **all logic lives in `index.html`**.
 
+> **This file is a lightweight repo-local reference and is NOT exhaustive.** The authoritative, current history of form-side work (residence occupancy + co-app parity, dirty-key autosave tracking, OCR forceSetVal fix, camera-capture buttons, verification-type/formMode threading) lives in the **rk-ddr-vps CLAUDE.md** — the cross-repo feature narrative is maintained there to avoid two docs drifting apart. Update that file, not this one, when reconciling form commits. Last stub touch-up: 26 Aug 2026 (410→453, added `partial`).
+
 **Live URL:** GitHub Pages — `https://trennyg.github.io/rk_ddr_form/index.html`
 **Backend API:** `https://api.relentlessais.com`
 **Repo:** `trennyg/rk_ddr_form` — only tracked files: `index.html`, `README.md`, `CLAUDE.md`
@@ -69,7 +71,7 @@ pane_invoice        Tax Invoice (not numbered)
 
 ```javascript
 currentTab          // active tab index (0-10 or 'invoice')
-currentFormMode     // 'ddr' | 'bsa' | 'dsa'
+currentFormMode     // 'ddr' | 'bsa' | 'dsa' | 'partial'
 uploadedFiles       // { key: [{file, base64, mimeType, name}] }
 currentDraftKey     // key of loaded draft (null for new case)
 _draftsCache        // array of draft summaries — module-level, populated by fetchDrafts()
@@ -125,7 +127,7 @@ Tab-switch save: `saveDraft()` called directly in `switchTab()` — immediate, n
 
 All submissions are **final** — intermediate-save path was removed 3 July 2026.
 `row[2]` is hardcoded `'Yes'` (was `submitType === 'final' ? 'Yes' : 'No'`).
-`buildRow()` produces a 410-element positional array → POST `body.row` to backend.
+`buildRow()` produces a 453-element positional array → POST `body.row` to backend. (Was 410; widened to 453/0–452 on 25 Aug — residence occupancy + co-app residence parity, cols 410–452. See the rk-ddr-vps CLAUDE.md 25 Aug entry for the full column map.)
 `case_session_id` sent as `body.case_session_id` (UUID from `currentCaseId`).
 Duplicate check: backend returns `{ status: 'possible_duplicate' }` → modal asks exec to confirm new visit or resubmit.
 
