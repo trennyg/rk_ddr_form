@@ -9,7 +9,7 @@ Read this file at the start of every session before making any changes.
 
 Mobile web form for R.K. Associates field executives. Executives fill out applicant details, upload photos, and submit for DDR report generation. Single-file SPA — **all logic lives in `index.html`**.
 
-> **This file is a lightweight repo-local reference and is NOT exhaustive.** The authoritative, current history of form-side work (residence occupancy + co-app parity, dirty-key autosave tracking, OCR forceSetVal fix, camera-capture buttons, verification-type/formMode threading) lives in the **rk-ddr-vps CLAUDE.md** — the cross-repo feature narrative is maintained there to avoid two docs drifting apart. Update that file, not this one, when reconciling form commits. Last stub touch-up: 26 Aug 2026 (410→453, added `partial`).
+> **This file is a lightweight repo-local reference and is NOT exhaustive.** The authoritative, current history of form-side work (residence occupancy + co-app parity, dirty-key autosave tracking, OCR forceSetVal fix, camera-capture buttons, verification-type/formMode threading, pending-docs checkboxes, office worklist landing gate, localStorage quota-crash fix) lives in the **rk-ddr-vps CLAUDE.md** — the cross-repo feature narrative is maintained there to avoid two docs drifting apart. Update that file, not this one, when reconciling form commits. Last stub touch-up: 27 Aug 2026 (corrected the saveDraft crash behaviour + added the localStorage quota-crash quirk; prior: 26 Aug 410→453, added `partial`).
 
 **Live URL:** GitHub Pages — `https://trennyg.github.io/rk_ddr_form/index.html`
 **Backend API:** `https://api.relentlessais.com`
@@ -105,7 +105,7 @@ renderDraftList()    Calls fetchDrafts(), resets search box, shows prompt. Calle
                        - deleteDraft() — after deletion
                        - saveDraftNow() — after manual save
 filterDrafts(query)  Reads _draftsCache only — NO network fetch. Called on search input.
-saveDraft(appName)   Upserts cloud + local. Non-fatal — fails silently.
+saveDraft(appName)   localStorage backup THEN cloud upsert. Both pre-POST setItem calls try/catch-guarded (8d5fd34); cloud POST authoritative, local best-effort. See KNOWN QUIRKS.
 deleteDraft(key)     Removes cloud + local, then calls renderDraftList().
 openDraft(key)       POST { action: 'getDraft' } → restores form fields.
 ```
@@ -159,3 +159,4 @@ Each has a companion `_other` text input (shown when "Other" selected).
 - **ITR section rebuilt on tab switch** — `buildItrSection()` (called on `switchTab(5)`) rebuilds ITR/F16 inputs from `itrStore` to handle co-app count changes without losing entered values.
 - **BSA/DSA form modes** — tabs 3, 6, 7, 8 are hidden for BSA/DSA modes via `HIDDEN_BSA_DSA` set in `switchTab()`.
 - **PDF scale** — OCR PDF rendering uses scale 3.5 (252 DPI), PNG format. Do not reduce.
+- **localStorage quota crash — FIXED `8d5fd34` (27 Aug 2026, this was OPEN BUG A)** — `saveDraft` writes a localStorage backup (`rka_draft_<key>` + `rka_draft_index`) via `localStorage.setItem` BEFORE the cloud POST. On heavy drafts (base64 documents/photos) the browser's ~5MB budget fills and `setItem` throws `QuotaExceededError`; the calls were BARE, so it threw UNCAUGHT and aborted `saveDraft` before the cloud save fired — the office's OCR/typing never reached the server. Hit PWA-origin drafts hardest (they open pre-filled, so they start closer to the quota). Fix: both pre-POST `setItem` calls (in `saveDraft` and in `_updateLocalIndex`) wrapped in try/catch — the cloud POST is authoritative and always fires; the localStorage backup is best-effort. **Side effect:** on heavy drafts the local backup now silently SKIPS every save (console logs "localStorage backup skipped"), so the offline/crash-recovery net is gone until the draft payload is shrunk (compression/base64-drop — see rk-ddr-vps PENDING TASKS). To reclaim space / restore the backup: DevTools → Application → Local Storage → the `api.relentlessais` entry → Clear (harmless; real data lives on the server). Cross-repo + diagnostic narrative: rk-ddr-vps CLAUDE.md, 27 Aug entry.
