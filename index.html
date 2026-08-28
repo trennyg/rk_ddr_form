@@ -5981,7 +5981,11 @@ function buildDraftMeta(draftName) {
     caseSessionId: currentCaseId,
     formMode: currentFormMode,
     vals: vals,
-    driveFiles: Object.assign({}, _draftDriveFiles)  // Drive URLs only (no base64)
+    driveFiles: Object.fromEntries(Object.entries(_draftDriveFiles).map(function(e){
+      return [e[0], (e[1]||[]).map(function(f){
+        return { driveUrl: f.driveUrl, name: f.name, mimeType: f.mimeType };
+      })];
+    }))  // deep copy, base64 stripped from payload — session cache untouched
   };
   if (_loadedVals !== null) {
     const dirtyKeys = [];
@@ -6697,7 +6701,11 @@ async function discardDriveFile(key, index) {
     try {
       var stored = JSON.parse(localStorage.getItem('rka_draft_' + currentDraftKey) || 'null');
       if (stored) {
-        stored.driveFiles = Object.assign({}, _draftDriveFiles);
+        stored.driveFiles = Object.fromEntries(Object.entries(_draftDriveFiles).map(function(e){
+          return [e[0], (e[1]||[]).map(function(f){
+            return { driveUrl: f.driveUrl, name: f.name, mimeType: f.mimeType };
+          })];
+        }));  // deep copy, base64 stripped from localStorage backup too
         stored.savedAt = new Date().toISOString();
         localStorage.setItem('rka_draft_' + currentDraftKey, JSON.stringify(stored));
         _updateLocalIndex(stored);
