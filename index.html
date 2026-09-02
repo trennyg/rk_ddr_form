@@ -6015,6 +6015,7 @@ async function saveDraft(draftName) {
       } catch(e) {}
     });
   } catch(e) {}
+  await waitForUploads();   // drain in-flight Drive uploads so the draft captures ALL photos, not just the ones already finished uploading
   const meta = buildDraftMeta(draftName);
 
   // Always save to localStorage as backup
