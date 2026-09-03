@@ -2957,6 +2957,12 @@ async function uploadFilesToDriveForDraft(key) {
       console.warn('Draft photo Drive upload failed for', key, f.name, e.message);
     } finally { _uploadsInFlight--; }
   }
+  // All uploads for this key are done — persist the complete set (coalesced,
+  // so it becomes the last write and can't be overwritten by an earlier save).
+  if (!_restoring) {
+    const _an = (document.getElementById('f_app_name') || {}).value || '';
+    if (_an.trim()) requestSaveDraft(_an.trim());
+  }
 }
 
 function renderFileList(key) {
@@ -6003,6 +6009,32 @@ function buildDraftMeta(draftName) {
   return meta;
 }
 
+// ── Serialized, coalescing draft saver ──────────────────────────────────
+// Runs saveDraft() strictly one at a time. If more save requests arrive while
+// one is running, exactly one more save runs afterward with the latest state,
+// so the final write always reflects the newest snapshot (all uploaded photos).
+// Fixes: overlapping saves racing, where an early small snapshot arrived last
+// and overwrote a later full one.
+let _saveRunning = false;
+let _savePending = false;
+let _savePendingName = null;
+let _lastSaveResult = null;
+async function requestSaveDraft(draftName) {
+  _savePendingName = draftName;
+  _savePending = true;
+  if (_saveRunning) return _lastSaveResult;
+  _saveRunning = true;
+  try {
+    while (_savePending) {
+      _savePending = false;
+      _lastSaveResult = await saveDraft(_savePendingName);
+    }
+  } finally {
+    _saveRunning = false;
+  }
+  return _lastSaveResult;
+}
+
 // ── SAVE DRAFT ────────────────────────────────────────────
 // Saves to cloud (Apps Script) AND localStorage as backup
 async function saveDraft(draftName) {
@@ -6453,7 +6485,7 @@ function scheduleAutosave() {
     if (_foreignPending) return;
     const appName = (document.getElementById('f_app_name') || {}).value || '';
     if (appName.trim()) {
-      await saveDraft(appName.trim());
+      await requestSaveDraft(appName.trim());
       // Silent — no toast
     }
   }, 1000);  // 1 second — guarded by _restoring flag
@@ -6573,7 +6605,7 @@ async function loadForeignChange() {
 
 async function saveDraftNow() {
   const appName = (document.getElementById('f_app_name') || {}).value || '';
-  const name = await saveDraft(appName.trim() || ('Draft ' + new Date().toLocaleTimeString('en-IN')));
+  const name = await requestSaveDraft(appName.trim() || ('Draft ' + new Date().toLocaleTimeString('en-IN')));
   showToast('Saved: ' + name, 'success');
   renderDraftList();
 }
