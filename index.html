@@ -5930,6 +5930,7 @@ function restoreFormValues(metaOrVals) {
   // Restore Drive-uploaded photos from draft
   const meta = (metaOrVals && metaOrVals.vals) ? metaOrVals : null;
   const savedDriveFiles = meta ? meta.driveFiles : null;
+  _loadedDriveSig = _driveSig(savedDriveFiles || {});
   if (savedDriveFiles && Object.keys(savedDriveFiles).length > 0) {
     _draftDriveFiles = savedDriveFiles;
     _discardedDriveKeys = new Set();
@@ -6008,6 +6009,13 @@ function buildDraftMeta(draftName) {
       }
     }
     meta.dirtyKeys = dirtyKeys;
+  }
+  if (_loadedDriveSig !== null) {
+    const _curSig = _driveSig(meta.driveFiles);
+    const _slots = new Set(Object.keys(_curSig).concat(Object.keys(_loadedDriveSig)));
+    meta.dirtySlots = Array.from(_slots).filter(function (k) {
+      return (_curSig[k] || '') !== (_loadedDriveSig[k] || '');
+    });
   }
   return meta;
 }
@@ -6597,6 +6605,14 @@ async function openDraft(key) {
 // ── AUTOSAVE ──────────────────────────────────────────────
 let _restoring = false;
 let _loadedVals = null;   // snapshot of vals when the current draft finished loading
+let _loadedDriveSig = null;   // slot -> signature of the file list when the current draft finished loading
+function _driveSig(obj) {
+  const out = {};
+  Object.keys(obj || {}).forEach(function (k) {
+    out[k] = (obj[k] || []).map(function (f) { return (f && (f.driveUrl || f.name)) || ''; }).join('|');
+  });
+  return out;
+}
 let _baselineRebuildSeq = null;
 let _foreignPending      = false;
 let _foreignPollTimer    = null;
@@ -6761,6 +6777,7 @@ function hardClearForm(confirm_first) {
   numCoApps = 0;
   currentDraftKey = null;
   _loadedVals = null;
+  _loadedDriveSig = null;
   _pendingDocs = new Set();
   injectPendingCheckboxes();   // currentDraftKey is now null → strips any pending checkboxes
   stopForeignPoll();
