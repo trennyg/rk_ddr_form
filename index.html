@@ -6177,9 +6177,12 @@ async function fetchIntakeQueue() {
 }
 
 // ---- OFFICE GATE: ladder + dedup ----
-// Pure function. Takes the two fetched lists (drafts, cases) and returns three
+// Pure function. Takes the two fetched lists (drafts, cases) and returns four
 // stacks, each case appearing exactly once. Ladder: Pending > Submitted > Awaiting.
-// Generated / bank-cancelled cases are already excluded by the backend query.
+// Fourth stack, Edited: cases whose report was already generated and then edited by
+// the field exec (server flag editedAfterReport). They go to Edited instead of
+// Submitted/Awaiting, but still also show in Pending if they carry pending_docs.
+// Bank-cancelled cases, and generated cases not edited since, are excluded by the backend query.
 function buildOfficeGateStacks(drafts, cases) {
   drafts = Array.isArray(drafts) ? drafts : [];
   cases  = Array.isArray(cases)  ? cases  : [];
@@ -6207,15 +6210,18 @@ function buildOfficeGateStacks(drafts, cases) {
 
   // 2. Bucket every intake case by status ("both": a pending case still shows in its
   //    status stack as well as in Pending).
+  //    Cases edited by the field exec after their report go to Edited only.
   const submitted = [];
   const awaiting  = [];
+  const edited    = [];
   cases.forEach(function(c) {
     if (!c) return;
-    if (c.status === 'field_complete') submitted.push(c);
+    if (c.editedAfterReport === true) edited.push(c);
+    else if (c.status === 'field_complete') submitted.push(c);
     else if (c.status === 'pending' || c.status === 'field_assigned') awaiting.push(c);
   });
 
-  // 4. Newest first: drafts by savedAt, cases by createdAt.
+  // 4. Newest first: drafts by savedAt, cases by createdAt, edited cases by fieldEditedAt.
   const byTime = function(field) {
     return function(a, b) {
       return new Date(b[field] || 0).getTime() - new Date(a[field] || 0).getTime();
@@ -6224,8 +6230,9 @@ function buildOfficeGateStacks(drafts, cases) {
   pending.sort(byTime('savedAt'));
   submitted.sort(byTime('createdAt'));
   awaiting.sort(byTime('createdAt'));
+  edited.sort(byTime('fieldEditedAt'));
 
-  return { pending: pending, submitted: submitted, awaiting: awaiting };
+  return { pending: pending, submitted: submitted, awaiting: awaiting, edited: edited };
 }
 
 // ---- OFFICE GATE: render + show / dismiss ----
@@ -6408,6 +6415,19 @@ async function showOfficeGate() {
     return row('intake_' + c.id, c.appName || 'Unnamed', sub, tag, _gateAgeTag(_gateCreatedIso(c, cases)));
   }).join('');
 
+  var editedHtml = stacks.edited.map(function(c) {
+    var loc = _gateOr(c.bank, '—') + (c.branch ? ' · ' + _gateEsc(c.branch) : '');
+    var when = _gateWhen(c.fieldEditedAt);
+    var sub = loc + (c.execName ? ' · ' + _gateEsc(c.execName) : '') + (when ? ' · Edited ' + when : '');
+    var n = Number(c.unsubmittedVisits);
+    var tag = n > 0
+      ? '<div style="margin-top:8px;"><span style="display:inline-block;font-size:14px;font-weight:600;'
+        + 'padding:4px 12px;border-radius:999px;border:1px solid #f59e0b;color:#f59e0b;">'
+        + 'Waiting for exec: ' + n + (n === 1 ? ' visit' : ' visits') + ' not submitted</span></div>'
+      : '';
+    return row('intake_' + c.id, c.appName || 'Unnamed', sub, tag, _gateAgeTag(c.fieldEditedAt));
+  }).join('');
+
   function section(title, count, html) {
     return '<div style="margin-bottom:22px;">'
       + '<div style="font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;'
@@ -6425,6 +6445,9 @@ async function showOfficeGate() {
       '<div style="max-width:760px;margin:0 auto;padding:22px 16px 40px;">'
     +   '<div style="font-size:26px;font-weight:700;color:var(--text);margin-bottom:4px;">Cases needing action</div>'
     +   '<div style="font-size:16px;color:var(--muted);margin-bottom:20px;">Tap a case to resume it, or start a blank form below.</div>'
+    +   (stacks.edited.length > 0
+          ? section('Edited by field exec — report needs update', stacks.edited.length, editedHtml)
+          : '')
     +   section('Pending — missing documents',      stacks.pending.length,   pendingHtml)
     +   section('Submitted — ready to make report', stacks.submitted.length, submittedHtml)
     +   section('Awaiting field visit',                  stacks.awaiting.length,  awaitingHtml)
