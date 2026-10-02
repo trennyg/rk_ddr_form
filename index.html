@@ -6091,7 +6091,7 @@ async function saveDraft(draftName) {
 async function fetchDrafts() {
   const endpoint = getEndpoint();
   // Always get local drafts first as baseline
-  const localDrafts = _getLocalDrafts();
+  let localDrafts = _getLocalDrafts();
 
   if (endpoint) {
     try {
@@ -6100,6 +6100,14 @@ async function fetchDrafts() {
         body: JSON.stringify({ action: 'getDrafts' })
       });
       const data = await res.json();
+      // Server-cancelled cases: purge any local copy so it can't resurface from this device.
+      if (Array.isArray(data.cancelledKeys) && data.cancelledKeys.length) {
+        const gone = new Set(data.cancelledKeys);
+        localDrafts.forEach(function(d) {
+          if (d && gone.has(d.key)) { localStorage.removeItem('rka_draft_' + d.key); _updateLocalIndex(null, d.key); }
+        });
+        localDrafts = localDrafts.filter(function(d) { return !(d && gone.has(d.key)); });
+      }
       if (data.drafts && Array.isArray(data.drafts) && data.drafts.length > 0) {
         // Merge cloud + local — newer savedAt wins for same key
         const merged = {};
@@ -6260,6 +6268,64 @@ function _gateAgeTag(iso) {
     + '&#9201; ' + label + '</span>';
 }
 
+// ---- OFFICE GATE: cancel a case (soft cancel — confirm first, nothing is deleted) ----
+function _gateConfirmCancel(key, name) {
+  var old = document.getElementById('gate-cancel-modal');
+  if (old && old.parentNode) old.parentNode.removeChild(old);
+  var m = document.createElement('div');
+  m.id = 'gate-cancel-modal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.72);'
+    + 'display:flex;align-items:center;justify-content:center;padding:18px;';
+  m.innerHTML =
+      '<div style="width:100%;max-width:520px;background:var(--surface);border:2px solid #dc2626;'
+    +   'border-radius:14px;padding:24px 22px;">'
+    +   '<div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:10px;">Cancel this case?</div>'
+    +   '<div style="font-size:22px;font-weight:700;color:var(--accent);margin-bottom:12px;word-break:break-word;">'
+    +     _gateEsc(name || 'Unnamed') + '</div>'
+    +   '<div style="font-size:17px;line-height:1.5;color:var(--text);margin-bottom:8px;">'
+    +     'This case will be removed from the office list, the cashbook queue and the field app.</div>'
+    +   '<div id="gate-cancel-err" style="font-size:16px;font-weight:700;color:#ff7b7b;min-height:22px;margin-bottom:12px;"></div>'
+    +   '<div style="display:flex;gap:12px;flex-wrap:wrap;">'
+    +     '<button type="button" id="gate-cancel-no" style="flex:1 1 180px;background:var(--surface2);'
+    +       'border:2px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:18px;'
+    +       'font-weight:700;padding:16px;cursor:pointer;touch-action:manipulation;">No, keep it</button>'
+    +     '<button type="button" id="gate-cancel-yes" style="flex:1 1 180px;background:#dc2626;'
+    +       'border:2px solid #dc2626;border-radius:10px;color:#fff;font-family:inherit;font-size:18px;'
+    +       'font-weight:800;padding:16px;cursor:pointer;touch-action:manipulation;">Yes, cancel case</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(m);
+
+  function close() { if (m.parentNode) m.parentNode.removeChild(m); }
+  var busy = false;
+  m.addEventListener('click', async function(e) {
+    if (busy) return;
+    if (e.target === m || e.target.closest('#gate-cancel-no')) { close(); return; }
+    if (!e.target.closest('#gate-cancel-yes')) return;
+    var yes = document.getElementById('gate-cancel-yes');
+    var err = document.getElementById('gate-cancel-err');
+    busy = true; yes.textContent = 'Cancelling...'; yes.style.opacity = '.6'; err.textContent = '';
+    try {
+      var endpoint = getEndpoint();
+      if (!endpoint) throw new Error('Not connected to the server');
+      var res = await fetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'cancelCase', key: key,
+          cancelledBy: localStorage.getItem('rk_office_exec') || '' })
+      });
+      var data = await res.json();
+      if (!data || !data.ok) throw new Error((data && data.error) || 'Cancel failed');
+      try { localStorage.removeItem('rka_draft_' + key); _updateLocalIndex(null, key); } catch (x) {}
+      close();
+      showToast('Case cancelled', 'success');
+      showOfficeGate();
+    } catch (ex) {
+      busy = false; yes.textContent = 'Yes, cancel case'; yes.style.opacity = '1';
+      err.textContent = 'Could not cancel: ' + (ex && ex.message ? ex.message : 'unknown error');
+    }
+  });
+}
+
 function hideOfficeGate() {
   var el = document.getElementById('office-gate-overlay');
   if (el && el.parentNode) el.parentNode.removeChild(el);
@@ -6275,9 +6341,15 @@ async function showOfficeGate() {
     return '<div class="gate-row" data-gkey="' + _gateEsc(key) + '" '
       + 'style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;'
       + 'padding:16px 18px;margin-bottom:10px;cursor:pointer;touch-action:manipulation;">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">'
-      +   '<div style="font-size:20px;font-weight:700;color:var(--text);min-width:0;">' + _gateEsc(title) + '</div>'
-      +   (age || '')
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+      +   '<div style="font-size:20px;font-weight:700;color:var(--text);min-width:0;flex:1 1 180px;">' + _gateEsc(title) + '</div>'
+      +   '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto;">'
+      +     '<button type="button" class="gate-cancel" data-gkey="' + _gateEsc(key) + '" data-gname="' + _gateEsc(title) + '" '
+      +       'style="background:transparent;border:2px solid #ef4444;border-radius:999px;color:#ff7b7b;'
+      +       'font-family:inherit;font-size:15px;font-weight:800;padding:5px 14px;cursor:pointer;white-space:nowrap;'
+      +       'touch-action:manipulation;">&#10005; Case cancelled</button>'
+      +     (age || '')
+      +   '</div>'
       + '</div>'
       + '<div style="font-size:16px;line-height:1.4;color:var(--text);opacity:.78;margin-top:5px;">' + sub + '</div>'
       + (tag || '') + '</div>';
@@ -6346,6 +6418,8 @@ async function showOfficeGate() {
 
   ov.addEventListener('click', function(e) {
     if (e.target.closest('#gate-dismiss')) { hideOfficeGate(); return; }
+    var cb = e.target.closest('.gate-cancel');
+    if (cb) { _gateConfirmCancel(cb.getAttribute('data-gkey'), cb.getAttribute('data-gname')); return; }
     var r = e.target.closest('.gate-row');
     if (r) { var key = r.getAttribute('data-gkey'); hideOfficeGate(); openDraft(key); }
   });
