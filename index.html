@@ -6222,6 +6222,44 @@ function _gateWhen(iso) {
     + ', ' + d.toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' });
 }
 
+function _gateCreatedIso(item, cases) {
+  // Creation time for any gate item, regardless of origin.
+  if (!item) return '';
+  if (item.createdAt) return item.createdAt;                 // intake case row
+  var key = item.key || '';
+  var mi = /^intake_(\d+)$/.exec(key);                       // intake-origin draft -> its case
+  if (mi && Array.isArray(cases)) {
+    for (var i = 0; i < cases.length; i++) {
+      if (cases[i] && String(cases[i].id) === mi[1] && cases[i].createdAt) return cases[i].createdAt;
+    }
+  }
+  var md = /^draft_(\d+)$/.exec(key);                        // office draft: key embeds Date.now()
+  if (md) {
+    var ts = Number(md[1]);
+    if (ts > 1500000000000 && ts <= Date.now()) return new Date(ts).toISOString();
+  }
+  return item.savedAt || '';                                 // last-resort fallback
+}
+
+function _gateAgeTag(iso) {
+  if (!iso) return '';
+  var t = new Date(iso).getTime();
+  if (isNaN(t)) return '';
+  var ms = Date.now() - t;
+  if (ms < 0) ms = 0;
+  var HOUR = 3600000, DAY = 86400000;
+  var label, bg;
+  if (ms < HOUR)      label = '< 1 hr';
+  else if (ms < DAY)  { var h = Math.floor(ms / HOUR); label = h + (h === 1 ? ' hr' : ' hrs'); }
+  else                { var d = Math.floor(ms / DAY);  label = d + (d === 1 ? ' day' : ' days'); }
+  if (ms < DAY)          bg = '#16a34a';   // green: under 24h
+  else if (ms < 3 * DAY) bg = '#ea580c';   // orange: 1 to 3 days
+  else                   bg = '#dc2626';   // red: 3 days and over
+  return '<span style="flex-shrink:0;display:inline-block;font-size:12px;font-weight:700;'
+    + 'padding:3px 10px;border-radius:999px;white-space:nowrap;color:#fff;background:' + bg + ';">'
+    + '&#9201; ' + label + '</span>';
+}
+
 function hideOfficeGate() {
   var el = document.getElementById('office-gate-overlay');
   if (el && el.parentNode) el.parentNode.removeChild(el);
@@ -6233,11 +6271,14 @@ async function showOfficeGate() {
   try { cases  = await fetchIntakeQueue(); } catch (e) {}
   var stacks = buildOfficeGateStacks(drafts, cases);
 
-  function row(key, title, sub, tag) {
+  function row(key, title, sub, tag, age) {
     return '<div class="gate-row" data-gkey="' + _gateEsc(key) + '" '
       + 'style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;'
       + 'padding:12px 14px;margin-bottom:8px;cursor:pointer;touch-action:manipulation;">'
-      + '<div style="font-size:15px;font-weight:600;color:var(--text);">' + _gateEsc(title) + '</div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+      +   '<div style="font-size:15px;font-weight:600;color:var(--text);min-width:0;">' + _gateEsc(title) + '</div>'
+      +   (age || '')
+      + '</div>'
       + '<div style="font-size:13px;color:var(--muted);margin-top:3px;">' + sub + '</div>'
       + (tag || '') + '</div>';
   }
@@ -6253,14 +6294,14 @@ async function showOfficeGate() {
     var when = _gateWhen(d.savedAt || d.createdAt);
     var sub = _gateOr(d.bank, '—') + ' · ' + n + ' document' + (n === 1 ? '' : 's') + ' pending'
       + ' · ' + origin + (when ? ' · ' + when : '');
-    return row(gkey, d.appName || d.name || 'Unnamed', sub, '');
+    return row(gkey, d.appName || d.name || 'Unnamed', sub, '', _gateAgeTag(_gateCreatedIso(d, cases)));
   }).join('');
 
   var submittedHtml = stacks.submitted.map(function(c) {
     var loc = _gateOr(c.bank, '—') + (c.branch ? ' · ' + _gateEsc(c.branch) : '');
     var when = _gateWhen(c.createdAt);
     var sub = loc + (c.execName ? ' · ' + _gateEsc(c.execName) : '') + (when ? ' · ' + when : '');
-    return row('intake_' + c.id, c.appName || 'Unnamed', sub, '');
+    return row('intake_' + c.id, c.appName || 'Unnamed', sub, '', _gateAgeTag(_gateCreatedIso(c, cases)));
   }).join('');
 
   var awaitingHtml = stacks.awaiting.map(function(c) {
@@ -6274,7 +6315,7 @@ async function showOfficeGate() {
           ? 'border:1px solid var(--accent);color:var(--accent);">Assigned to ' + _gateEsc(c.execName)
           : 'border:1px solid var(--border);color:var(--muted);">Unassigned')
       + '</span></div>';
-    return row('intake_' + c.id, c.appName || 'Unnamed', sub, tag);
+    return row('intake_' + c.id, c.appName || 'Unnamed', sub, tag, _gateAgeTag(_gateCreatedIso(c, cases)));
   }).join('');
 
   function section(title, count, html) {
