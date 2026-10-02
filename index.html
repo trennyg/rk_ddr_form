@@ -4157,10 +4157,11 @@ async function applyOcrData() {
     if (d.execName)       setVal('f_car_exec_name', d.execName);
   }
 
-  showToast('✅ Values applied!', 'success');
+  showToast('✅ Values applied — saving…', 'success');
   // Save draft immediately after OCR fills fields
   var _ocrAppName = (document.getElementById('f_app_name') || {}).value || '';
-  if (_ocrAppName.trim()) { try { await saveDraft(_ocrAppName.trim()); } catch(e) {} }
+  if (_ocrAppName.trim()) { _lastCloudSaveOk = null; try { await saveDraft(_ocrAppName.trim()); } catch(e) {} if (_lastCloudSaveOk === true) { showToast('✅ Saved', 'success'); }
+    else { showToast('⚠️ Not saved — check connection and save again', 'error'); } }
 }
 
 function setVal(id, val) {
@@ -5920,6 +5921,7 @@ function restoreFormValues(metaOrVals) {
     } finally {
       if (autosaveTimer) clearTimeout(autosaveTimer);
       autosaveTimer = null;
+      _autosaveDue = false;
       _restoring = false;
       _loadedVals = collectFormValues();   // baseline for dirty-tracking (restore is fully done here)
     }
@@ -6039,6 +6041,8 @@ async function requestSaveDraft(draftName) {
 // ── SAVE DRAFT ────────────────────────────────────────────
 // Saves to cloud (Apps Script) AND localStorage as backup
 async function saveDraft(draftName) {
+  _savesInFlight++;
+  try {
   try {
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     Object.keys(localStorage).filter(k => k.startsWith('rka_draft_')).forEach(function(k) {
@@ -6069,21 +6073,27 @@ async function saveDraft(draftName) {
   const endpoint = getEndpoint();
   if (endpoint) {
     try {
+      const _saveBody = JSON.stringify({ action: 'saveDraft', draft: meta });
       const res = await fetch(endpoint, {
         method: 'POST',
-        body: JSON.stringify({ action: 'saveDraft', draft: meta })
+        body: _saveBody,
+        keepalive: _saveBody.length < 60000
       });
       const data = await res.json();
       if (data.error) {
+        _lastCloudSaveOk = false;
         console.warn('Cloud draft save error:', data.error);
       } else {
+        _lastCloudSaveOk = true;
         console.log('Cloud draft saved:', meta.appName || meta.name);
       }
     } catch(e) {
+      _lastCloudSaveOk = false;
       console.warn('Cloud draft save failed (local backup kept):', e.message);
     }
   }
   return meta.name;
+  } finally { _savesInFlight--; }
 }
 
 // ── LOAD DRAFTS ───────────────────────────────────────────
@@ -6592,11 +6602,16 @@ let _foreignPending      = false;
 let _foreignPollTimer    = null;
 let _uploadsInFlight      = 0;
 let autosaveTimer = null;
+let _savesInFlight = 0;
+let _lastCloudSaveOk = null;
+let _autosaveDue   = false;
 function scheduleAutosave() {
   if (_restoring) return;
   if (_foreignPending) return;
   if (autosaveTimer) clearTimeout(autosaveTimer);
+  _autosaveDue = true;
   autosaveTimer = setTimeout(async function() {
+    _autosaveDue = false;
     if (_restoring) return;
     if (_foreignPending) return;
     const appName = (document.getElementById('f_app_name') || {}).value || '';
@@ -6606,6 +6621,14 @@ function scheduleAutosave() {
     }
   }, 1000);  // 1 second — guarded by _restoring flag
 }
+
+// Warn before closing the tab while a draft save is queued, running, or an upload is in flight.
+window.addEventListener('beforeunload', function (e) {
+  if (_savesInFlight > 0 || _uploadsInFlight > 0 || _saveRunning || _savePending || _autosaveDue) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
 
 function startForeignPoll() {
   stopForeignPoll();
