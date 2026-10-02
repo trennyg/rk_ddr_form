@@ -6255,8 +6255,8 @@ function _gateAgeTag(iso) {
   if (ms < DAY)          bg = '#16a34a';   // green: under 24h
   else if (ms < 3 * DAY) bg = '#ea580c';   // orange: 1 to 3 days
   else                   bg = '#dc2626';   // red: 3 days and over
-  return '<span style="flex-shrink:0;display:inline-block;font-size:12px;font-weight:700;'
-    + 'padding:3px 10px;border-radius:999px;white-space:nowrap;color:#fff;background:' + bg + ';">'
+  return '<span style="flex-shrink:0;display:inline-block;font-size:16px;font-weight:700;'
+    + 'padding:6px 14px;border-radius:999px;white-space:nowrap;color:#fff;background:' + bg + ';">'
     + '&#9201; ' + label + '</span>';
 }
 
@@ -6274,12 +6274,12 @@ async function showOfficeGate() {
   function row(key, title, sub, tag, age) {
     return '<div class="gate-row" data-gkey="' + _gateEsc(key) + '" '
       + 'style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;'
-      + 'padding:12px 14px;margin-bottom:8px;cursor:pointer;touch-action:manipulation;">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-      +   '<div style="font-size:15px;font-weight:600;color:var(--text);min-width:0;">' + _gateEsc(title) + '</div>'
+      + 'padding:16px 18px;margin-bottom:10px;cursor:pointer;touch-action:manipulation;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+      +   '<div style="font-size:20px;font-weight:700;color:var(--text);min-width:0;">' + _gateEsc(title) + '</div>'
       +   (age || '')
       + '</div>'
-      + '<div style="font-size:13px;color:var(--muted);margin-top:3px;">' + sub + '</div>'
+      + '<div style="font-size:16px;line-height:1.4;color:var(--text);opacity:.78;margin-top:5px;">' + sub + '</div>'
       + (tag || '') + '</div>';
   }
 
@@ -6309,8 +6309,8 @@ async function showOfficeGate() {
     var when = _gateWhen(c.createdAt);
     var sub = loc + (when ? ' · ' + when : '');
     var assigned = !!c.execName;
-    var tag = '<div style="margin-top:6px;"><span style="display:inline-block;font-size:12px;'
-      + 'padding:2px 9px;border-radius:999px;'
+    var tag = '<div style="margin-top:8px;"><span style="display:inline-block;font-size:14px;font-weight:600;'
+      + 'padding:4px 12px;border-radius:999px;'
       + (assigned
           ? 'border:1px solid var(--accent);color:var(--accent);">Assigned to ' + _gateEsc(c.execName)
           : 'border:1px solid var(--border);color:var(--muted);">Unassigned')
@@ -6319,10 +6319,10 @@ async function showOfficeGate() {
   }).join('');
 
   function section(title, count, html) {
-    return '<div style="margin-bottom:18px;">'
-      + '<div style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;'
-      + 'color:var(--muted);margin-bottom:8px;">' + _gateEsc(title) + ' (' + count + ')</div>'
-      + (html || '<div style="font-size:13px;color:var(--muted);padding:2px;">Nothing here.</div>')
+    return '<div style="margin-bottom:22px;">'
+      + '<div style="font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;'
+      + 'color:var(--muted);margin-bottom:10px;">' + _gateEsc(title) + ' (' + count + ')</div>'
+      + (html || '<div style="font-size:16px;color:var(--muted);padding:2px;">Nothing here.</div>')
       + '</div>';
   }
 
@@ -6332,14 +6332,14 @@ async function showOfficeGate() {
   ov.style.cssText = 'position:fixed;inset:0;z-index:9500;background:var(--bg);'
     + 'overflow-y:auto;-webkit-overflow-scrolling:touch;';
   ov.innerHTML =
-      '<div style="max-width:640px;margin:0 auto;padding:22px 16px 40px;">'
-    +   '<div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px;">Cases needing action</div>'
-    +   '<div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Tap a case to resume it, or start a blank form below.</div>'
+      '<div style="max-width:760px;margin:0 auto;padding:22px 16px 40px;">'
+    +   '<div style="font-size:26px;font-weight:700;color:var(--text);margin-bottom:4px;">Cases needing action</div>'
+    +   '<div style="font-size:16px;color:var(--muted);margin-bottom:20px;">Tap a case to resume it, or start a blank form below.</div>'
     +   section('Pending — missing documents',      stacks.pending.length,   pendingHtml)
     +   section('Submitted — ready to make report', stacks.submitted.length, submittedHtml)
     +   section('Awaiting field visit',                  stacks.awaiting.length,  awaitingHtml)
     +   '<button id="gate-dismiss" style="width:100%;margin-top:6px;background:var(--accent);border:none;'
-    +     'border-radius:9px;color:#000;font-size:15px;font-weight:700;padding:13px;cursor:pointer;'
+    +     'border-radius:9px;color:#000;font-size:18px;font-weight:700;padding:16px;cursor:pointer;'
     +     'touch-action:manipulation;">+  Start a blank form</button>'
     + '</div>';
   document.body.appendChild(ov);
