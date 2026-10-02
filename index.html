@@ -6,7 +6,7 @@
 <title>R.K. Associates — DDR Field Form</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
 
   :root {
     --bg: #0f1117;
@@ -6255,8 +6255,8 @@ function _gateAgeTag(iso) {
   if (ms < DAY)          bg = '#16a34a';   // green: under 24h
   else if (ms < 3 * DAY) bg = '#ea580c';   // orange: 1 to 3 days
   else                   bg = '#dc2626';   // red: 3 days and over
-  return '<span style="flex-shrink:0;display:inline-block;font-size:16px;font-weight:700;'
-    + 'padding:6px 14px;border-radius:999px;white-space:nowrap;color:#fff;background:' + bg + ';">'
+  return '<span style="flex-shrink:0;display:inline-block;font-size:19px;font-weight:900;'
+    + 'padding:6px 16px;border-radius:999px;white-space:nowrap;color:#fff;background:' + bg + ';">'
     + '&#9201; ' + label + '</span>';
 }
 
