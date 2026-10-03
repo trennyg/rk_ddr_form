@@ -6017,6 +6017,7 @@ function buildDraftMeta(draftName) {
       return (_curSig[k] || '') !== (_loadedDriveSig[k] || '');
     });
   }
+  if (typeof _baselineRebuildSeq === 'number') meta.baseRebuildSeq = _baselineRebuildSeq;
   return meta;
 }
 
