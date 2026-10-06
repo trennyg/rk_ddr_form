@@ -2060,6 +2060,43 @@
           style="margin-top:8px;display:none">
       </div>
       <div class="field">
+        <label>Billed Bank Branch *</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="ti_branch_name" list="bank_branch_list" autocomplete="off"
+            placeholder="Type to search branch name" oninput="tiOnBranchInput()" style="flex:1;min-width:0">
+          <button type="button" class="btn btn-secondary" style="font-size:13px;padding:8px 12px;white-space:nowrap"
+            onclick="tiToggleAddBranch()">+ Add new branch</button>
+        </div>
+        <div id="ti_branch_msg" style="display:none;font-size:12px;color:var(--accent2)"></div>
+        <div id="ti_newbr_panel" style="display:none;margin-top:6px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)">
+          <div style="display:flex;gap:8px">
+            <div class="field" style="width:90px">
+              <label>Bank</label>
+              <select id="ti_newbr_bank" onchange="tiNewBranchPreview()">
+                <option value="BOI">BOI</option>
+              </select>
+            </div>
+            <div class="field" style="flex:1;min-width:0">
+              <label>Place</label>
+              <input type="text" id="ti_newbr_place" autocomplete="off" placeholder="e.g. Lower Parel" oninput="tiNewBranchPreview()">
+            </div>
+          </div>
+          <div id="ti_newbr_preview" style="margin-top:8px;font-size:13px;color:var(--label)"></div>
+          <div id="ti_newbr_dym" style="display:none;margin-top:8px;font-size:13px;color:var(--accent)">
+            <div id="ti_newbr_dym_text"></div>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <button type="button" id="ti_newbr_use" class="btn btn-secondary" style="font-size:13px;padding:6px 12px" onclick="tiUseSuggestedBranch()">Use existing</button>
+              <button type="button" class="btn btn-secondary" style="font-size:13px;padding:6px 12px" onclick="tiConfirmNewBranch(true)">Create anyway</button>
+            </div>
+          </div>
+          <div id="ti_newbr_msg" style="display:none;margin-top:8px;font-size:12px;color:var(--accent2)"></div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button type="button" id="ti_newbr_confirm" class="btn btn-primary" style="font-size:13px;padding:8px 14px" onclick="tiConfirmNewBranch(false)">Add branch</button>
+            <button type="button" class="btn btn-secondary" style="font-size:13px;padding:8px 14px" onclick="tiToggleAddBranch(false)">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div class="field">
         <label>Bank Branch Name &amp; Address</label>
         <textarea id="ti_branch_address" rows="3"
           oninput="renderTaxInvoicePreview()"
@@ -7614,6 +7651,154 @@ function addParkingRow() {
   container.appendChild(div);
 }
 
+// ── Billed bank branch (must be a canonical branches.branch_name) ──
+var _tiSuggestedBranch = null;
+
+// Trim + collapse repeated spaces, uppercase — used to match a typed name to the list
+function _tiNorm(s) { return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
+// Letters and digits only — used ONLY for the "Did you mean" hint and the 409 lookup
+function _tiLoose(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+function _tiBranchNames() {
+  return Array.prototype.map.call(
+    document.querySelectorAll('#bank_branch_list option'), function(o) { return o.value; });
+}
+
+function _tiAddBranchOption(name) {
+  if (_tiBranchNames().indexOf(name) !== -1) return;
+  var dl = document.getElementById('bank_branch_list');
+  if (!dl) return;
+  var opt = document.createElement('option');
+  opt.value = name;
+  dl.appendChild(opt);
+}
+
+// Returns the canonical spelling from the list, or null
+function tiResolveBranch(value) {
+  var n = _tiNorm(value);
+  if (!n) return null;
+  var names = _tiBranchNames();
+  for (var i = 0; i < names.length; i++) {
+    if (_tiNorm(names[i]) === n) return names[i];
+  }
+  return null;
+}
+
+function _tiLooseMatches(name, names) {
+  var key = _tiLoose(name);
+  if (!key) return [];
+  return names.filter(function(b) { return _tiLoose(b) === key; });
+}
+
+function _tiShowMsg(id, text) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.display = text ? '' : 'none';
+}
+
+function tiOnBranchInput() {
+  var v = (document.getElementById('ti_branch_name') || {}).value || '';
+  if (!v.trim() || tiResolveBranch(v)) _tiShowMsg('ti_branch_msg', '');
+  else _tiShowMsg('ti_branch_msg', 'Not in the branch list. Pick a branch from the list, or use + Add new branch.');
+}
+
+function _tiUseBranch(name) {
+  var el = document.getElementById('ti_branch_name');
+  if (el) el.value = name;
+  tiOnBranchInput();
+}
+
+function tiToggleAddBranch(show) {
+  var panel = document.getElementById('ti_newbr_panel');
+  if (!panel) return;
+  var open = (show === undefined) ? panel.style.display === 'none' : !!show;
+  panel.style.display = open ? '' : 'none';
+  var placeEl = document.getElementById('ti_newbr_place');
+  if (placeEl) placeEl.value = '';
+  _tiSuggestedBranch = null;
+  tiNewBranchPreview();
+}
+
+function _tiComposeNewBranch() {
+  var bank  = _tiNorm((document.getElementById('ti_newbr_bank') || {}).value);
+  var place = _tiNorm((document.getElementById('ti_newbr_place') || {}).value);
+  return place ? bank + ' ' + place : '';
+}
+
+function tiNewBranchPreview() {
+  var name = _tiComposeNewBranch();
+  var prev = document.getElementById('ti_newbr_preview');
+  if (prev) prev.textContent = name ? 'Will be saved as: ' + name : '';
+  var dym = document.getElementById('ti_newbr_dym');
+  if (dym) dym.style.display = 'none';
+  _tiSuggestedBranch = null;
+  _tiShowMsg('ti_newbr_msg', '');
+}
+
+function _tiShowDidYouMean(matches) {
+  var dym  = document.getElementById('ti_newbr_dym');
+  var text = document.getElementById('ti_newbr_dym_text');
+  var useBtn = document.getElementById('ti_newbr_use');
+  _tiSuggestedBranch = matches.length === 1 ? matches[0] : null;
+  if (text) text.textContent = matches.length === 1
+    ? 'Did you mean ' + matches[0] + '?'
+    : 'Did you mean one of: ' + matches.join(', ') + '? Pick it from the list.';
+  if (useBtn) useBtn.style.display = matches.length === 1 ? '' : 'none';
+  if (dym) dym.style.display = '';
+}
+
+function tiUseSuggestedBranch() {
+  if (!_tiSuggestedBranch) return;
+  _tiUseBranch(_tiSuggestedBranch);
+  tiToggleAddBranch(false);
+}
+
+async function tiConfirmNewBranch(force) {
+  var name = _tiComposeNewBranch();
+  if (!name) { _tiShowMsg('ti_newbr_msg', 'Type the place name.'); return; }
+  _tiShowMsg('ti_newbr_msg', '');
+  if (!force) {
+    var near = _tiLooseMatches(name, _tiBranchNames());
+    if (near.length) { _tiShowDidYouMean(near); return; }
+  }
+  var btn = document.getElementById('ti_newbr_confirm');
+  if (btn) btn.disabled = true;
+  try {
+    var bank = _tiNorm((document.getElementById('ti_newbr_bank') || {}).value);
+    var res = await fetch(getEndpoint() + '/api/branches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bank_name: bank, branch_name: name }),
+    });
+    if (res.status === 409) {
+      // Already exists — find it in a fresh list; never guess
+      var listRes = await fetch(getEndpoint() + '/api/branches/canonical');
+      var listData = await listRes.json();
+      var hits = _tiLooseMatches(name, (listData && listData.branches) || []);
+      if (hits.length !== 1) {
+        _tiShowMsg('ti_newbr_msg', 'This branch already exists. Pick it from the list.');
+        return;
+      }
+      _tiAddBranchOption(hits[0]);
+      _tiUseBranch(hits[0]);
+      tiToggleAddBranch(false);
+      return;
+    }
+    var data = await res.json();
+    var saved = data && data.branch && data.branch.branch_name;
+    if (!res.ok || !saved) throw new Error((data && data.error) || ('HTTP ' + res.status));
+    _tiAddBranchOption(saved);
+    _tiUseBranch(saved);
+    tiToggleAddBranch(false);
+    showToast('Branch added: ' + saved, 'success');
+  } catch (e) {
+    _tiShowMsg('ti_newbr_msg', 'Could not add the branch: ' + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 // ── Collect all tax invoice form data ─────────────────────
 function collectTaxInvoiceData() {
   var g = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
@@ -7684,6 +7869,7 @@ function collectTaxInvoiceData() {
     bankKey:         bankKey,
     addresseeTitle:  addresseeTitle,
     branchAddress:   g('ti_branch_address'),
+    branchName:      tiResolveBranch(g('ti_branch_name')) || '',
     bankGst:         g('ti_bank_gst') || g('ti_poss_bank_gst'),
     vendorCode:      cfg.vendorCode || '',
     rkAccNo:         cfg.accNo      || '',
@@ -7733,6 +7919,10 @@ async function submitTaxInvoice() {
 
     if (!data.invoiceType)   throw new Error('Please select an invoice type.');
     if (!data.bankKey)       throw new Error('Please select a client bank.');
+    if (!data.branchName) {
+      _tiShowMsg('ti_branch_msg', 'Choose the billed bank branch from the list, or add a new one.');
+      throw new Error('Please choose the billed bank branch from the list, or add a new one.');
+    }
     if (!data.branchAddress) throw new Error('Please enter the bank branch address.');
     if (data.grandTotal <= 0) throw new Error('Please fill in line items — total is zero.');
 
